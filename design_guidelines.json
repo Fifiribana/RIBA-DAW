@@ -1,0 +1,125 @@
+{
+  "project_name": "Riba 12 Web DAW",
+  "theme": "Dark",
+  "archetype": "Archetype 2: Performance Pro (Audio/Studio Adapted)",
+  "emotional_tone": "Technical, punchy, immersive, professional, and tactile.",
+  "typography": {
+    "fonts": {
+      "heading": "Outfit, sans-serif",
+      "ui": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "hierarchy": {
+      "h1": "text-3xl font-bold tracking-tight",
+      "h2": "text-xl font-semibold tracking-tight",
+      "ui_large": "text-sm font-semibold tracking-wide uppercase",
+      "ui_standard": "text-sm font-medium",
+      "ui_small": "text-xs font-medium",
+      "metrics": "font-mono text-sm tracking-wider",
+      "metrics_large": "font-mono text-2xl font-bold tracking-widest text-white"
+    },
+    "guidelines": [
+      "Use 'JetBrains Mono' strictly for numerical displays like BPM, Time Signatures, and VU meter values.",
+      "Use 'Manrope' for all track names, tooltips, menus, and labels to ensure maximum legibility at small sizes.",
+      "Never use Inter, Roboto, or Space Grotesk."
+    ]
+  },
+  "colors": {
+    "background": {
+      "app": "#09090B",
+      "panel": "#18181B",
+      "track_row": "#27272A",
+      "track_row_hover": "#3F3F46"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#A1A1AA",
+      "muted": "#71717A"
+    },
+    "borders": {
+      "default": "rgba(255, 255, 255, 0.1)",
+      "focus": "rgba(255, 255, 255, 0.3)"
+    },
+    "track_types": {
+      "voice": "#3B82F6",
+      "drums": "#22C55E",
+      "bass": "#F97316",
+      "guitar": "#EA580C",
+      "synth": "#EC4899",
+      "dream": "#D946EF"
+    },
+    "transport": {
+      "play": "#22C55E",
+      "record": "#EF4444",
+      "metronome_active": "#EAB308"
+    }
+  },
+  "layout": {
+    "structure": "Grid/Flex hybrid. Full viewport height (100vh), overflow-hidden on body.",
+    "top_bar": "h-16 flex items-center justify-between px-4 border-b border-white/10 bg-[#09090B] z-50",
+    "main_workspace": "flex flex-1 h-[calc(100vh-4rem)]",
+    "left_panel": "w-64 flex flex-col border-r border-white/10 bg-[#18181B] overflow-y-auto",
+    "center_panel": "flex-1 flex flex-col bg-[#09090B] overflow-y-auto relative",
+    "right_panel": "w-72 flex flex-col border-l border-white/10 bg-[#18181B] overflow-y-auto",
+    "spacing": {
+      "track_gap": "gap-1",
+      "panel_padding": "p-4",
+      "control_group_gap": "gap-2"
+    }
+  },
+  "components": {
+    "track_row": {
+      "container": "flex items-center w-full h-24 bg-[#18181B] border border-white/5 rounded-md overflow-hidden transition-colors hover:bg-[#27272A]",
+      "color_tag": "w-2 h-full",
+      "controls": "flex flex-col w-48 p-2 border-r border-white/5 gap-2",
+      "waveform_area": "flex-1 h-full bg-[#09090B] relative overflow-hidden"
+    },
+    "buttons": {
+      "primary": "bg-white text-black font-semibold px-4 py-2 rounded flex items-center justify-center hover:bg-zinc-200 transition-colors",
+      "transport": "w-10 h-10 rounded-full flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-white transition-all",
+      "toggle_active": "bg-zinc-700 text-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]"
+    },
+    "sliders_and_knobs": {
+      "track": "h-1 bg-zinc-800 rounded-full overflow-hidden",
+      "fill": "h-full bg-current",
+      "thumb": "w-3 h-3 bg-white rounded-full shadow"
+    },
+    "vu_meter": {
+      "container": "w-2 h-16 bg-black rounded flex flex-col-reverse overflow-hidden",
+      "segments": "w-full h-[2px] mb-[1px] bg-zinc-800",
+      "active_green": "bg-green-500",
+      "active_yellow": "bg-yellow-500",
+      "active_red": "bg-red-500"
+    }
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-out",
+    "metronome_blink": "animate-[pulse_0.5s_ease-in-out_infinite]",
+    "waveform_zoom": "transition-transform duration-300 ease-out",
+    "hover_states": "hover:brightness-125 hover:-translate-y-[1px]"
+  },
+  "accessibility": {
+    "focus_rings": "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+    "contrast": "Ensure all text over colored tags passes APCA 3:1.",
+    "aria": "Use aria-pressed for active states on solo/mute/metronome buttons."
+  },
+  "media": {
+    "images": [
+      {
+        "category": "welcome_state_background",
+        "url": "https://images.unsplash.com/photo-1636818477383-3a23426afe87?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwyfHxhdWRpbyUyMHN0dWRpbyUyMGVxdWFsaXplciUyMG1peGluZyUyMGNvbnNvbGUlMjBkYXJrfGVufDB8fHx8MTc4MTIzMzM1Mnww&ixlib=rb-4.1.0&q=85",
+        "description": "Colorful studio equalizer board, to be used with a heavy dark overlay (bg-black/80) as an immersive background for the empty workspace when no tracks are loaded."
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Create a JS-based React application (NOT TSX) using Tailwind CSS and standard Shadcn components customized for a dark theme.",
+    "Implement Phosphor Icons (@phosphor-icons/react) or Lucide-react for all UI iconography (transport, tracks, metronome).",
+    "The layout must have three primary columns: left transport/mixer, center timeline/tracks, right inspector/AI Dream Track.",
+    "Track rows must dynamically apply colors from the track_types object to their left border and waveform canvas.",
+    "Mock the Magic12 Source Separation and Mastering features, but create highly polished, animated UI for them (e.g., progress bars, status text).",
+    "Mock the 'Dream Track' AI Generation with a prompt input, a generating state with a fake progress interval, and appending a 'Dream' type track.",
+    "Keyboard shortcuts (Space, M, 1-9) must be implemented with React hooks.",
+    "CRITICAL: All interactive elements (buttons, sliders, inputs) MUST include a 'data-testid' attribute (e.g., data-testid='play-button', data-testid='track-mute-1')."
+  ]
+}
