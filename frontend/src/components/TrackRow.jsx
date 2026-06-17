@@ -13,19 +13,25 @@ const TYPE_LABEL = {
   synth: 'SYNTH', dream: 'DREAM', recording: 'REC', other: 'AUDIO'
 };
 
-export default function TrackRow({ track, index, color, onAction }) {
+export default function TrackRow({ track, index, color, isSelected, onSelect, onAction }) {
   const sliderStyle = (v, c) => ({ color: c, '--val': `${v}%` });
 
   return (
     <div
       data-testid={TID.trackRow(index)}
       className="track-row"
+      onClick={(e) => {
+        // only select if not clicking buttons/inputs
+        if (['BUTTON','INPUT','SELECT','OPTION','TEXTAREA'].includes(e.target.tagName)) return;
+        onSelect?.(track.id);
+      }}
       style={{
         display: 'flex', alignItems: 'stretch',
-        background: '#18181B',
-        border: '1px solid rgba(255,255,255,0.05)',
+        background: isSelected ? '#27272A' : '#18181B',
+        border: isSelected ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.05)',
+        boxShadow: isSelected ? `0 0 0 1px ${color}33, 0 0 12px ${color}22` : 'none',
         borderRadius: 8, overflow: 'hidden',
-        minHeight: 110,
+        minHeight: 110, cursor: 'pointer'
       }}
     >
       {/* Color tag */}

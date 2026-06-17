@@ -1,0 +1,39 @@
+{
+  "summary": "Backend regression 7/7 PASS (no backend changes). Frontend Pro Tools menu bar fully verified: all 9 menus (File/Edit/Track/Event/AudioSuite/Tools/View/Setup/Help), every menu item from the spec is present with the correct shortcut label, and clicking each menu item works. Setup modal shows the correct tab (Playback Engine: Web Audio API + Sample Rate + Buffer Size + Output Latency + State; I/O Setup: Input/Output channels; Preferences: Theme/Tempo/Time Signature/Loop/Metronome/Undo History). Track selection paints the row border in the track color (rgb(236,72,153) verified). Duplicate Track produces 'MIDI 1 (dup)'. Freeze Track appends '❄️' and shows 'Track frozen — CPU saved' status. Commit Track appends ' [committed]' and converts the track type from SYNTH to AUDIO. Cut/Copy/Paste correctly mutate track count. Group Tracks shows 'Grouped 2 tracks (color synced)' status. Consolidate Clip shows 'Consolidated: 8 → 8 notes' status. AudioSuite on a MIDI track is correctly refused. Bounce Mix (Ctrl+Alt+B) triggers a real WAV download (Riba_Bounce_<ts>.wav). Ctrl+N resets the session. Ctrl+G triggers Group. Zero page errors during the entire run. ONE FUNCTIONAL BUG FOUND: Edit → Separate Clip At Selection is broken because the Timeline component is missing the onPositionChange callback prop, so playheadBeatRef in Daw.jsx never gets updated and the separateClip handler always rejects with 'Position playhead in the middle of the clip first' even after clicking on the timeline at beat 4.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Edit → Separate Clip At Selection (Ctrl+E)",
+        "issue": "Timeline component is not wired with onPositionChange. In Daw.jsx (~line 1479) <Timeline ... onLoopWrap={handleLoopWrap} /> is missing onPositionChange={handlePlayheadChange}. As a result playheadBeatRef.current stays at 0 forever, even though the visual playhead and the on-screen label (e.g. '2.1 · 4.00 beats · 2.00s') reflect the click position. separateClip() (line 985) then always falls through the `if (cutAt <= 0)` early-return branch and shows the status 'Position playhead in the middle of the clip first'. Reproduce: add a MIDI track → select it → click the middle of the timeline (visual playhead jumps to ~beat 4) → Edit → Separate Clip → status shows the error and no [L]/[R] tracks are created.",
+        "affected_selectors": ["[data-testid=\"menuitem-edit_separate_clip\"]", "[data-testid=\"timeline\"]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_riba_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Wire Timeline onPositionChange in Daw.jsx (~line 1479): add the prop `onPositionChange={handlePlayheadChange}` to the <Timeline /> element. This single line will unblock Separate Clip and any future feature that reads playheadBeatRef (e.g. drop-in recording, paste-at-playhead).",
+    "Optional polish (not blocking): the duplicated track currently shows the GM 128-row instrument selector while the frozen/committed/audio tracks correctly show the waveform — visually the duplicate could collapse the selector after the user picks an instrument, but this matches the existing MIDI-track behaviour so it is consistent.",
+    "Optional polish: Bounce Mix completes so quickly with one MIDI track that the 'Bouncing Mix...' green popup is gone before Playwright can read it. The download fires correctly, so this is a UX nit only — consider keeping the popup visible for a min ~500 ms even when render finishes faster."
+  ],
+  "critical_code_review_comments": [
+    "Daw.jsx is now ~2290 lines (was 1648). The PRO_TOOLS_MENUS object, MenuBar, Timeline and Modal can each move to their own files. Splitting will also make undo/redo + selection logic easier to reason about.",
+    "playheadBeatRef vs Timeline.beatRef: there are now two refs holding the same data, but only one is wired (and one isn't, hence the Separate Clip bug). Consider lifting beat state to Daw and passing it down + a setter, or use the existing onPositionChange consistently.",
+    "Many `useCallback`s in Daw.jsx depend on `tracks` and `selectedTrackId` which causes the callback identity to churn on every track change. For a 2k+ line component this is fine today but if the callback list grows further consider a single ref-based actions object.",
+    "Track row badge says 'SYNTH' for MIDI and 'AUDIO' for audio — but after Commit the same track becomes AUDIO (correct) while after Freeze the badge stays SYNTH even though isMIDI is now false. Worth aligning the badge with isMIDI for consistency.",
+    "Modal close: clicking the backdrop closes it but Escape does NOT. Pressing Escape is a near-universal expectation; add a key handler in <Modal>."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100% (7/7)", "frontend": "94% (17/18 reviewed flows; Separate Clip broken due to missing prop wiring)" },
+  "test_credentials": "N/A — app has no auth",
+  "seed_data_creation": "Backend test creates TEST_session_1 (CRUD then deletes). Dream history grows by 1 per run.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After main agent adds `onPositionChange={handlePlayheadChange}` to the <Timeline /> in Daw.jsx, re-run only the Separate Clip flow: add MIDI track → click row → click timeline at 40% → Edit → Separate Clip — expect two tracks with displayName ending in ' [L]' and ' [R]'. All other 17 review flows are already verified. Backend regression: `REACT_APP_BACKEND_URL=https://riba-studio.preview.emergentagent.com pytest /app/backend/tests/ -v` (7/7).",
+  "rca of the issue": "BUG: Edit → Separate Clip always shows 'Position playhead in the middle of the clip first' regardless of where the user clicks on the timeline. ROOT CAUSE: In /app/frontend/src/components/Daw.jsx the Timeline component (defined at line 2164) accepts an `onPositionChange` callback prop that fires on every animation frame (line 2196) and is the only mechanism by which the parent's playheadBeatRef gets updated. The parent instantiates <Timeline /> at line 1479 with onLoopWrap={handleLoopWrap} but does NOT pass onPositionChange, so playheadBeatRef.current is never written and stays at its useRef(0) initial value. separateClip() at line 984-985 then sees `cutAt = playheadBeatRef.current = 0`, hits the `if (cutAt <= 0)` guard and bails out. REPRO: add MIDI → select → click timeline at 50% → label reads '4.00 beats' → Edit → Separate Clip → status 'Position playhead in the middle of the clip first' and no new track is created. FIX (one-line): `<Timeline ... onLoopWrap={handleLoopWrap} onPositionChange={handlePlayheadChange} />`. Not applied because this is integration wiring rather than a test-side issue."
+}

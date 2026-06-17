@@ -62,6 +62,13 @@ export default function Daw() {
   const [mixerOpen, setMixerOpen] = useState(false);
   const [stemsExporting, setStemsExporting] = useState(false);
   const [stemsProgress, setStemsProgress] = useState({ current: 0, total: 0 });
+  // === Pro Tools features state ===
+  const [selectedTrackId, setSelectedTrackId] = useState(null);
+  const clipboardRef = useRef(null);
+  const [bouncing, setBouncing] = useState(false);
+  const [bounceProgress, setBounceProgress] = useState(0);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [setupTab, setSetupTab] = useState('playback'); // playback | io | preferences
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -315,6 +322,8 @@ export default function Daw() {
   }, [tracks, tempo]);
 
   // === Playhead state owned by Timeline; Daw only provides loop wrap action ===
+  const playheadBeatRef = useRef(0);
+  const handlePlayheadChange = useCallback((beat) => { playheadBeatRef.current = beat; }, []);
   const handleLoopWrap = useCallback(() => {
     engine.ensureCtx();
     const soloSet = new Set(tracks.filter(t => t.isSolo).map(t => t.id));
@@ -714,16 +723,485 @@ export default function Daw() {
     setStatusMsg('All tracks cleared');
   };
 
+  // ============================================================
+  // === Pro Tools-inspired menu actions ========================
+  // ============================================================
+
+  const helpers = {
+    getSelectedTrack: () => tracks.find(t => t.id === selectedTrackId),
+    getSelectedIndex: () => tracks.findIndex(t => t.id === selectedTrackId),
+  };
+
+  // --- File menu ---
+  const newSession = useCallback(() => {
+    if (!window.confirm('New Session? Unsaved work will be lost.')) return;
+    tracks.forEach(t => engine.removeTrack(t.id));
+    engine.stopAll();
+    setTracks([]);
+    setTempo(120);
+    setMasterVol(80);
+    setTimeSig(4);
+    setIsPlayingAll(false);
+    setStatusMsg('New session created');
+  }, [tracks]);
+
+  const saveCopyIn = useCallback(async () => {
+    try {
+      const tracksData = tracks.map(t => ({
+        displayName: t.displayName,
+        trackType: t.trackType,
+        isMIDI: t.isMIDI,
+        volume: t.volume, pan: t.pan,
+        eq: t.eq, effects: t.effects,
+        instrumentIndex: t.instrumentIndex,
+        midiNotes: t.midiNotes || [],
+        dreamPrompt: t.dreamPrompt || '',
+      }));
+      const newName = window.prompt('Save Copy In — Enter session name:', `Riba copy ${new Date().toLocaleString()}`);
+      if (!newName) return;
+      await axios.post(`${API}/session/save`, {
+        name: newName, tempo, master_volume: masterVol, tracks: tracksData,
+      });
+      setStatusMsg(`Session copy saved as "${newName}"`);
+    } catch (e) {
+      setStatusMsg('Save Copy In failed: ' + e.message);
+    }
+  }, [tracks, tempo, masterVol]);
+
+  const importSessionData = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/session/list`);
+      const sessions = res.data;
+      if (!sessions.length) { setStatusMsg('No sessions available to import from'); return; }
+      const names = sessions.map((s, i) => `${i + 1}. ${s.name}`).join('\n');
+      const choice = window.prompt(`Import Session Data — pick session number:\n${names}`, '1');
+      const idx = parseInt(choice) - 1;
+      if (Number.isNaN(idx) || !sessions[idx]) return;
+      const s = sessions[idx];
+      pushUndo();
+      // append tracks (don't clear existing)
+      const newTracks = (s.tracks || []).map(td => {
+        const id = uid();
+        const color = TRACK_COLORS[td.trackType] || TRACK_COLORS.other;
+        const peaks = new Array(80).fill(0).map((_, k) => 0.15 + 0.6 * Math.abs(Math.sin(k * 0.3)));
+        const n = engine.getOrCreateTrack(id);
+        if (td.isMIDI && td.midiNotes?.length) n.setMIDI(td.midiNotes);
+        n.setVolume((td.volume || 80) / 100);
+        n.setPan((td.pan || 0) / 50);
+        n.setEQ(td.eq?.bass || 50, td.eq?.mid || 50, td.eq?.high || 50, td.eq?.enabled || false);
+        if (typeof td.instrumentIndex === 'number') n.setInstrument(td.instrumentIndex);
+        if (td.effects?.reverb) n.setReverb(true);
+        if (td.effects?.delay) n.setDelay(true);
+        return {
+          id, displayName: td.displayName + ' (imported)', trackType: td.trackType, color,
+          isPlaying: false, isMuted: false, isSolo: false, isMIDI: !!td.isMIDI,
+          volume: td.volume || 80, pan: td.pan || 0, peaks,
+          eq: td.eq || { bass: 50, mid: 50, high: 50, enabled: false },
+          effects: td.effects || { reverb: false, delay: false },
+          instrumentIndex: td.instrumentIndex || 0,
+          midiNotes: td.midiNotes || [], dreamPrompt: td.dreamPrompt || '',
+        };
+      });
+      setTracks(prev => [...prev, ...newTracks]);
+      setStatusMsg(`Imported ${newTracks.length} tracks from "${s.name}"`);
+    } catch (e) {
+      setStatusMsg('Import failed: ' + e.message);
+    }
+  }, [pushUndo]);
+
+  const bounceMix = useCallback(async () => {
+    if (!tracks.length) { setStatusMsg('No tracks to bounce'); return; }
+    setBouncing(true);
+    setBounceProgress(0);
+    setStatusMsg('Bouncing mix to WAV...');
+    try {
+      // compute total duration in seconds
+      let maxSec = 4;
+      for (const t of tracks) {
+        if (t.isMIDI && t.midiNotes?.length) {
+          for (const n of t.midiNotes) maxSec = Math.max(maxSec, ((n.start + n.duration) * 60) / tempo);
+        } else if (t.duration) {
+          maxSec = Math.max(maxSec, t.duration);
+        }
+      }
+      maxSec += 1.5; // tail for reverb/delay
+      const sr = 48000;
+      const oCtx = new OfflineAudioContext(2, Math.ceil(maxSec * sr), sr);
+      const masterOut = oCtx.createGain();
+      masterOut.gain.value = masterVol / 100;
+      masterOut.connect(oCtx.destination);
+      const beatSec = 60 / tempo;
+      const soloSet = new Set(tracks.filter(t => t.isSolo).map(t => t.id));
+
+      for (const t of tracks) {
+        if (t.isMuted) continue;
+        if (soloSet.size > 0 && !soloSet.has(t.id)) continue;
+
+        // per-track chain: source -> EQ (3 biquads) -> reverb/delay sends -> pan -> gain -> master
+        const trkGain = oCtx.createGain();
+        trkGain.gain.value = (t.volume || 80) / 100;
+        const panNode = oCtx.createStereoPanner();
+        panNode.pan.value = (t.pan || 0) / 50;
+
+        const eqLow = oCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 200;
+        const eqMid = oCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.frequency.value = 1000; eqMid.Q.value = 1;
+        const eqHigh = oCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 5000;
+        if (t.eq?.enabled) {
+          eqLow.gain.value = (t.eq.bass - 50) * 0.24;
+          eqMid.gain.value = (t.eq.mid - 50) * 0.24;
+          eqHigh.gain.value = (t.eq.high - 50) * 0.24;
+        }
+
+        const fxIn = oCtx.createGain();
+        const fxOut = oCtx.createGain();
+        const dry = oCtx.createGain(); dry.gain.value = 1;
+        fxIn.connect(dry); dry.connect(fxOut);
+        if (t.effects?.delay) {
+          const dn = oCtx.createDelay(2); dn.delayTime.value = 0.28;
+          const fb = oCtx.createGain(); fb.gain.value = 0.32;
+          const wet = oCtx.createGain(); wet.gain.value = 0.4;
+          fxIn.connect(dn); dn.connect(fb); fb.connect(dn);
+          dn.connect(wet); wet.connect(fxOut);
+        }
+        if (t.effects?.reverb) {
+          const conv = oCtx.createConvolver();
+          // build small IR
+          const irLen = Math.floor(sr * 1.8);
+          const irBuf = oCtx.createBuffer(2, irLen, sr);
+          for (let ch = 0; ch < 2; ch++) {
+            const data = irBuf.getChannelData(ch);
+            for (let i = 0; i < irLen; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 3);
+          }
+          conv.buffer = irBuf;
+          const wet = oCtx.createGain(); wet.gain.value = 0.35;
+          fxIn.connect(conv); conv.connect(wet); wet.connect(fxOut);
+        }
+
+        eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(fxIn);
+        fxOut.connect(panNode); panNode.connect(trkGain); trkGain.connect(masterOut);
+
+        if (t.isMIDI && t.midiNotes?.length) {
+          const preset = GM_INSTRUMENTS[t.instrumentIndex || 0] || GM_INSTRUMENTS[0];
+          const s = preset.synth;
+          for (const n of t.midiNotes) {
+            const freq = 440 * Math.pow(2, (n.pitch - 69) / 12);
+            const v = Math.max(0.05, Math.min(0.9, (n.velocity || 100) / 127));
+            const startT = n.start * beatSec;
+            const stopT = startT + n.duration * beatSec;
+            const osc = oCtx.createOscillator();
+            osc.type = s.type;
+            osc.frequency.value = freq;
+            const filt = oCtx.createBiquadFilter();
+            filt.type = 'lowpass';
+            filt.frequency.value = s.cutoff || 4000;
+            const env = oCtx.createGain();
+            const attack = Math.min(s.attack, Math.max(0.005, (stopT - startT) * 0.4));
+            env.gain.setValueAtTime(0, startT);
+            env.gain.linearRampToValueAtTime(v, startT + attack);
+            env.gain.linearRampToValueAtTime(v * s.sustain, startT + attack + s.decay);
+            env.gain.setValueAtTime(v * s.sustain, stopT);
+            env.gain.linearRampToValueAtTime(0, stopT + s.release);
+            osc.connect(filt); filt.connect(env); env.connect(eqLow);
+            osc.start(startT);
+            osc.stop(stopT + s.release + 0.05);
+          }
+        } else {
+          // audio track playback - look up engine buffer
+          const enTrk = engine.tracks.get(t.id);
+          if (enTrk && enTrk.audioBuffer) {
+            const src = oCtx.createBufferSource();
+            src.buffer = enTrk.audioBuffer;
+            src.connect(eqLow);
+            src.start(0);
+          }
+        }
+      }
+
+      // simulate progress
+      const progInterval = setInterval(() => {
+        setBounceProgress(p => Math.min(95, p + 4));
+      }, 100);
+      const rendered = await oCtx.startRendering();
+      clearInterval(progInterval);
+      setBounceProgress(100);
+      const blob = audioBufferToWavBlob(rendered);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Riba_Bounce_${Date.now()}.wav`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatusMsg(`Bounce Mix complete: ${maxSec.toFixed(1)}s WAV downloaded`);
+    } catch (e) {
+      console.error(e);
+      setStatusMsg('Bounce failed: ' + e.message);
+    } finally {
+      setBouncing(false);
+      setTimeout(() => setBounceProgress(0), 800);
+    }
+  }, [tracks, tempo, masterVol]);
+
+  // --- Edit menu ---
+  const cutTrack = useCallback(() => {
+    const t = helpers.getSelectedTrack();
+    if (!t) { setStatusMsg('Select a track first'); return; }
+    pushUndo();
+    clipboardRef.current = JSON.parse(JSON.stringify(t));
+    deleteTrack(t.id);
+    setStatusMsg(`Cut: ${t.displayName}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId, pushUndo, deleteTrack]);
+
+  const copyTrack = useCallback(() => {
+    const t = helpers.getSelectedTrack();
+    if (!t) { setStatusMsg('Select a track first'); return; }
+    clipboardRef.current = JSON.parse(JSON.stringify(t));
+    setStatusMsg(`Copied: ${t.displayName}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId]);
+
+  const pasteTrack = useCallback(() => {
+    const src = clipboardRef.current;
+    if (!src) { setStatusMsg('Clipboard empty'); return; }
+    pushUndo();
+    const id = uid();
+    const copy = { ...src, id, displayName: src.displayName + ' (copy)', isPlaying: false, isSolo: false };
+    const n = engine.getOrCreateTrack(id);
+    if (copy.isMIDI && copy.midiNotes?.length) n.setMIDI(copy.midiNotes);
+    n.setVolume((copy.volume || 80) / 100);
+    n.setPan((copy.pan || 0) / 50);
+    n.setEQ(copy.eq.bass, copy.eq.mid, copy.eq.high, copy.eq.enabled);
+    n.setInstrument(copy.instrumentIndex || 0);
+    if (copy.effects?.reverb) n.setReverb(true);
+    if (copy.effects?.delay) n.setDelay(true);
+    setTracks(prev => [...prev, copy]);
+    setStatusMsg(`Pasted: ${copy.displayName}`);
+  }, [pushUndo]);
+
+  const separateClip = useCallback(() => {
+    const t = helpers.getSelectedTrack();
+    if (!t || !t.isMIDI) { setStatusMsg('Select a MIDI track to split'); return; }
+    const cutAt = playheadBeatRef.current;
+    if (cutAt <= 0) { setStatusMsg('Position playhead in the middle of the clip first'); return; }
+    pushUndo();
+    const left = (t.midiNotes || []).filter(n => n.start < cutAt).map(n => ({
+      ...n, duration: Math.min(n.duration, cutAt - n.start),
+    }));
+    const right = (t.midiNotes || []).filter(n => (n.start + n.duration) > cutAt).map(n => ({
+      ...n, start: Math.max(0, n.start - cutAt),
+      duration: n.start < cutAt ? (n.start + n.duration - cutAt) : n.duration,
+    }));
+    // mutate original to be left part
+    setTracks(prev => prev.map(tt => tt.id === t.id ? { ...tt, midiNotes: left, displayName: tt.displayName + ' [L]' } : tt));
+    engine.loadMIDI(t.id, left);
+    // create new right track
+    const newId = uid();
+    const peaks = new Array(80).fill(0).map((_, i) => 0.15 + 0.6 * Math.abs(Math.sin(i * 0.3)));
+    const rightTrack = {
+      ...t, id: newId, displayName: t.displayName + ' [R]',
+      isPlaying: false, isSolo: false,
+      midiNotes: right, peaks,
+    };
+    const n = engine.getOrCreateTrack(newId);
+    n.setMIDI(right);
+    n.setVolume((t.volume || 80) / 100);
+    n.setPan((t.pan || 0) / 50);
+    n.setEQ(t.eq.bass, t.eq.mid, t.eq.high, t.eq.enabled);
+    n.setInstrument(t.instrumentIndex || 0);
+    if (t.effects?.reverb) n.setReverb(true);
+    if (t.effects?.delay) n.setDelay(true);
+    setTracks(prev => [...prev, rightTrack]);
+    setStatusMsg(`Clip split at beat ${cutAt.toFixed(2)} (L: ${left.length} notes, R: ${right.length} notes)`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId, pushUndo]);
+
+  const consolidateClip = useCallback(() => {
+    const t = helpers.getSelectedTrack();
+    if (!t || !t.isMIDI) { setStatusMsg('Select a MIDI track to consolidate'); return; }
+    pushUndo();
+    // sort notes by start, dedupe overlapping same-pitch
+    const notes = [...(t.midiNotes || [])].sort((a, b) => a.start - b.start);
+    const cleaned = [];
+    for (const n of notes) {
+      const dup = cleaned.find(c => c.pitch === n.pitch && Math.abs(c.start - n.start) < 0.05);
+      if (!dup) cleaned.push(n);
+    }
+    setTracks(prev => prev.map(tt => tt.id === t.id ? { ...tt, midiNotes: cleaned } : tt));
+    engine.loadMIDI(t.id, cleaned);
+    setStatusMsg(`Consolidated: ${notes.length} → ${cleaned.length} notes`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId, pushUndo]);
+
+  // --- Track menu ---
+  const groupTracks = useCallback(() => {
+    if (tracks.length < 2) { setStatusMsg('Need at least 2 tracks to group'); return; }
+    pushUndo();
+    const groupColor = '#A78BFA';
+    setTracks(prev => prev.map(t => ({ ...t, color: groupColor, groupId: 'group_1' })));
+    setStatusMsg(`Grouped ${tracks.length} tracks (color synced)`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, pushUndo]);
+
+  const duplicateTrack = useCallback(() => {
+    const t = helpers.getSelectedTrack();
+    if (!t) { setStatusMsg('Select a track first'); return; }
+    pushUndo();
+    const id = uid();
+    const copy = JSON.parse(JSON.stringify(t));
+    copy.id = id;
+    copy.displayName = t.displayName + ' (dup)';
+    copy.isPlaying = false; copy.isSolo = false;
+    const n = engine.getOrCreateTrack(id);
+    if (copy.isMIDI && copy.midiNotes?.length) n.setMIDI(copy.midiNotes);
+    n.setVolume((copy.volume || 80) / 100);
+    n.setPan((copy.pan || 0) / 50);
+    n.setEQ(copy.eq.bass, copy.eq.mid, copy.eq.high, copy.eq.enabled);
+    n.setInstrument(copy.instrumentIndex || 0);
+    if (copy.effects?.reverb) n.setReverb(true);
+    if (copy.effects?.delay) n.setDelay(true);
+    const idx = tracks.findIndex(tt => tt.id === t.id);
+    setTracks(prev => {
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+    setStatusMsg(`Duplicated: ${t.displayName}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId, pushUndo]);
+
+  const freezeTrack = useCallback(async () => {
+    const t = helpers.getSelectedTrack();
+    if (!t) { setStatusMsg('Select a track first'); return; }
+    if (!t.isMIDI) { setStatusMsg('Only MIDI tracks need freezing'); return; }
+    pushUndo();
+    setStatusMsg(`Freezing "${t.displayName}"...`);
+    try {
+      const blob = await engine.renderTrackToWav(t.id, tempo);
+      if (!blob) throw new Error('render failed');
+      // load the rendered buffer back into the engine
+      const buf = await blob.arrayBuffer();
+      const decoded = await engine.ensureCtx().decodeAudioData(buf.slice(0));
+      const enTrk = engine.getOrCreateTrack(t.id);
+      enTrk.loadAudio(decoded);
+      const peaks = engine.computePeaks(decoded, 200);
+      // mark frozen and keep MIDI for unfreezing
+      setTracks(prev => prev.map(tt => tt.id === t.id ? {
+        ...tt, isMIDI: false, isFrozen: true,
+        _frozenMidi: tt.midiNotes, _frozenInstrument: tt.instrumentIndex,
+        peaks, displayName: tt.displayName + ' ❄️',
+      } : tt));
+      setStatusMsg(`Track frozen — CPU saved. (Re-enable by editing again)`);
+    } catch (e) {
+      setStatusMsg('Freeze failed: ' + e.message);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId, tempo, pushUndo]);
+
+  const commitTrack = useCallback(async () => {
+    const t = helpers.getSelectedTrack();
+    if (!t) { setStatusMsg('Select a track first'); return; }
+    if (!t.isMIDI) { setStatusMsg('Only MIDI tracks can be committed'); return; }
+    pushUndo();
+    setStatusMsg(`Committing "${t.displayName}" to audio...`);
+    try {
+      const blob = await engine.renderTrackToWav(t.id, tempo);
+      if (!blob) throw new Error('render failed');
+      const buf = await blob.arrayBuffer();
+      const decoded = await engine.ensureCtx().decodeAudioData(buf.slice(0));
+      const enTrk = engine.getOrCreateTrack(t.id);
+      enTrk.loadAudio(decoded);
+      const peaks = engine.computePeaks(decoded, 200);
+      setTracks(prev => prev.map(tt => tt.id === t.id ? {
+        ...tt, isMIDI: false, isCommitted: true, midiNotes: [],
+        peaks, displayName: tt.displayName + ' [committed]',
+        trackType: 'other', color: TRACK_COLORS.other,
+      } : tt));
+      setStatusMsg('Track committed permanently to audio');
+    } catch (e) {
+      setStatusMsg('Commit failed: ' + e.message);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId, tempo, pushUndo]);
+
+  // --- AudioSuite (destructive processing) ---
+  const audioSuiteProcess = useCallback(async (type) => {
+    const t = helpers.getSelectedTrack();
+    if (!t) { setStatusMsg('Select an audio track first'); return; }
+    const enTrk = engine.tracks.get(t.id);
+    if (!enTrk?.audioBuffer) { setStatusMsg('AudioSuite only works on audio tracks'); return; }
+    pushUndo();
+    setStatusMsg(`AudioSuite: ${type} on "${t.displayName}"...`);
+    try {
+      const sr = enTrk.audioBuffer.sampleRate;
+      const ch = enTrk.audioBuffer.numberOfChannels;
+      const dur = enTrk.audioBuffer.duration + (type === 'reverb' ? 1.5 : 0);
+      const oCtx = new OfflineAudioContext(ch, Math.ceil(dur * sr), sr);
+      const src = oCtx.createBufferSource();
+      src.buffer = enTrk.audioBuffer;
+      let last = src;
+      if (type === 'gain') {
+        const gain = oCtx.createGain();
+        gain.gain.value = 1.6; // +4 dB destructive
+        last.connect(gain); last = gain;
+      } else if (type === 'eq') {
+        const low = oCtx.createBiquadFilter(); low.type = 'lowshelf'; low.frequency.value = 200; low.gain.value = 4;
+        const mid = oCtx.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 1000; mid.Q.value = 1; mid.gain.value = -2;
+        const high = oCtx.createBiquadFilter(); high.type = 'highshelf'; high.frequency.value = 5000; high.gain.value = 3;
+        last.connect(low); low.connect(mid); mid.connect(high); last = high;
+      } else if (type === 'reverb') {
+        const conv = oCtx.createConvolver();
+        const irLen = Math.floor(sr * 1.8);
+        const irBuf = oCtx.createBuffer(2, irLen, sr);
+        for (let cIdx = 0; cIdx < 2; cIdx++) {
+          const data = irBuf.getChannelData(cIdx);
+          for (let i = 0; i < irLen; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 3);
+        }
+        conv.buffer = irBuf;
+        const wet = oCtx.createGain(); wet.gain.value = 0.4;
+        const dry = oCtx.createGain(); dry.gain.value = 1;
+        last.connect(dry); dry.connect(oCtx.destination);
+        last.connect(conv); conv.connect(wet); wet.connect(oCtx.destination);
+        src.start(0);
+        const rendered2 = await oCtx.startRendering();
+        enTrk.loadAudio(rendered2);
+        const peaks2 = engine.computePeaks(rendered2, 200);
+        setTracks(prev => prev.map(tt => tt.id === t.id ? { ...tt, peaks: peaks2, displayName: tt.displayName + ' [reverb]' } : tt));
+        setStatusMsg(`AudioSuite Reverb applied destructively`);
+        return;
+      }
+      last.connect(oCtx.destination);
+      src.start(0);
+      const rendered = await oCtx.startRendering();
+      enTrk.loadAudio(rendered);
+      const peaks = engine.computePeaks(rendered, 200);
+      const tag = type === 'gain' ? ' [gain+]' : ' [eq]';
+      setTracks(prev => prev.map(tt => tt.id === t.id ? { ...tt, peaks, displayName: tt.displayName + tag } : tt));
+      setStatusMsg(`AudioSuite ${type} applied destructively`);
+    } catch (e) {
+      setStatusMsg('AudioSuite failed: ' + e.message);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId, pushUndo]);
+
   // === Keyboard shortcuts ===
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === 's') { e.preventDefault(); saveSession(); }
+        if (e.key === 'n' && !e.shiftKey) { e.preventDefault(); newSession(); }
+        else if (e.key === 'N' || (e.key === 'n' && e.shiftKey)) { e.preventDefault(); addMIDITrack(); }
+        else if (e.key === 's') { e.preventDefault(); saveSession(); }
         else if (e.key === 'o') { e.preventDefault(); loadSession(); }
-        else if (e.key === 'e') { e.preventDefault(); exportSession(); }
+        else if (e.key === 'e' && !e.shiftKey) { e.preventDefault(); separateClip(); }
+        else if (e.key === 'E' || (e.key === 'e' && e.shiftKey)) { e.preventDefault(); exportSession(); }
+        else if (e.key === 'I' || (e.key === 'i' && e.shiftKey)) { e.preventDefault(); fileInputRef.current?.click(); }
+        else if (e.key === 'g') { e.preventDefault(); groupTracks(); }
+        else if (e.key === 'x') { e.preventDefault(); cutTrack(); }
+        else if (e.key === 'c') { e.preventDefault(); copyTrack(); }
+        else if (e.key === 'v') { e.preventDefault(); pasteTrack(); }
         else if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
         else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+        else if (e.altKey && e.key === 'b') { e.preventDefault(); bounceMix(); }
         return;
       }
       if (e.code === 'Space') { e.preventDefault(); playAll(); }
@@ -775,25 +1253,55 @@ export default function Daw() {
         openMenu={openMenu}
         setOpenMenu={setOpenMenu}
         actions={{
-          newSession: clearAll,
-          openProject: () => projectFileInputRef.current?.click(),
+          // File
+          newSession,
           loadSession,
           saveSession,
-          exportSession,
+          saveCopyIn,
+          importAudio: () => fileInputRef.current?.click(),
+          importSessionData,
+          openProject: () => projectFileInputRef.current?.click(),
+          bounceMix,
           exportStems,
+          exportSession,
+          // Edit
           undo, redo,
-          addAudio: () => fileInputRef.current?.click(),
+          cutTrack, copyTrack, pasteTrack,
+          separateClip, consolidateClip,
+          // Track
           addMIDI: addMIDITrack,
+          addAudio: () => fileInputRef.current?.click(),
+          groupTracks,
+          duplicateTrack,
+          freezeTrack,
+          commitTrack,
+          deleteSelected: () => { const t = tracks.find(x => x.id === selectedTrackId); if (t) deleteTrack(t.id); },
+          // Event
+          openDream: () => setDreamOpen(true),
+          openHistory: loadDreamHistory,
+          openPiano: () => { const t = tracks.find(x => x.id === selectedTrackId); if (t && t.isMIDI) setPianoTrackId(t.id); else setStatusMsg('Select a MIDI track first'); },
+          // AudioSuite
+          asGain: () => audioSuiteProcess('gain'),
+          asEq: () => audioSuiteProcess('eq'),
+          asReverb: () => audioSuiteProcess('reverb'),
+          magic12Sep: magic12Separate,
+          magic12Master,
+          // Tools
+          toggleMetronome,
+          toggleLoop,
+          toggleRecord: toggleRecording,
+          // View
           openMixer: () => setMixerOpen(true),
+          toggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+          // Setup
+          openPlayback: () => { setSetupTab('playback'); setSetupOpen(true); },
+          openIO: () => { setSetupTab('io'); setSetupOpen(true); },
+          openPrefs: () => { setSetupTab('preferences'); setSetupOpen(true); },
           openGM: () => setGmOpen(true),
           openVst: scanVst,
           openPlugins: () => setPluginsOpen(true),
-          openDream: () => setDreamOpen(true),
-          openHistory: loadDreamHistory,
-          toggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+          // Help
           openManual: () => setManualOpen(true),
-          toggleMetronome,
-          toggleLoop,
         }}
       />
 
@@ -1087,6 +1595,8 @@ export default function Daw() {
                 index={i}
                 track={t}
                 color={t.color}
+                isSelected={t.id === selectedTrackId}
+                onSelect={(id) => setSelectedTrackId(id)}
                 onAction={handleTrackAction}
               />
             ))
@@ -1421,55 +1931,168 @@ export default function Daw() {
           </div>
         </div>
       )}
+
+      {bouncing && (
+        <div style={{
+          position: 'fixed', bottom: 36, right: 16, zIndex: 200,
+          background: '#18181B', border: '1px solid rgba(34, 197, 94, 0.4)',
+          borderRadius: 10, padding: 12, minWidth: 280,
+          boxShadow: '0 0 30px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Export size={16} color="#22C55E" />
+            <div className="font-heading" style={{ fontSize: 14, fontWeight: 700 }}>Bouncing Mix...</div>
+          </div>
+          <div className="font-mono-r" style={{ fontSize: 11, color: '#A1A1AA' }}>
+            Rendering offline · {bounceProgress}%
+          </div>
+          <div style={{ height: 6, background: '#27272A', borderRadius: 3, overflow: 'hidden', marginTop: 6 }}>
+            <div style={{
+              height: '100%', width: `${bounceProgress}%`,
+              background: 'linear-gradient(90deg, #22C55E, #6366F1)',
+              transition: 'width 0.2s ease-out'
+            }} />
+          </div>
+        </div>
+      )}
+
+      {setupOpen && (
+        <Modal title={`Setup · ${setupTab === 'playback' ? 'Playback Engine' : setupTab === 'io' ? 'I/O Setup' : 'Preferences'}`} onClose={() => setSetupOpen(false)}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
+            {[['playback', 'Playback Engine'], ['io', 'I/O Setup'], ['preferences', 'Preferences']].map(([k, l]) => (
+              <button key={k} className="riba-btn" data-active={setupTab === k}
+                onClick={() => setSetupTab(k)}
+                style={{ fontSize: 11 }}>{l}</button>
+            ))}
+          </div>
+          {setupTab === 'playback' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+              <SetupRow label="Audio Engine" value="Web Audio API" />
+              <SetupRow label="Sample Rate" value={`${engine.ctx?.sampleRate || 48000} Hz`} />
+              <SetupRow label="Buffer Size" value={`${engine.ctx?.baseLatency ? Math.round(engine.ctx.baseLatency * 1000) : '~'} ms (system)`} />
+              <SetupRow label="Output Latency" value={`${engine.ctx?.outputLatency ? Math.round(engine.ctx.outputLatency * 1000) : '~'} ms`} />
+              <SetupRow label="State" value={engine.ctx?.state || 'not started'} />
+              <div style={{ marginTop: 8, color: '#A1A1AA', fontSize: 11 }}>
+                ⚠️ Native ASIO / CoreAudio drivers cannot be selected in browsers. For lower latency, consider the desktop build (Electron + ASIO host).
+              </div>
+            </div>
+          )}
+          {setupTab === 'io' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+              <SetupRow label="Input" value="Default microphone (getUserMedia)" />
+              <SetupRow label="Output" value="Default speakers (AudioDestinationNode)" />
+              <SetupRow label="Active Input Channels" value="1 (mono mic capture)" />
+              <SetupRow label="Active Output Channels" value="2 (stereo)" />
+              <SetupRow label="Master Bus" value="Master Gain → Analyser → Destination" />
+            </div>
+          )}
+          {setupTab === 'preferences' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+              <SetupRow label="Theme" value={
+                <button className="riba-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{ fontSize: 11 }}>
+                  {theme === 'dark' ? 'Dark (click to switch)' : 'Light (click to switch)'}
+                </button>
+              } />
+              <SetupRow label="Tempo" value={`${tempo} BPM`} />
+              <SetupRow label="Time Signature" value={`${timeSig}/4`} />
+              <SetupRow label="Loop" value={looping ? 'ON' : 'OFF'} />
+              <SetupRow label="Metronome" value={metronomeOn ? 'ON' : 'OFF'} />
+              <SetupRow label="Auto-save" value="Disabled (use Ctrl+S manually)" />
+              <SetupRow label="Undo History" value={`${undoStackRef.current.length} / 30 steps`} />
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }
 
-// ====== MenuBar component ======
+function SetupRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+      <span style={{ color: '#A1A1AA' }}>{label}</span>
+      <span className="font-mono-r" style={{ color: '#FAFAFA', fontSize: 12 }}>{value}</span>
+    </div>
+  );
+}
+
+// ====== MenuBar component (Pro Tools-style) ======
+const PRO_TOOLS_MENUS = {
+  File: [
+    { id: 'file_new_session', label: 'New Session...', shortcut: 'Ctrl+N', key: 'newSession' },
+    { id: 'file_open_session', label: 'Open Session...', shortcut: 'Ctrl+O', key: 'loadSession' },
+    { id: 'file_save', label: 'Save', shortcut: 'Ctrl+S', key: 'saveSession' },
+    { id: 'file_save_copy_in', label: 'Save Copy In...', key: 'saveCopyIn' },
+    { sep: true },
+    { id: 'file_import_audio', label: 'Import Audio...', shortcut: 'Ctrl+Shift+I', key: 'importAudio' },
+    { id: 'file_import_session_data', label: 'Import Session Data...', key: 'importSessionData' },
+    { id: 'file_import_project_json', label: 'Import Project JSON...', key: 'openProject' },
+    { sep: true },
+    { id: 'file_bounce_mix', label: 'Bounce Mix...', shortcut: 'Ctrl+Alt+B', key: 'bounceMix' },
+    { id: 'file_export_stems', label: 'Export Stems (WAV)', key: 'exportStems' },
+    { id: 'file_export_json', label: 'Export Session JSON', key: 'exportSession' },
+  ],
+  Edit: [
+    { id: 'edit_undo', label: 'Undo', shortcut: 'Ctrl+Z', key: 'undo' },
+    { id: 'edit_redo', label: 'Redo', shortcut: 'Ctrl+Y', key: 'redo' },
+    { sep: true },
+    { id: 'edit_cut', label: 'Cut', shortcut: 'Ctrl+X', key: 'cutTrack' },
+    { id: 'edit_copy', label: 'Copy', shortcut: 'Ctrl+C', key: 'copyTrack' },
+    { id: 'edit_paste', label: 'Paste', shortcut: 'Ctrl+V', key: 'pasteTrack' },
+    { sep: true },
+    { id: 'edit_separate_clip', label: 'Separate Clip At Selection', shortcut: 'Ctrl+E', key: 'separateClip' },
+    { id: 'edit_consolidate', label: 'Consolidate Clip', shortcut: 'Alt+Shift+3', key: 'consolidateClip' },
+  ],
+  Track: [
+    { id: 'track_new_midi', label: 'New MIDI Track', shortcut: 'Ctrl+Shift+N', key: 'addMIDI' },
+    { id: 'track_new_audio', label: 'New Audio Track (import)', key: 'addAudio' },
+    { id: 'track_group', label: 'Group Tracks...', shortcut: 'Ctrl+G', key: 'groupTracks' },
+    { id: 'track_duplicate', label: 'Duplicate Track...', key: 'duplicateTrack' },
+    { sep: true },
+    { id: 'track_freeze', label: 'Freeze Track', key: 'freezeTrack' },
+    { id: 'track_commit', label: 'Commit Track...', shortcut: 'Alt+Shift+C', key: 'commitTrack' },
+    { sep: true },
+    { id: 'track_delete', label: 'Delete Selected', key: 'deleteSelected' },
+  ],
+  Event: [
+    { id: 'event_dream', label: 'Dream Track (AI)', key: 'openDream' },
+    { id: 'event_history', label: 'Dream History', key: 'openHistory' },
+    { sep: true },
+    { id: 'event_piano', label: 'Open Piano Roll', key: 'openPiano' },
+  ],
+  AudioSuite: [
+    { id: 'as_gain', label: 'Gain (Destructive)', key: 'asGain' },
+    { id: 'as_eq', label: 'EQ / Filter', key: 'asEq' },
+    { id: 'as_reverb', label: 'Reverb Process', key: 'asReverb' },
+    { sep: true },
+    { id: 'as_separate', label: 'Magic12 Source Separation', key: 'magic12Sep' },
+    { id: 'as_master', label: 'Magic12 AI Mastering', key: 'magic12Master' },
+  ],
+  Tools: [
+    { id: 'tools_metronome', label: 'Toggle Metronome', shortcut: 'M', key: 'toggleMetronome' },
+    { id: 'tools_loop', label: 'Toggle Loop', shortcut: 'L', key: 'toggleLoop' },
+    { id: 'tools_record', label: 'Toggle Record', key: 'toggleRecord' },
+  ],
+  View: [
+    { id: 'view_mixer', label: 'Mixer', key: 'openMixer' },
+    { id: 'view_theme', label: 'Toggle Theme', key: 'toggleTheme' },
+  ],
+  Setup: [
+    { id: 'setup_playback', label: 'Playback Engine...', key: 'openPlayback' },
+    { id: 'setup_io', label: 'I/O Setup...', key: 'openIO' },
+    { id: 'setup_preferences', label: 'Preferences...', key: 'openPrefs' },
+    { sep: true },
+    { id: 'setup_gm', label: 'GM 128 Instruments', key: 'openGM' },
+    { id: 'setup_vst', label: 'VST Scan', key: 'openVst' },
+    { id: 'setup_plugins', label: 'Plugins List', key: 'openPlugins' },
+  ],
+  Help: [
+    { id: 'help_manual', label: 'User Manual...', shortcut: 'F1', key: 'openManual' },
+  ],
+};
+
 function MenuBar({ openMenu, setOpenMenu, actions }) {
   const close = () => setOpenMenu(null);
-  const items = {
-    File: [
-      ['New Session', actions.newSession],
-      ['Open Project (JSON)', () => { actions.openProject(); close(); }],
-      ['Load Session', () => { actions.loadSession(); close(); }],
-      ['Save Session', () => { actions.saveSession(); close(); }],
-      ['Export Session JSON', () => { actions.exportSession(); close(); }],
-      ['Export Stems (WAV)', () => { actions.exportStems(); close(); }],
-    ],
-    Edit: [
-      ['Undo  (Ctrl+Z)', () => { actions.undo(); close(); }],
-      ['Redo  (Ctrl+Y)', () => { actions.redo(); close(); }],
-    ],
-    Track: [
-      ['Add Audio', () => { actions.addAudio(); close(); }],
-      ['Add MIDI', () => { actions.addMIDI(); close(); }],
-    ],
-    Event: [
-      ['Dream Track (AI)', () => { actions.openDream(); close(); }],
-      ['Dream History', () => { actions.openHistory(); close(); }],
-    ],
-    AudioSuite: [
-      ['Plugins List', () => { actions.openPlugins(); close(); }],
-      ['VST Scan', () => { actions.openVst(); close(); }],
-      ['GM 128 Instruments', () => { actions.openGM(); close(); }],
-    ],
-    Tools: [
-      ['Toggle Metronome (M)', () => { actions.toggleMetronome(); close(); }],
-      ['Toggle Loop (L)', () => { actions.toggleLoop(); close(); }],
-    ],
-    View: [
-      ['Mixer', () => { actions.openMixer(); close(); }],
-      ['Toggle Theme', () => { actions.toggleTheme(); close(); }],
-    ],
-    Options: [
-      ['User Manual (F1)', () => { actions.openManual(); close(); }],
-    ],
-    Help: [
-      ['Manual (F1)', () => { actions.openManual(); close(); }],
-    ],
-  };
-
   return (
     <div style={{
       height: 32, background: '#0B0B0E', borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -1477,7 +2100,7 @@ function MenuBar({ openMenu, setOpenMenu, actions }) {
     }}
       onMouseLeave={close}
     >
-      {Object.keys(items).map((key, idx) => (
+      {Object.keys(PRO_TOOLS_MENUS).map((key, idx) => (
         <div
           key={key}
           data-testid={`menu-${key.toLowerCase()}`}
@@ -1487,7 +2110,7 @@ function MenuBar({ openMenu, setOpenMenu, actions }) {
             padding: '0 12px', display: 'flex', alignItems: 'center',
             fontSize: 12, color: openMenu === key ? '#FAFAFA' : '#A1A1AA',
             cursor: 'pointer', background: openMenu === key ? '#1F1F23' : 'transparent',
-            borderRadius: 3, marginLeft: idx === Object.keys(items).length - 1 ? 'auto' : 0,
+            borderRadius: 3, marginLeft: idx === Object.keys(PRO_TOOLS_MENUS).length - 1 ? 'auto' : 0,
             position: 'relative', userSelect: 'none'
           }}
         >
@@ -1496,21 +2119,39 @@ function MenuBar({ openMenu, setOpenMenu, actions }) {
             <div style={{
               position: 'absolute', top: '100%', left: 0,
               background: '#1F1F23', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 6, padding: 4, minWidth: 220, zIndex: 50,
+              borderRadius: 6, padding: 4, minWidth: 280, zIndex: 50,
               boxShadow: '0 8px 20px rgba(0,0,0,0.5)'
             }}>
-              {items[key].map(([label, fn], i) => (
-                <div
-                  key={i}
-                  onClick={(e) => { e.stopPropagation(); fn(); }}
-                  style={{
-                    padding: '6px 10px', fontSize: 12, color: '#E4E4E7',
-                    borderRadius: 4, cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#2F2F35'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >{label}</div>
-              ))}
+              {PRO_TOOLS_MENUS[key].map((item, i) => {
+                if (item.sep) {
+                  return <div key={`sep-${i}`} style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />;
+                }
+                const fn = actions[item.key];
+                const disabled = !fn;
+                return (
+                  <div
+                    key={item.id}
+                    data-testid={`menuitem-${item.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!disabled) { fn(); close(); }
+                    }}
+                    style={{
+                      padding: '6px 10px', fontSize: 12,
+                      color: disabled ? '#52525B' : '#E4E4E7',
+                      borderRadius: 4, cursor: disabled ? 'not-allowed' : 'pointer',
+                      display: 'flex', justifyContent: 'space-between', gap: 16
+                    }}
+                    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#2F2F35'; }}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>{item.label}</span>
+                    {item.shortcut && (
+                      <span className="font-mono-r" style={{ fontSize: 10, color: '#71717A' }}>{item.shortcut}</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1520,7 +2161,7 @@ function MenuBar({ openMenu, setOpenMenu, actions }) {
 }
 
 // ====== Timeline component (self-animating; owns playhead state) ======
-function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap }) {
+function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap, onPositionChange }) {
   const containerRef = useRef(null);
   const headRef = useRef(null);
   const labelRef = useRef(null);
@@ -1552,6 +2193,7 @@ function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap }) 
         }
       }
       const beat = beatRef.current;
+      if (onPositionChange) onPositionChange(beat);
       const pct = Math.min(100, (beat / maxBeats) * 100);
       if (headRef.current) headRef.current.style.left = pct + '%';
       if (labelRef.current) {
@@ -1563,7 +2205,7 @@ function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap }) 
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap]);
+  }, [isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap, onPositionChange]);
 
   const handleClick = (e) => {
     const r = containerRef.current.getBoundingClientRect();
