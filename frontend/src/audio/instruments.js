@@ -1,0 +1,186 @@
+// General MIDI 128 instruments mapped to web-audio synthesis presets.
+// Each preset defines oscillator type, harmonic blend, envelope and an optional filter cutoff.
+// We approximate timbres - not exact GM but recognisable families.
+
+export const GM_FAMILIES = [
+  "Piano", "Chromatic Percussion", "Organ", "Guitar", "Bass",
+  "Strings", "Ensemble", "Brass", "Reed", "Pipe",
+  "Synth Lead", "Synth Pad", "Synth Effects", "Ethnic", "Percussive", "Sound Effects"
+];
+
+// Each entry: index 0-127. Name and synth params.
+// synth: { type, type2, mix, attack, decay, sustain, release, cutoff, vibrato }
+function p(type, attack = 0.01, decay = 0.15, sustain = 0.5, release = 0.25, cutoff = 4000, type2 = null, mix = 0, vibrato = 0) {
+  return { type, type2, mix, attack, decay, sustain, release, cutoff, vibrato };
+}
+
+export const GM_INSTRUMENTS = [
+  // 1-8 Pianos
+  { name: "Acoustic Grand Piano", synth: p("triangle", 0.002, 0.6, 0.0, 0.4, 5000, "sine", 0.3) },
+  { name: "Bright Acoustic Piano", synth: p("triangle", 0.002, 0.5, 0.05, 0.3, 6000, "square", 0.15) },
+  { name: "Electric Grand Piano", synth: p("sine", 0.005, 0.7, 0.1, 0.4, 4500, "triangle", 0.2) },
+  { name: "Honky-tonk Piano", synth: p("triangle", 0.002, 0.5, 0.0, 0.3, 4500, "sawtooth", 0.1) },
+  { name: "Electric Piano 1", synth: p("sine", 0.005, 0.4, 0.4, 0.6, 3500, "triangle", 0.5) },
+  { name: "Electric Piano 2", synth: p("sine", 0.005, 0.5, 0.3, 0.5, 4000, "square", 0.2) },
+  { name: "Harpsichord", synth: p("sawtooth", 0.002, 0.3, 0.0, 0.2, 3500) },
+  { name: "Clavinet", synth: p("square", 0.005, 0.2, 0.0, 0.2, 3000) },
+  // 9-16 Chromatic Percussion
+  { name: "Celesta", synth: p("sine", 0.002, 0.6, 0.0, 0.5, 6000, "triangle", 0.3) },
+  { name: "Glockenspiel", synth: p("sine", 0.002, 0.8, 0.0, 0.6, 8000) },
+  { name: "Music Box", synth: p("triangle", 0.002, 0.8, 0.0, 0.6, 5000, "sine", 0.4) },
+  { name: "Vibraphone", synth: p("sine", 0.01, 1.2, 0.0, 0.8, 4000, null, 0, 5) },
+  { name: "Marimba", synth: p("triangle", 0.002, 0.5, 0.0, 0.4, 3500) },
+  { name: "Xylophone", synth: p("square", 0.002, 0.5, 0.0, 0.3, 4500) },
+  { name: "Tubular Bells", synth: p("sine", 0.005, 1.5, 0.0, 1.2, 5000, "triangle", 0.4) },
+  { name: "Dulcimer", synth: p("triangle", 0.002, 0.7, 0.1, 0.5, 4000) },
+  // 17-24 Organ
+  { name: "Drawbar Organ", synth: p("sawtooth", 0.02, 0.1, 0.9, 0.1, 5000, "square", 0.3) },
+  { name: "Percussive Organ", synth: p("square", 0.005, 0.2, 0.7, 0.1, 4000) },
+  { name: "Rock Organ", synth: p("sawtooth", 0.005, 0.1, 0.9, 0.15, 5500, "square", 0.4) },
+  { name: "Church Organ", synth: p("sawtooth", 0.05, 0.1, 0.9, 0.4, 4500, "sine", 0.5) },
+  { name: "Reed Organ", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.3, 3500, "triangle", 0.3) },
+  { name: "Accordion", synth: p("sawtooth", 0.02, 0.1, 0.9, 0.15, 3500, "square", 0.2, 4) },
+  { name: "Harmonica", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 3000, null, 0, 5) },
+  { name: "Tango Accordion", synth: p("sawtooth", 0.02, 0.1, 0.85, 0.2, 3000, "square", 0.3, 5) },
+  // 25-32 Guitar
+  { name: "Acoustic Guitar (nylon)", synth: p("triangle", 0.005, 0.4, 0.1, 0.3, 3500, "sawtooth", 0.1) },
+  { name: "Acoustic Guitar (steel)", synth: p("triangle", 0.005, 0.4, 0.05, 0.3, 4500, "sawtooth", 0.2) },
+  { name: "Electric Guitar (jazz)", synth: p("triangle", 0.005, 0.5, 0.2, 0.4, 3000, "sine", 0.2) },
+  { name: "Electric Guitar (clean)", synth: p("triangle", 0.005, 0.5, 0.2, 0.4, 4000, "square", 0.15) },
+  { name: "Electric Guitar (muted)", synth: p("triangle", 0.005, 0.2, 0.0, 0.2, 2500) },
+  { name: "Overdriven Guitar", synth: p("sawtooth", 0.005, 0.6, 0.3, 0.3, 3500, "square", 0.4) },
+  { name: "Distortion Guitar", synth: p("square", 0.005, 0.6, 0.4, 0.3, 4500, "sawtooth", 0.5) },
+  { name: "Guitar Harmonics", synth: p("sine", 0.005, 0.7, 0.2, 0.5, 5500) },
+  // 33-40 Bass
+  { name: "Acoustic Bass", synth: p("triangle", 0.005, 0.4, 0.3, 0.3, 1200) },
+  { name: "Electric Bass (finger)", synth: p("triangle", 0.005, 0.4, 0.5, 0.3, 1500, "sine", 0.2) },
+  { name: "Electric Bass (pick)", synth: p("triangle", 0.002, 0.3, 0.4, 0.3, 1800, "sawtooth", 0.2) },
+  { name: "Fretless Bass", synth: p("sine", 0.01, 0.6, 0.4, 0.4, 1200, "triangle", 0.2) },
+  { name: "Slap Bass 1", synth: p("sawtooth", 0.002, 0.2, 0.0, 0.2, 2500, "square", 0.3) },
+  { name: "Slap Bass 2", synth: p("square", 0.002, 0.2, 0.0, 0.2, 2500) },
+  { name: "Synth Bass 1", synth: p("sawtooth", 0.005, 0.3, 0.5, 0.2, 1800) },
+  { name: "Synth Bass 2", synth: p("square", 0.005, 0.3, 0.5, 0.2, 1500) },
+  // 41-48 Strings
+  { name: "Violin", synth: p("sawtooth", 0.08, 0.2, 0.8, 0.4, 4500, "sine", 0.2, 5) },
+  { name: "Viola", synth: p("sawtooth", 0.08, 0.2, 0.8, 0.4, 3500, "sine", 0.2, 5) },
+  { name: "Cello", synth: p("sawtooth", 0.1, 0.2, 0.8, 0.5, 2500, null, 0, 4) },
+  { name: "Contrabass", synth: p("sawtooth", 0.1, 0.2, 0.8, 0.5, 1500, null, 0, 4) },
+  { name: "Tremolo Strings", synth: p("sawtooth", 0.05, 0.2, 0.8, 0.5, 3500, null, 0, 10) },
+  { name: "Pizzicato Strings", synth: p("triangle", 0.002, 0.3, 0.0, 0.2, 3500) },
+  { name: "Orchestral Harp", synth: p("triangle", 0.005, 0.8, 0.0, 0.6, 4500, "sine", 0.3) },
+  { name: "Timpani", synth: p("sine", 0.005, 0.8, 0.0, 0.5, 500) },
+  // 49-56 Ensemble
+  { name: "String Ensemble 1", synth: p("sawtooth", 0.15, 0.2, 0.9, 0.6, 4000, "sine", 0.3, 3) },
+  { name: "String Ensemble 2", synth: p("sawtooth", 0.2, 0.2, 0.9, 0.6, 3500, "triangle", 0.4, 3) },
+  { name: "Synth Strings 1", synth: p("sawtooth", 0.1, 0.2, 0.85, 0.5, 4000, "square", 0.3) },
+  { name: "Synth Strings 2", synth: p("sawtooth", 0.15, 0.2, 0.85, 0.5, 3500, "triangle", 0.3) },
+  { name: "Choir Aahs", synth: p("sine", 0.2, 0.3, 0.9, 0.5, 3000, "triangle", 0.4) },
+  { name: "Voice Oohs", synth: p("sine", 0.15, 0.3, 0.9, 0.5, 2500, "triangle", 0.3) },
+  { name: "Synth Voice", synth: p("triangle", 0.1, 0.3, 0.9, 0.4, 3000, "sine", 0.4) },
+  { name: "Orchestra Hit", synth: p("sawtooth", 0.005, 0.5, 0.1, 0.3, 4000) },
+  // 57-64 Brass
+  { name: "Trumpet", synth: p("sawtooth", 0.02, 0.1, 0.8, 0.2, 3500, "square", 0.2) },
+  { name: "Trombone", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.3, 2500, "triangle", 0.3) },
+  { name: "Tuba", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.3, 1500) },
+  { name: "Muted Trumpet", synth: p("sawtooth", 0.02, 0.1, 0.6, 0.2, 2800) },
+  { name: "French Horn", synth: p("sawtooth", 0.08, 0.1, 0.8, 0.3, 2800, "triangle", 0.3) },
+  { name: "Brass Section", synth: p("sawtooth", 0.05, 0.1, 0.85, 0.3, 3500, "square", 0.3) },
+  { name: "Synth Brass 1", synth: p("sawtooth", 0.02, 0.1, 0.8, 0.2, 3500, "square", 0.4) },
+  { name: "Synth Brass 2", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 3000, "square", 0.4) },
+  // 65-72 Reed
+  { name: "Soprano Sax", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 4000, null, 0, 4) },
+  { name: "Alto Sax", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 3500, null, 0, 4) },
+  { name: "Tenor Sax", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 3000, null, 0, 4) },
+  { name: "Baritone Sax", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.3, 2500, null, 0, 4) },
+  { name: "Oboe", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 4500, "triangle", 0.3) },
+  { name: "English Horn", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 3500, "triangle", 0.3) },
+  { name: "Bassoon", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.3, 2000) },
+  { name: "Clarinet", synth: p("square", 0.02, 0.1, 0.8, 0.2, 3500) },
+  // 73-80 Pipe
+  { name: "Piccolo", synth: p("sine", 0.02, 0.1, 0.8, 0.2, 6000, null, 0, 5) },
+  { name: "Flute", synth: p("sine", 0.05, 0.1, 0.8, 0.2, 4500, null, 0, 4) },
+  { name: "Recorder", synth: p("sine", 0.05, 0.1, 0.8, 0.2, 4000) },
+  { name: "Pan Flute", synth: p("sine", 0.05, 0.1, 0.8, 0.3, 4000, null, 0, 6) },
+  { name: "Blown Bottle", synth: p("sine", 0.1, 0.2, 0.7, 0.3, 3000) },
+  { name: "Shakuhachi", synth: p("sine", 0.05, 0.2, 0.7, 0.4, 3500, null, 0, 5) },
+  { name: "Whistle", synth: p("sine", 0.05, 0.1, 0.8, 0.2, 5500, null, 0, 5) },
+  { name: "Ocarina", synth: p("sine", 0.05, 0.1, 0.8, 0.2, 4500) },
+  // 81-88 Synth Lead
+  { name: "Lead 1 (square)", synth: p("square", 0.005, 0.1, 0.8, 0.2, 4000) },
+  { name: "Lead 2 (sawtooth)", synth: p("sawtooth", 0.005, 0.1, 0.8, 0.2, 4500) },
+  { name: "Lead 3 (calliope)", synth: p("sine", 0.05, 0.1, 0.8, 0.3, 4500, "triangle", 0.3) },
+  { name: "Lead 4 (chiff)", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 4000) },
+  { name: "Lead 5 (charang)", synth: p("sawtooth", 0.005, 0.1, 0.7, 0.2, 3500, "square", 0.4) },
+  { name: "Lead 6 (voice)", synth: p("triangle", 0.05, 0.1, 0.8, 0.3, 3500) },
+  { name: "Lead 7 (fifths)", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.3, 3500, "square", 0.4) },
+  { name: "Lead 8 (bass + lead)", synth: p("sawtooth", 0.005, 0.1, 0.7, 0.2, 3000, "square", 0.4) },
+  // 89-96 Synth Pad
+  { name: "Pad 1 (new age)", synth: p("sine", 0.3, 0.4, 0.9, 0.8, 3500, "triangle", 0.4) },
+  { name: "Pad 2 (warm)", synth: p("sawtooth", 0.4, 0.4, 0.9, 1.0, 2500, "sine", 0.5) },
+  { name: "Pad 3 (polysynth)", synth: p("sawtooth", 0.3, 0.4, 0.85, 0.8, 3500, "square", 0.4) },
+  { name: "Pad 4 (choir)", synth: p("sine", 0.4, 0.4, 0.9, 1.0, 3000, "triangle", 0.5) },
+  { name: "Pad 5 (bowed)", synth: p("sawtooth", 0.5, 0.4, 0.9, 1.0, 3000) },
+  { name: "Pad 6 (metallic)", synth: p("sawtooth", 0.2, 0.4, 0.85, 0.6, 4000, "square", 0.5) },
+  { name: "Pad 7 (halo)", synth: p("sine", 0.5, 0.4, 0.9, 1.2, 4000) },
+  { name: "Pad 8 (sweep)", synth: p("sawtooth", 0.5, 0.4, 0.8, 1.0, 3500, "triangle", 0.4) },
+  // 97-104 Synth Effects
+  { name: "FX 1 (rain)", synth: p("sine", 0.1, 0.5, 0.5, 0.5, 4000) },
+  { name: "FX 2 (soundtrack)", synth: p("sawtooth", 0.5, 0.5, 0.7, 1.0, 3500) },
+  { name: "FX 3 (crystal)", synth: p("sine", 0.05, 0.8, 0.0, 0.5, 6000) },
+  { name: "FX 4 (atmosphere)", synth: p("triangle", 0.3, 0.4, 0.8, 0.8, 3500) },
+  { name: "FX 5 (brightness)", synth: p("sawtooth", 0.05, 0.4, 0.8, 0.5, 5000) },
+  { name: "FX 6 (goblins)", synth: p("square", 0.3, 0.4, 0.7, 0.5, 2000, "sawtooth", 0.5) },
+  { name: "FX 7 (echoes)", synth: p("sine", 0.1, 0.8, 0.5, 1.0, 3500) },
+  { name: "FX 8 (sci-fi)", synth: p("sawtooth", 0.1, 0.5, 0.6, 0.5, 3000, "square", 0.5) },
+  // 105-112 Ethnic
+  { name: "Sitar", synth: p("sawtooth", 0.005, 0.6, 0.2, 0.5, 3500, "triangle", 0.4) },
+  { name: "Banjo", synth: p("triangle", 0.002, 0.4, 0.0, 0.3, 4000, "sawtooth", 0.2) },
+  { name: "Shamisen", synth: p("triangle", 0.002, 0.4, 0.0, 0.3, 4500) },
+  { name: "Koto", synth: p("triangle", 0.005, 0.5, 0.1, 0.4, 3500) },
+  { name: "Kalimba", synth: p("triangle", 0.002, 0.5, 0.0, 0.4, 3500, "sine", 0.3) },
+  { name: "Bagpipe", synth: p("sawtooth", 0.02, 0.1, 0.9, 0.2, 3000, "square", 0.4, 4) },
+  { name: "Fiddle", synth: p("sawtooth", 0.05, 0.2, 0.8, 0.3, 4000, null, 0, 5) },
+  { name: "Shanai", synth: p("sawtooth", 0.05, 0.1, 0.8, 0.2, 3500, null, 0, 4) },
+  // 113-120 Percussive
+  { name: "Tinkle Bell", synth: p("sine", 0.002, 0.7, 0.0, 0.5, 6000) },
+  { name: "Agogo", synth: p("triangle", 0.002, 0.3, 0.0, 0.2, 3500) },
+  { name: "Steel Drums", synth: p("triangle", 0.002, 0.4, 0.0, 0.4, 4500, "sine", 0.3) },
+  { name: "Woodblock", synth: p("square", 0.002, 0.1, 0.0, 0.1, 5000) },
+  { name: "Taiko Drum", synth: p("sine", 0.005, 0.3, 0.0, 0.2, 800) },
+  { name: "Melodic Tom", synth: p("triangle", 0.005, 0.3, 0.0, 0.2, 1500) },
+  { name: "Synth Drum", synth: p("triangle", 0.005, 0.3, 0.0, 0.2, 2000) },
+  { name: "Reverse Cymbal", synth: p("sawtooth", 0.5, 0.3, 0.5, 0.2, 6000) },
+  // 121-128 Sound Effects
+  { name: "Guitar Fret Noise", synth: p("sawtooth", 0.002, 0.1, 0.0, 0.1, 4000) },
+  { name: "Breath Noise", synth: p("sawtooth", 0.05, 0.2, 0.3, 0.3, 3000) },
+  { name: "Seashore", synth: p("sawtooth", 0.5, 0.5, 0.5, 0.5, 2000) },
+  { name: "Bird Tweet", synth: p("sine", 0.005, 0.2, 0.5, 0.2, 5000, null, 0, 8) },
+  { name: "Telephone Ring", synth: p("sine", 0.005, 0.3, 0.5, 0.2, 3500) },
+  { name: "Helicopter", synth: p("sawtooth", 0.02, 0.3, 0.8, 0.3, 800) },
+  { name: "Applause", synth: p("sawtooth", 0.1, 0.3, 0.5, 0.5, 3500) },
+  { name: "Gunshot", synth: p("sawtooth", 0.001, 0.1, 0.0, 0.05, 2000) },
+];
+
+// Fake VST list (purely cosmetic)
+export const FAKE_VST_PLUGINS = [
+  { name: "Serum", vendor: "Xfer Records", format: "VST3", path: "C:\\Program Files\\VST3\\Serum.vst3", category: "Synth" },
+  { name: "Massive X", vendor: "Native Instruments", format: "VST3", path: "C:\\Program Files\\Common Files\\VST3\\Massive X.vst3", category: "Synth" },
+  { name: "Kontakt 7", vendor: "Native Instruments", format: "VST3", path: "C:\\Program Files\\Common Files\\VST3\\Kontakt 7.vst3", category: "Sampler" },
+  { name: "Omnisphere 2", vendor: "Spectrasonics", format: "VST3", path: "C:\\Program Files\\VST3\\Omnisphere.vst3", category: "Synth" },
+  { name: "Diva", vendor: "u-he", format: "VST3", path: "C:\\Program Files\\VST3\\Diva.vst3", category: "Synth" },
+  { name: "Pro-Q 3", vendor: "FabFilter", format: "VST3", path: "C:\\Program Files\\VST3\\FabFilter Pro-Q 3.vst3", category: "EQ" },
+  { name: "Pro-C 2", vendor: "FabFilter", format: "VST3", path: "C:\\Program Files\\VST3\\FabFilter Pro-C 2.vst3", category: "Compressor" },
+  { name: "Pro-L 2", vendor: "FabFilter", format: "VST3", path: "C:\\Program Files\\VST3\\FabFilter Pro-L 2.vst3", category: "Limiter" },
+  { name: "Valhalla VintageVerb", vendor: "Valhalla DSP", format: "VST3", path: "C:\\Program Files\\VST3\\ValhallaVintageVerb.vst3", category: "Reverb" },
+  { name: "EchoBoy", vendor: "Soundtoys", format: "VST3", path: "C:\\Program Files\\VST3\\EchoBoy.vst3", category: "Delay" },
+  { name: "Decapitator", vendor: "Soundtoys", format: "VST3", path: "C:\\Program Files\\VST3\\Decapitator.vst3", category: "Distortion" },
+  { name: "Ozone 11", vendor: "iZotope", format: "VST3", path: "C:\\Program Files\\VST3\\Ozone 11.vst3", category: "Mastering" },
+  { name: "Neutron 4", vendor: "iZotope", format: "VST3", path: "C:\\Program Files\\VST3\\Neutron 4.vst3", category: "Channel Strip" },
+  { name: "RX 11", vendor: "iZotope", format: "VST3", path: "C:\\Program Files\\VST3\\RX 11.vst3", category: "Repair" },
+  { name: "Auto-Tune Pro X", vendor: "Antares", format: "VST3", path: "C:\\Program Files\\VST3\\Auto-Tune Pro X.vst3", category: "Pitch" },
+  { name: "Melodyne 5", vendor: "Celemony", format: "VST3", path: "C:\\Program Files\\VST3\\Melodyne 5.vst3", category: "Pitch" },
+  { name: "Pigments 4", vendor: "Arturia", format: "VST3", path: "C:\\Program Files\\VST3\\Pigments.vst3", category: "Synth" },
+  { name: "Analog Lab V", vendor: "Arturia", format: "VST3", path: "C:\\Program Files\\VST3\\Analog Lab V.vst3", category: "Synth" },
+  { name: "Sylenth1", vendor: "LennarDigital", format: "VST3", path: "C:\\Program Files\\VST3\\Sylenth1.vst3", category: "Synth" },
+  { name: "Spire", vendor: "Reveal Sound", format: "VST3", path: "C:\\Program Files\\VST3\\Spire.vst3", category: "Synth" },
+];

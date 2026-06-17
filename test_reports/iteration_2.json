@@ -1,0 +1,36 @@
+{
+  "summary": "Backend regression (7/7 pytest) PASSES. Frontend: tested all new v2 features per review. Found and fixed one critical bug: undo/redo crashed with 'n.loadMIDI is not a function' because restoreSnapshot called engine-level loadMIDI on a track object instead of track.setMIDI. After fix, all undo/redo flows work (button + Ctrl+Z/Y). Verified menu bar (9 menus, File dropdown shows New/Open/Load/Save/Export JSON/Export Stems), top transport (play/record/metronome/loop/undo/redo/tempo/master-vol/theme/manual all visible), timeline + playhead (click moves it; PLAY animates left% over time), L key toggles transport-loop data-active, MIDI track per-row controls (track-instrument 128 GM options, reverb/delay buttons toggle data-active), GM 128 modal applies instrument to all MIDI tracks, VST Scan popup shows 'Scanning VST' + % and completes in ~3-4s, Plugins modal lists Serum/Pro-Q 3/FabFilter/Massive X/Kontakt 7/Omnisphere/Diva etc., Mixer opens with per-track + Master sliders, Stems export triggers 'Exported N stem WAV file(s)' status, Project JSON import (programmatic file dispatch on hidden project-file-input) restored tempo=140, added one MIDI track 'Lead' with instrument '81. Lead 1 (square)' and reverb data-active=true.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_riba_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Hydration warning: React reports '<span> cannot be a child of <option>' from TrackRow.jsx line 65 (option containing data-ve-dynamic span). The element is injected by a dev wrapper (x-ve-dynamic), causes a console error but does not break behaviour. Consider rendering instrument label as a plain string child of <option> to silence this. Non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "Daw.jsx is now 1648 lines - the file should be split. MenuBar and Timeline can already be extracted to their own files; modals (GM, Plugins, Mixer, VST scan, Manual) are good candidates too.",
+    "engine.js exposes both engine.loadMIDI(id, notes) and track.setMIDI(notes); the API surface is easy to confuse (exactly the bug I just fixed). Consider renaming one of them or adding a track.loadMIDI alias delegating to setMIDI.",
+    "restoreSnapshot has `[tracks]` as dependency, which means every time tracks change the function reference changes and is captured by undo/redo callbacks. Works, but could grow heavy. Consider using a ref-based pattern.",
+    "Mocked features (Magic12 stem separation, MIDI<->Audio convert, VST scan, Plugins list, MP3-as-JSON export) are clearly listed in mocked_apis_list. They produce realistic-looking UI - consider a subtle 'simulated' tag.",
+    "Backend uses deprecated @app.on_event('shutdown'); consider FastAPI lifespan handlers (cosmetic)."
+  ],
+  "updated_files": [
+    "/app/frontend/src/components/Daw.jsx"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (all 13 review flows verified after fix)"},
+  "test_credentials": "N/A - app has no auth",
+  "seed_data_creation": "Backend test creates TEST_session_1 (CRUD then deletes); dream_history entries added by /api/dream/generate.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run backend regressions with `REACT_APP_BACKEND_URL=<url> pytest /app/backend/tests/ -v`. Frontend tests use [data-testid] from /app/frontend/src/constants/testIds.js. For project JSON import, use page.set_input_files on [data-testid=project-file-input] with mimeType application/json. Stems export does trigger a real WAV download via OfflineAudioContext; in headless Playwright the easiest signal is the status text 'Exported N stem WAV file(s)'. VST scan popup shows literal text 'Scanning VST' (not 'Scanning'), and completes in ~3-4s. Undo/Redo round-trip is now confirmed working (button and Ctrl+Z/Y).",
+  "rca of the issue": "BUG: clicking transport-undo (or Ctrl+Z) after any operation involving MIDI tracks threw 'TypeError: n.loadMIDI is not a function' and showed a full-screen runtime-error overlay that blocked subsequent UI (e.g., Plugins modal). ROOT CAUSE: in /app/frontend/src/components/Daw.jsx restoreSnapshot (line 116) called `n.loadMIDI(t.midiNotes)` on a Track instance. The Track API exposes `setMIDI(notes)`; `loadMIDI(id, notes)` is only on the AudioEngine top level. REPRODUCTION: add MIDI track -> GM 128 -> apply -> click Undo -> error overlay. FIX (applied): changed line 116 to `n.setMIDI(t.midiNotes)`. VERIFIED: GM apply 0->30, Undo button 30->0, Redo button 0->30, Ctrl+Z 30->0, Ctrl+Y 0->30, and Plugins modal now opens cleanly (no overlay)."
+}

@@ -3,9 +3,11 @@ import axios from 'axios';
 import {
   Play, Stop, Record, Sparkle, Clock, ClockClockwise, Sliders, Waveform as WaveIcon,
   Sun, Moon, BookOpen, Trash, FloppyDisk, FolderOpen, DownloadSimple, Plus,
-  Microphone, MusicNote, MagicWand, ArrowsLeftRight, Equalizer as EqIcon
+  Microphone, MusicNote, MagicWand, ArrowsLeftRight, Equalizer as EqIcon,
+  Repeat, ArrowUUpLeft, ArrowUUpRight, Plug, Package, PianoKeys, Faders, Export
 } from '@phosphor-icons/react';
-import { engine } from '@/audio/engine';
+import { engine, audioBufferToWavBlob } from '@/audio/engine';
+import { GM_INSTRUMENTS, FAKE_VST_PLUGINS } from '@/audio/instruments';
 import { TID } from '@/constants/testIds';
 import TrackRow from './TrackRow';
 import Spectrum from './Spectrum';
@@ -49,6 +51,21 @@ export default function Daw() {
   const [recordTime, setRecordTime] = useState(0);
   const [theme, setTheme] = useState('dark');
 
+  // === New v1.1 state ===
+  const [looping, setLooping] = useState(false);
+  const [openMenu, setOpenMenu] = useState(null);
+  const [gmOpen, setGmOpen] = useState(false);
+  const [gmSelectedIdx, setGmSelectedIdx] = useState(0);
+  const [vstScanning, setVstScanning] = useState(false);
+  const [vstFoundCount, setVstFoundCount] = useState(0);
+  const [pluginsOpen, setPluginsOpen] = useState(false);
+  const [mixerOpen, setMixerOpen] = useState(false);
+  const [stemsExporting, setStemsExporting] = useState(false);
+  const [stemsProgress, setStemsProgress] = useState({ current: 0, total: 0 });
+  const undoStackRef = useRef([]);
+  const redoStackRef = useRef([]);
+  const [historyVersion, setHistoryVersion] = useState(0);
+
   const [dreamOpen, setDreamOpen] = useState(false);
   const [dreaming, setDreaming] = useState(false);
   const [dreamProgress, setDreamProgress] = useState(0);
@@ -64,7 +81,63 @@ export default function Daw() {
   const [masteringLoading, setMasteringLoading] = useState(false);
 
   const fileInputRef = useRef(null);
+  const projectFileInputRef = useRef(null);
   const recTimerRef = useRef(null);
+
+  // === Undo/Redo snapshot helpers ===
+  const snapshotState = useCallback(() => ({
+    tracks: tracks.map(t => ({
+      ...t,
+      // keep arrays referenceable
+      midiNotes: t.midiNotes ? [...t.midiNotes] : [],
+      effects: { ...(t.effects || {}) },
+      eq: { ...t.eq },
+    })),
+    tempo, masterVol, timeSig,
+  }), [tracks, tempo, masterVol, timeSig]);
+
+  const pushUndo = useCallback(() => {
+    undoStackRef.current.push(snapshotState());
+    if (undoStackRef.current.length > 30) undoStackRef.current.shift();
+    redoStackRef.current = [];
+    setHistoryVersion(v => v + 1);
+  }, [snapshotState]);
+
+  const restoreSnapshot = useCallback((snap) => {
+    // dispose current engine tracks then rebuild
+    tracks.forEach(t => engine.removeTrack(t.id));
+    snap.tracks.forEach(t => {
+      const n = engine.getOrCreateTrack(t.id);
+      n.setVolume((t.volume || 80) / 100);
+      n.setPan((t.pan || 0) / 50);
+      n.setEQ(t.eq.bass, t.eq.mid, t.eq.high, t.eq.enabled);
+      n.setReverb(!!t.effects?.reverb);
+      n.setDelay(!!t.effects?.delay);
+      if (t.isMIDI && t.midiNotes?.length) n.setMIDI(t.midiNotes);
+      if (typeof t.instrumentIndex === 'number') n.setInstrument(t.instrumentIndex);
+    });
+    setTracks(snap.tracks);
+    setTempo(snap.tempo);
+    setMasterVol(snap.masterVol);
+    setTimeSig(snap.timeSig);
+    setHistoryVersion(v => v + 1);
+  }, [tracks]);
+
+  const undo = useCallback(() => {
+    if (!undoStackRef.current.length) { setStatusMsg('Nothing to undo'); return; }
+    redoStackRef.current.push(snapshotState());
+    const snap = undoStackRef.current.pop();
+    restoreSnapshot(snap);
+    setStatusMsg('Undo');
+  }, [snapshotState, restoreSnapshot]);
+
+  const redo = useCallback(() => {
+    if (!redoStackRef.current.length) { setStatusMsg('Nothing to redo'); return; }
+    undoStackRef.current.push(snapshotState());
+    const snap = redoStackRef.current.pop();
+    restoreSnapshot(snap);
+    setStatusMsg('Redo');
+  }, [snapshotState, restoreSnapshot]);
 
   // === Track management ===
   const updateTrack = useCallback((id, patch) => {
@@ -83,6 +156,8 @@ export default function Daw() {
         isPlaying: false, isMuted: false, isSolo: false, isMIDI: false,
         volume: 80, pan: 0, peaks, duration: buf.duration,
         eq: { bass: 50, mid: 50, high: 50, enabled: false },
+        effects: { reverb: false, delay: false },
+        instrumentIndex: 0,
         fileName: file.name,
       };
       setTracks(prev => [...prev, newTrack]);
@@ -110,11 +185,14 @@ export default function Daw() {
       isPlaying: false, isMuted: false, isSolo: false, isMIDI: true,
       volume: 80, pan: 0, peaks, duration: 8,
       eq: { bass: 50, mid: 50, high: 50, enabled: false },
+      effects: { reverb: false, delay: false },
+      instrumentIndex: 0,
       midiNotes: notes,
     };
     setTracks(prev => [...prev, newTrack]);
     engine.loadMIDI(id, notes);
     engine.getOrCreateTrack(id).setVolume(0.8);
+    engine.getOrCreateTrack(id).setInstrument(0);
     setStatusMsg('MIDI track added');
   }, [tracks.length]);
 
@@ -198,11 +276,183 @@ export default function Daw() {
       }));
     } else if (action === 'piano') {
       setPianoTrackId(id);
+    } else if (action === 'toggleReverb') {
+      setTracks(prev => prev.map(t => {
+        if (t.id !== id) return t;
+        const fx = { ...(t.effects || {}), reverb: !t.effects?.reverb };
+        engine.getOrCreateTrack(id).setReverb(fx.reverb);
+        return { ...t, effects: fx };
+      }));
+    } else if (action === 'toggleDelay') {
+      setTracks(prev => prev.map(t => {
+        if (t.id !== id) return t;
+        const fx = { ...(t.effects || {}), delay: !t.effects?.delay };
+        engine.getOrCreateTrack(id).setDelay(fx.delay);
+        return { ...t, effects: fx };
+      }));
+    } else if (action === 'instrument') {
+      const idx = payload | 0;
+      engine.getOrCreateTrack(id).setInstrument(idx);
+      updateTrack(id, { instrumentIndex: idx });
+      setStatusMsg(`Instrument: ${GM_INSTRUMENTS[idx]?.name || '?'}`);
     }
   }, [playTrack, deleteTrack, updateTrack]);
 
   // === Master volume ===
   useEffect(() => { engine.setMasterVolume(masterVol / 100); }, [masterVol]);
+
+  // === Tracks duration / max beats (derived) ===
+  const maxBeats = useMemo(() => {
+    let maxB = 8;
+    for (const t of tracks) {
+      if (t.isMIDI && t.midiNotes?.length) {
+        for (const n of t.midiNotes) maxB = Math.max(maxB, n.start + n.duration);
+      } else if (t.duration) {
+        maxB = Math.max(maxB, (t.duration * tempo) / 60);
+      }
+    }
+    return Math.max(8, Math.ceil(maxB));
+  }, [tracks, tempo]);
+
+  // === Playhead state owned by Timeline; Daw only provides loop wrap action ===
+  const handleLoopWrap = useCallback(() => {
+    engine.ensureCtx();
+    const soloSet = new Set(tracks.filter(t => t.isSolo).map(t => t.id));
+    const ids = tracks.map(t => t.id);
+    engine.stopAll();
+    engine.playAll(ids, soloSet);
+  }, [tracks]);
+
+  // === Loop toggle ===
+  const toggleLoop = useCallback(() => {
+    setLooping(l => {
+      const next = !l;
+      setStatusMsg(`Loop: ${next ? 'ON' : 'OFF'}`);
+      return next;
+    });
+  }, []);
+
+  // === VST Scan (cosmetic) ===
+  const scanVst = useCallback(() => {
+    setVstScanning(true);
+    setVstFoundCount(0);
+    setStatusMsg('Scanning VST plugins...');
+    let count = 0;
+    const total = 4833;
+    const id = setInterval(() => {
+      count += Math.floor(80 + Math.random() * 200);
+      if (count >= total) {
+        count = total;
+        clearInterval(id);
+        setVstScanning(false);
+        setStatusMsg(`VST scan complete: ${total} plugins found`);
+      }
+      setVstFoundCount(Math.min(count, total));
+    }, 60);
+  }, []);
+
+  // === Apply GM instrument to all MIDI tracks ===
+  const applyGmInstrument = useCallback((idx) => {
+    pushUndo();
+    setTracks(prev => prev.map(t => {
+      if (!t.isMIDI) return t;
+      engine.getOrCreateTrack(t.id).setInstrument(idx);
+      return { ...t, instrumentIndex: idx };
+    }));
+    setStatusMsg(`Applied "${GM_INSTRUMENTS[idx].name}" to all MIDI tracks`);
+  }, [pushUndo]);
+
+  // === Stems export ===
+  const exportStems = useCallback(async () => {
+    if (!tracks.length) { setStatusMsg('No tracks to export'); return; }
+    setStemsExporting(true);
+    setStemsProgress({ current: 0, total: tracks.length });
+    let i = 0;
+    for (const t of tracks) {
+      i += 1;
+      setStemsProgress({ current: i, total: tracks.length });
+      try {
+        const blob = await engine.renderTrackToWav(t.id, tempo);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${t.displayName.replace(/[^a-z0-9_-]/gi, '_')}_stem.wav`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } catch (e) {
+        console.error('stem export', e);
+      }
+    }
+    setStemsExporting(false);
+    setStatusMsg(`Exported ${tracks.length} stem WAV file(s)`);
+  }, [tracks, tempo]);
+
+  // === Load Project JSON (new format) ===
+  const loadProjectJson = useCallback(async (file) => {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const proj = data.project || data;
+      pushUndo();
+      // clear
+      tracks.forEach(t => engine.removeTrack(t.id));
+      const newTempo = proj.tempo || 120;
+      setTempo(newTempo);
+      if (proj.timeSignature) {
+        const [num] = String(proj.timeSignature).split('/');
+        setTimeSig(parseInt(num) || 4);
+      }
+      const restored = (proj.tracks || []).map((td, ti) => {
+        const id = td.id || uid();
+        const isMIDI = (td.type || '').toLowerCase() === 'midi' || !!td.notes;
+        const type = isMIDI ? (td.trackType || 'synth') : (td.trackType || 'other');
+        const color = TRACK_COLORS[type] || TRACK_COLORS.other;
+        const notes = (td.notes || td.midiNotes || []).map(n => ({
+          pitch: n.pitch | 0,
+          velocity: n.velocity | 0 || 100,
+          start: Number(n.start) || 0,
+          duration: Number(n.duration) || 0.5,
+        }));
+        const eq = td.eq || { bass: 50, mid: 50, high: 50, enabled: false };
+        const effects = {
+          reverb: Array.isArray(td.effects) ? td.effects.includes('reverb') : !!td.effects?.reverb,
+          delay: Array.isArray(td.effects) ? td.effects.includes('delay') : !!td.effects?.delay,
+        };
+        // map instrument name to index
+        let instrumentIndex = td.instrumentIndex;
+        if (typeof instrumentIndex !== 'number' && td.instrument) {
+          const found = GM_INSTRUMENTS.findIndex(g => g.name.toLowerCase().includes(String(td.instrument).toLowerCase()));
+          instrumentIndex = found >= 0 ? found : 0;
+        }
+        instrumentIndex = instrumentIndex || 0;
+        const peaks = new Array(80).fill(0).map((_, k) => 0.15 + 0.6 * Math.abs(Math.sin(k * 0.3 + ti)));
+        // engine wiring
+        const n = engine.getOrCreateTrack(id);
+        if (isMIDI && notes.length) n.setMIDI(notes);
+        n.setInstrument(instrumentIndex);
+        n.setVolume((td.volume || 80) / 100);
+        n.setPan((td.pan || 0) / 50);
+        n.setEQ(eq.bass, eq.mid, eq.high, eq.enabled);
+        n.setReverb(effects.reverb);
+        n.setDelay(effects.delay);
+        return {
+          id, displayName: td.name || td.displayName || `Track ${ti + 1}`,
+          trackType: type, color,
+          isPlaying: false, isMuted: false, isSolo: false, isMIDI,
+          volume: td.volume || 80, pan: td.pan || 0, peaks,
+          eq, effects,
+          midiNotes: notes, instrumentIndex,
+        };
+      });
+      setTracks(restored);
+      setStatusMsg(`Loaded project: ${restored.length} tracks · ${newTempo} BPM`);
+    } catch (e) {
+      console.error(e);
+      setStatusMsg('Could not load project JSON: ' + e.message);
+    }
+  }, [tracks, pushUndo]);
 
   // === Tempo / time signature ===
   useEffect(() => { engine.setTempo(tempo); }, [tempo]);
@@ -267,11 +517,15 @@ export default function Daw() {
         isPlaying: false, isMuted: false, isSolo: false, isMIDI: true,
         volume: 80, pan: 0, peaks,
         eq: { bass: 50, mid: 50, high: 50, enabled: false },
+        effects: { reverb: true, delay: false },
+        instrumentIndex: 88, // Pad 1 (new age) - dreamy default
         midiNotes: notes, dreamPrompt: prompt, dreamId: res.data.id,
         description: res.data.description,
       };
       engine.loadMIDI(id, notes);
       engine.getOrCreateTrack(id).setVolume(0.8);
+      engine.getOrCreateTrack(id).setInstrument(88);
+      engine.getOrCreateTrack(id).setReverb(true);
       setTracks(prev => [...prev, newTrack]);
       setStatusMsg(`Dream generated: ${res.data.name}`);
       setTimeout(() => {
@@ -468,10 +722,13 @@ export default function Daw() {
         if (e.key === 's') { e.preventDefault(); saveSession(); }
         else if (e.key === 'o') { e.preventDefault(); loadSession(); }
         else if (e.key === 'e') { e.preventDefault(); exportSession(); }
+        else if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+        else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
         return;
       }
       if (e.code === 'Space') { e.preventDefault(); playAll(); }
       else if (e.key.toLowerCase() === 'm') { toggleMetronome(); }
+      else if (e.key.toLowerCase() === 'l') { toggleLoop(); }
       else if (e.key === 'F1') { e.preventDefault(); setManualOpen(true); }
       else if (e.key >= '1' && e.key <= '9') {
         const idx = parseInt(e.key) - 1;
@@ -505,6 +762,39 @@ export default function Daw() {
         data-testid={TID.audioFileInput}
         style={{ display: 'none' }}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) addAudioFile(f); e.target.value = ''; }}
+      />
+      <input
+        ref={projectFileInputRef} type="file" accept="application/json,.json"
+        data-testid={TID.projectFileInput}
+        style={{ display: 'none' }}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) loadProjectJson(f); e.target.value = ''; }}
+      />
+
+      {/* MENU BAR */}
+      <MenuBar
+        openMenu={openMenu}
+        setOpenMenu={setOpenMenu}
+        actions={{
+          newSession: clearAll,
+          openProject: () => projectFileInputRef.current?.click(),
+          loadSession,
+          saveSession,
+          exportSession,
+          exportStems,
+          undo, redo,
+          addAudio: () => fileInputRef.current?.click(),
+          addMIDI: addMIDITrack,
+          openMixer: () => setMixerOpen(true),
+          openGM: () => setGmOpen(true),
+          openVst: scanVst,
+          openPlugins: () => setPluginsOpen(true),
+          openDream: () => setDreamOpen(true),
+          openHistory: loadDreamHistory,
+          toggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+          openManual: () => setManualOpen(true),
+          toggleMetronome,
+          toggleLoop,
+        }}
       />
 
       {/* TOP BAR */}
@@ -577,6 +867,37 @@ export default function Daw() {
           )}
         </button>
 
+        <button
+          data-testid={TID.loopBtn}
+          onClick={toggleLoop}
+          className="riba-btn"
+          data-active={looping}
+          style={{ height: 38 }}
+          title="Loop (L)"
+        >
+          <Repeat size={14} weight={looping ? 'fill' : 'regular'} />
+          Loop
+        </button>
+
+        <button
+          data-testid={TID.undoBtn}
+          onClick={undo}
+          className="riba-btn riba-btn-icon"
+          style={{ height: 38 }}
+          title="Undo (Ctrl+Z)"
+        >
+          <ArrowUUpLeft size={14} />
+        </button>
+        <button
+          data-testid={TID.redoBtn}
+          onClick={redo}
+          className="riba-btn riba-btn-icon"
+          style={{ height: 38 }}
+          title="Redo (Ctrl+Y)"
+        >
+          <ArrowUUpRight size={14} />
+        </button>
+
         {/* Tempo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '0 12px', borderLeft: '1px solid rgba(255,255,255,0.06)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
@@ -646,6 +967,16 @@ export default function Daw() {
         </button>
       </div>
 
+      {/* TIMELINE / PLAYHEAD */}
+      <Timeline
+        isPlaying={isPlayingAll}
+        looping={looping}
+        maxBeats={maxBeats}
+        timeSig={timeSig}
+        tempo={tempo}
+        onLoopWrap={handleLoopWrap}
+      />
+
       {/* MAIN AREA */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* LEFT TOOLBAR */}
@@ -694,8 +1025,25 @@ export default function Daw() {
           <button data-testid={TID.exportBtn} className="riba-btn" onClick={exportSession}>
             <DownloadSimple size={13} /> Export JSON
           </button>
+          <button data-testid={TID.stemsBtn} className="riba-btn" onClick={exportStems} disabled={stemsExporting}>
+            <Export size={13} /> {stemsExporting ? `Stems ${stemsProgress.current}/${stemsProgress.total}` : 'Export Stems'}
+          </button>
           <button data-testid={TID.clearBtn} className="riba-btn" onClick={clearAll} style={{ color: '#EF4444' }}>
             <Trash size={13} /> Clear All
+          </button>
+
+          <div className="font-mono-r" style={{ fontSize: 9, color: themeText2, letterSpacing: '0.1em', marginTop: 10, marginBottom: 4 }}>VIEW & PLUGINS</div>
+          <button data-testid={TID.mixerBtn} className="riba-btn" onClick={() => setMixerOpen(true)}>
+            <Faders size={13} /> Mixer
+          </button>
+          <button data-testid={TID.gmBtn} className="riba-btn" onClick={() => setGmOpen(true)}>
+            <PianoKeys size={13} /> GM 128
+          </button>
+          <button data-testid={TID.vstBtn} className="riba-btn" onClick={scanVst} disabled={vstScanning}>
+            <Plug size={13} /> {vstScanning ? `Scanning ${vstFoundCount}` : 'VST Scan'}
+          </button>
+          <button data-testid={TID.pluginsBtn} className="riba-btn" onClick={() => setPluginsOpen(true)}>
+            <Package size={13} /> Plugins
           </button>
         </div>
 
@@ -931,6 +1279,340 @@ export default function Daw() {
           </div>
         </Modal>
       )}
+
+      {gmOpen && (
+        <Modal title="General MIDI · 128 Instruments" onClose={() => setGmOpen(false)}>
+          <div style={{ marginBottom: 10, color: '#A1A1AA', fontSize: 12 }}>
+            Pick an instrument and apply to all MIDI tracks, or use per-track selector to set it individually.
+          </div>
+          <select
+            data-testid={TID.gmSelect}
+            value={gmSelectedIdx}
+            onChange={(e) => setGmSelectedIdx(parseInt(e.target.value))}
+            size={14}
+            style={{
+              width: '100%', background: '#09090B', color: '#FAFAFA',
+              border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
+              padding: 6, fontSize: 13, fontFamily: 'JetBrains Mono, monospace'
+            }}
+          >
+            {GM_INSTRUMENTS.map((ins, i) => (
+              <option key={i} value={i}>{String(i + 1).padStart(3, '0')}. {ins.name}</option>
+            ))}
+          </select>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+            <button className="riba-btn" onClick={() => setGmOpen(false)}>Cancel</button>
+            <button
+              data-testid={TID.gmApply}
+              className="riba-btn"
+              style={{ background: 'linear-gradient(135deg, #D946EF, #6366F1)', color: '#fff', border: 'none' }}
+              onClick={() => { applyGmInstrument(gmSelectedIdx); setGmOpen(false); }}
+            >Apply to all MIDI</button>
+          </div>
+        </Modal>
+      )}
+
+      {pluginsOpen && (
+        <Modal title="Plugins (Simulated VST list)" onClose={() => setPluginsOpen(false)}>
+          <div style={{ color: '#A1A1AA', fontSize: 12, marginBottom: 10 }}>
+            ⚠️ Simulated — web browsers cannot load native VST/AU plugins. This is a curated representative list.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 400, overflow: 'auto' }}>
+            {FAKE_VST_PLUGINS.map((p, i) => (
+              <div key={i} style={{
+                background: '#09090B', borderRadius: 6, padding: '8px 10px',
+                border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10
+              }}>
+                <div style={{
+                  background: '#27272A', color: '#A1A1AA', padding: '2px 6px',
+                  borderRadius: 3, fontSize: 9, fontFamily: 'JetBrains Mono, monospace', minWidth: 36, textAlign: 'center'
+                }}>{p.format}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                  <div style={{ fontSize: 10, color: '#71717A' }} className="font-mono-r">
+                    {p.vendor} · {p.category}
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: '#52525B' }} className="font-mono-r">{p.path}</div>
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {mixerOpen && (
+        <Modal title="Mixer · All Tracks" onClose={() => setMixerOpen(false)}>
+          {tracks.length === 0 ? (
+            <div style={{ color: '#A1A1AA', padding: 20, textAlign: 'center' }}>No tracks in session.</div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, overflow: 'auto', padding: '4px 0' }}>
+              {tracks.map((t, i) => (
+                <div key={t.id} style={{
+                  minWidth: 100, background: '#09090B',
+                  border: `1px solid ${t.color}33`, borderRadius: 8, padding: 8,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8
+                }}>
+                  <div style={{
+                    background: t.color, color: '#000', fontSize: 9, fontWeight: 700,
+                    padding: '2px 6px', borderRadius: 3
+                  }} className="font-mono-r">#{i + 1}</div>
+                  <div style={{
+                    fontSize: 11, fontWeight: 600, textAlign: 'center',
+                    height: 28, overflow: 'hidden'
+                  }}>{t.displayName.slice(0, 16)}</div>
+                  <VUMeter source="track" trackId={t.id} width={20} height={120} />
+                  <input
+                    type="range" min={0} max={100} value={t.volume}
+                    onChange={(e) => handleTrackAction('volume', t.id, parseInt(e.target.value))}
+                    className="riba-slider"
+                    style={{ width: 80, color: t.color, '--val': `${t.volume}%` }}
+                  />
+                  <div className="font-mono-r" style={{ fontSize: 10, color: '#A1A1AA' }}>{t.volume}</div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="riba-btn riba-btn-icon" data-active={t.isMuted}
+                      onClick={() => handleTrackAction('mute', t.id)}
+                      style={{ width: 28, height: 22, fontSize: 9 }}>M</button>
+                    <button className="riba-btn riba-btn-icon" data-active={t.isSolo}
+                      onClick={() => handleTrackAction('solo', t.id)}
+                      style={{ width: 28, height: 22, fontSize: 9, color: t.isSolo ? '#000' : '#EAB308' }}>S</button>
+                  </div>
+                </div>
+              ))}
+              <div style={{
+                minWidth: 100, background: '#09090B',
+                border: '2px solid #FFFFFF22', borderRadius: 8, padding: 8,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8
+              }}>
+                <div style={{ background: '#FAFAFA', color: '#000', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 3 }} className="font-mono-r">MASTER</div>
+                <div style={{ fontSize: 11, fontWeight: 600 }}>Out</div>
+                <VUMeter width={20} height={120} />
+                <input type="range" min={0} max={100} value={masterVol}
+                  onChange={(e) => setMasterVol(parseInt(e.target.value))}
+                  className="riba-slider"
+                  style={{ width: 80, color: '#FAFAFA', '--val': `${masterVol}%` }}
+                />
+                <div className="font-mono-r" style={{ fontSize: 10, color: '#A1A1AA' }}>{masterVol}</div>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {vstScanning && (
+        <div style={{
+          position: 'fixed', bottom: 36, right: 16, zIndex: 200,
+          background: '#18181B', border: '1px solid rgba(217,70,239,0.4)',
+          borderRadius: 10, padding: 12, minWidth: 260,
+          boxShadow: '0 0 30px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Plug size={16} color="#D946EF" />
+            <div className="font-heading" style={{ fontSize: 14, fontWeight: 700 }}>Scanning VST</div>
+          </div>
+          <div className="font-mono-r" style={{ fontSize: 11, color: '#A1A1AA' }}>
+            {vstFoundCount.toLocaleString()} / 4,833 plugins
+          </div>
+          <div style={{ height: 6, background: '#27272A', borderRadius: 3, overflow: 'hidden', marginTop: 6 }}>
+            <div style={{
+              height: '100%', width: `${(vstFoundCount / 4833) * 100}%`,
+              background: 'linear-gradient(90deg, #D946EF, #6366F1)',
+              transition: 'width 0.1s linear'
+            }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ====== MenuBar component ======
+function MenuBar({ openMenu, setOpenMenu, actions }) {
+  const close = () => setOpenMenu(null);
+  const items = {
+    File: [
+      ['New Session', actions.newSession],
+      ['Open Project (JSON)', () => { actions.openProject(); close(); }],
+      ['Load Session', () => { actions.loadSession(); close(); }],
+      ['Save Session', () => { actions.saveSession(); close(); }],
+      ['Export Session JSON', () => { actions.exportSession(); close(); }],
+      ['Export Stems (WAV)', () => { actions.exportStems(); close(); }],
+    ],
+    Edit: [
+      ['Undo  (Ctrl+Z)', () => { actions.undo(); close(); }],
+      ['Redo  (Ctrl+Y)', () => { actions.redo(); close(); }],
+    ],
+    Track: [
+      ['Add Audio', () => { actions.addAudio(); close(); }],
+      ['Add MIDI', () => { actions.addMIDI(); close(); }],
+    ],
+    Event: [
+      ['Dream Track (AI)', () => { actions.openDream(); close(); }],
+      ['Dream History', () => { actions.openHistory(); close(); }],
+    ],
+    AudioSuite: [
+      ['Plugins List', () => { actions.openPlugins(); close(); }],
+      ['VST Scan', () => { actions.openVst(); close(); }],
+      ['GM 128 Instruments', () => { actions.openGM(); close(); }],
+    ],
+    Tools: [
+      ['Toggle Metronome (M)', () => { actions.toggleMetronome(); close(); }],
+      ['Toggle Loop (L)', () => { actions.toggleLoop(); close(); }],
+    ],
+    View: [
+      ['Mixer', () => { actions.openMixer(); close(); }],
+      ['Toggle Theme', () => { actions.toggleTheme(); close(); }],
+    ],
+    Options: [
+      ['User Manual (F1)', () => { actions.openManual(); close(); }],
+    ],
+    Help: [
+      ['Manual (F1)', () => { actions.openManual(); close(); }],
+    ],
+  };
+
+  return (
+    <div style={{
+      height: 32, background: '#0B0B0E', borderBottom: '1px solid rgba(255,255,255,0.05)',
+      display: 'flex', alignItems: 'stretch', padding: '0 8px', position: 'relative', flexShrink: 0
+    }}
+      onMouseLeave={close}
+    >
+      {Object.keys(items).map((key, idx) => (
+        <div
+          key={key}
+          data-testid={`menu-${key.toLowerCase()}`}
+          onMouseEnter={() => openMenu && setOpenMenu(key)}
+          onClick={() => setOpenMenu(openMenu === key ? null : key)}
+          style={{
+            padding: '0 12px', display: 'flex', alignItems: 'center',
+            fontSize: 12, color: openMenu === key ? '#FAFAFA' : '#A1A1AA',
+            cursor: 'pointer', background: openMenu === key ? '#1F1F23' : 'transparent',
+            borderRadius: 3, marginLeft: idx === Object.keys(items).length - 1 ? 'auto' : 0,
+            position: 'relative', userSelect: 'none'
+          }}
+        >
+          {key}
+          {openMenu === key && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0,
+              background: '#1F1F23', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 6, padding: 4, minWidth: 220, zIndex: 50,
+              boxShadow: '0 8px 20px rgba(0,0,0,0.5)'
+            }}>
+              {items[key].map(([label, fn], i) => (
+                <div
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); fn(); }}
+                  style={{
+                    padding: '6px 10px', fontSize: 12, color: '#E4E4E7',
+                    borderRadius: 4, cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#2F2F35'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >{label}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ====== Timeline component (self-animating; owns playhead state) ======
+function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap }) {
+  const containerRef = useRef(null);
+  const headRef = useRef(null);
+  const labelRef = useRef(null);
+  const beatRef = useRef(0);
+
+  // reset on play start
+  useEffect(() => {
+    if (isPlaying) beatRef.current = 0;
+  }, [isPlaying]);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    const tick = () => {
+      const now = performance.now();
+      const dt = (now - last) / 1000;
+      last = now;
+      if (isPlaying) {
+        const cur = beatRef.current + (dt * tempo) / 60;
+        if (cur >= maxBeats) {
+          if (looping) {
+            beatRef.current = 0;
+            if (onLoopWrap) onLoopWrap();
+          } else {
+            beatRef.current = maxBeats;
+          }
+        } else {
+          beatRef.current = cur;
+        }
+      }
+      const beat = beatRef.current;
+      const pct = Math.min(100, (beat / maxBeats) * 100);
+      if (headRef.current) headRef.current.style.left = pct + '%';
+      if (labelRef.current) {
+        const m = Math.floor(beat / timeSig) + 1;
+        const b = Math.floor(beat % timeSig) + 1;
+        labelRef.current.textContent = `${m}.${b} · ${beat.toFixed(2)} beats · ${((beat * 60) / tempo).toFixed(2)}s`;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap]);
+
+  const handleClick = (e) => {
+    const r = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    beatRef.current = Math.max(0, Math.min(maxBeats, (x / r.width) * maxBeats));
+  };
+  const measures = Math.ceil(maxBeats / timeSig);
+  return (
+    <div
+      ref={containerRef}
+      data-testid={TID.timeline}
+      onClick={handleClick}
+      style={{
+        height: 28, background: '#0B0B0E', borderBottom: '1px solid rgba(255,255,255,0.05)',
+        position: 'relative', overflow: 'hidden', flexShrink: 0, cursor: 'pointer'
+      }}
+    >
+      {Array.from({ length: measures + 1 }).map((_, m) => {
+        const x = ((m * timeSig) / maxBeats) * 100;
+        return (
+          <div key={m} style={{
+            position: 'absolute', left: `${x}%`, top: 0, bottom: 0,
+            width: 1, background: m === 0 ? 'transparent' : 'rgba(255,255,255,0.08)'
+          }}>
+            <span style={{
+              position: 'absolute', top: 4, left: 4, fontSize: 9, color: '#52525B',
+              fontFamily: 'JetBrains Mono, monospace'
+            }}>{m + 1}</span>
+          </div>
+        );
+      })}
+      <div
+        ref={headRef}
+        data-testid={TID.playhead}
+        style={{
+          position: 'absolute', top: 0, bottom: 0,
+          left: '0%',
+          width: 2, background: '#EF4444', boxShadow: '0 0 8px #EF4444',
+          pointerEvents: 'none'
+        }}
+      />
+      <div
+        ref={labelRef}
+        style={{
+          position: 'absolute', right: 8, top: 6, fontSize: 10, color: '#A1A1AA',
+          fontFamily: 'JetBrains Mono, monospace', background: 'rgba(0,0,0,0.5)',
+          padding: '1px 6px', borderRadius: 3
+        }}
+      >1.1 · 0.00 beats · 0.00s</div>
     </div>
   );
 }

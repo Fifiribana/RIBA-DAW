@@ -1,11 +1,12 @@
 import React from 'react';
 import {
   Play, Stop, SpeakerSimpleHigh, SpeakerSimpleSlash, Headphones,
-  Trash, PianoKeys, Equalizer as EqIcon, MagicWand, MusicNote
+  Trash, PianoKeys, Equalizer as EqIcon, MusicNote, Waveform as WaveIcon, Drop
 } from '@phosphor-icons/react';
 import Waveform from './Waveform';
 import VUMeter from './VUMeter';
 import { TID } from '@/constants/testIds';
+import { GM_INSTRUMENTS } from '@/audio/instruments';
 
 const TYPE_LABEL = {
   voice: 'VOICE', drums: 'DRUMS', bass: 'BASS', guitar: 'GUITAR',
@@ -24,13 +25,13 @@ export default function TrackRow({ track, index, color, onAction }) {
         background: '#18181B',
         border: '1px solid rgba(255,255,255,0.05)',
         borderRadius: 8, overflow: 'hidden',
-        minHeight: 92,
+        minHeight: 110,
       }}
     >
       {/* Color tag */}
       <div style={{ width: 6, background: color, boxShadow: `inset 0 0 8px ${color}` }} />
 
-      {/* Track name + controls block */}
+      {/* Name + controls */}
       <div style={{ width: 220, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6, borderRight: '1px solid rgba(255,255,255,0.04)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{
@@ -49,7 +50,24 @@ export default function TrackRow({ track, index, color, onAction }) {
           {track.displayName}
         </div>
 
-        <div style={{ display: 'flex', gap: 4, marginTop: 'auto' }}>
+        {track.isMIDI && (
+          <select
+            data-testid={TID.trackInstrument(index)}
+            value={track.instrumentIndex || 0}
+            onChange={(e) => onAction('instrument', track.id, parseInt(e.target.value))}
+            style={{
+              background: '#0B0B0E', color: '#A1A1AA', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 4, padding: '2px 4px', fontSize: 10, fontFamily: 'JetBrains Mono, monospace'
+            }}
+            title="GM Instrument"
+          >
+            {GM_INSTRUMENTS.map((ins, i) => (
+              <option key={i} value={i}>{i + 1}. {ins.name}</option>
+            ))}
+          </select>
+        )}
+
+        <div style={{ display: 'flex', gap: 4, marginTop: 'auto', flexWrap: 'wrap' }}>
           <button
             data-testid={TID.trackPlay(index)}
             className="riba-btn riba-btn-icon"
@@ -99,14 +117,19 @@ export default function TrackRow({ track, index, color, onAction }) {
         </div>
       </div>
 
-      {/* Waveform area */}
+      {/* Waveform */}
       <div style={{ flex: 1, padding: 6, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, background: '#0B0B0E' }}>
         <Waveform peaks={track.peaks} color={color} height={48} />
         <VUMeter source="track" trackId={track.id} width={200} height={6} />
+        {track.isMIDI && (
+          <div className="font-mono-r" style={{ fontSize: 9, color: '#71717A', textAlign: 'right' }}>
+            {(GM_INSTRUMENTS[track.instrumentIndex || 0]?.name || '').slice(0, 28)} · {(track.midiNotes || []).length} notes
+          </div>
+        )}
       </div>
 
-      {/* EQ + Volume + Pan controls */}
-      <div style={{ width: 320, padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 4, borderLeft: '1px solid rgba(255,255,255,0.04)' }}>
+      {/* EQ + FX + Volume + Pan */}
+      <div style={{ width: 340, padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 4, borderLeft: '1px solid rgba(255,255,255,0.04)' }}>
         {/* EQ row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
@@ -141,8 +164,33 @@ export default function TrackRow({ track, index, color, onAction }) {
           ))}
         </div>
 
+        {/* FX row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="font-mono-r" style={{ fontSize: 9, color: '#71717A', width: 18 }}>FX</span>
+          <button
+            data-testid={TID.trackReverb(index)}
+            className="riba-btn"
+            data-active={track.effects?.reverb}
+            onClick={() => onAction('toggleReverb', track.id)}
+            style={{ fontSize: 10, padding: '4px 8px', flex: 1 }}
+            title="Reverb"
+          >
+            <Drop size={12} weight={track.effects?.reverb ? 'fill' : 'regular'} /> Reverb
+          </button>
+          <button
+            data-testid={TID.trackDelay(index)}
+            className="riba-btn"
+            data-active={track.effects?.delay}
+            onClick={() => onAction('toggleDelay', track.id)}
+            style={{ fontSize: 10, padding: '4px 8px', flex: 1 }}
+            title="Delay"
+          >
+            <WaveIcon size={12} weight={track.effects?.delay ? 'fill' : 'regular'} /> Delay
+          </button>
+        </div>
+
         {/* Volume */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
           <SpeakerSimpleHigh size={12} color="#A1A1AA" />
           <input
             type="range" min={0} max={100} value={track.volume}

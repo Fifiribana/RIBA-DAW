@@ -1,6 +1,23 @@
 // Riba DAW Web Audio Engine
 // Provides per-track playback (audio + MIDI), EQ, panning, volume, master meter, metronome and recording.
 
+import { GM_INSTRUMENTS } from './instruments';
+
+// Create a synthetic impulse response for reverb
+function buildImpulseResponse(ctx, duration = 1.8, decay = 2.5) {
+  const rate = ctx.sampleRate;
+  const length = Math.floor(rate * duration);
+  const impulse = ctx.createBuffer(2, length, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      const t = i / length;
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, decay);
+    }
+  }
+  return impulse;
+}
+
 class TrackNode {
   constructor(ctx, master) {
     this.ctx = ctx;
@@ -10,6 +27,7 @@ class TrackNode {
     this.midiNotes = [];           // [{pitch,velocity,start,duration}] (beats)
     this.midiOscillators = [];     // currently scheduled
     this.isMIDI = false;
+    this.instrumentIndex = 0;      // GM instrument index for MIDI tracks
 
     this.gain = ctx.createGain();
     this.gain.gain.value = 1.0;
@@ -33,16 +51,50 @@ class TrackNode {
     this.eqHigh.frequency.value = 5000;
     this.eqHigh.gain.value = 0;
 
+    // FX bus: eqHigh -> fxIn -> {dry, delay, reverb} -> fxOut -> pan
+    this.fxIn = ctx.createGain();
+    this.fxOut = ctx.createGain();
+    this.dryGain = ctx.createGain();
+    this.dryGain.gain.value = 1.0;
+
+    this.delayNode = ctx.createDelay(2.0);
+    this.delayNode.delayTime.value = 0.28;
+    this.delayFeedback = ctx.createGain();
+    this.delayFeedback.gain.value = 0.32;
+    this.delayWet = ctx.createGain();
+    this.delayWet.gain.value = 0; // off by default
+
+    this.reverbNode = ctx.createConvolver();
+    this.reverbNode.buffer = buildImpulseResponse(ctx, 2.0, 3.0);
+    this.reverbWet = ctx.createGain();
+    this.reverbWet.gain.value = 0; // off by default
+
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 256;
 
+    // wire
     this.eqLow.connect(this.eqMid);
     this.eqMid.connect(this.eqHigh);
-    this.eqHigh.connect(this.pan);
+    this.eqHigh.connect(this.fxIn);
+    this.fxIn.connect(this.dryGain);
+    this.dryGain.connect(this.fxOut);
+    // delay branch (with feedback)
+    this.fxIn.connect(this.delayNode);
+    this.delayNode.connect(this.delayFeedback);
+    this.delayFeedback.connect(this.delayNode);
+    this.delayNode.connect(this.delayWet);
+    this.delayWet.connect(this.fxOut);
+    // reverb branch
+    this.fxIn.connect(this.reverbNode);
+    this.reverbNode.connect(this.reverbWet);
+    this.reverbWet.connect(this.fxOut);
+    // out
+    this.fxOut.connect(this.pan);
     this.pan.connect(this.gain);
     this.gain.connect(this.analyser);
     this.analyser.connect(master);
 
+    this.effects = { reverb: false, delay: false };
     this.eqEnabled = false;
     this.muted = false;
     this.userGain = 1.0;
@@ -70,6 +122,17 @@ class TrackNode {
     this.eqLow.gain.setTargetAtTime(enabled ? scale(low) : 0, this.ctx.currentTime, 0.05);
     this.eqMid.gain.setTargetAtTime(enabled ? scale(mid) : 0, this.ctx.currentTime, 0.05);
     this.eqHigh.gain.setTargetAtTime(enabled ? scale(high) : 0, this.ctx.currentTime, 0.05);
+  }
+  setReverb(on) {
+    this.effects.reverb = on;
+    this.reverbWet.gain.setTargetAtTime(on ? 0.35 : 0, this.ctx.currentTime, 0.05);
+  }
+  setDelay(on) {
+    this.effects.delay = on;
+    this.delayWet.gain.setTargetAtTime(on ? 0.4 : 0, this.ctx.currentTime, 0.05);
+  }
+  setInstrument(idx) {
+    this.instrumentIndex = Math.max(0, Math.min(127, idx | 0));
   }
   loadAudio(buffer) {
     this.audioBuffer = buffer;
@@ -102,30 +165,84 @@ class TrackNode {
     this.stop();
     const beatSec = 60 / bpm;
     const tNow = this.ctx.currentTime + 0.05;
+    const preset = GM_INSTRUMENTS[this.instrumentIndex] || GM_INSTRUMENTS[0];
+    const s = preset.synth;
     for (const n of this.midiNotes) {
-      const osc = this.ctx.createOscillator();
-      osc.type = 'triangle';
       const freq = 440 * Math.pow(2, (n.pitch - 69) / 12);
-      osc.frequency.value = freq;
-      const env = this.ctx.createGain();
       const v = Math.max(0.05, Math.min(0.9, n.velocity / 127));
       const startT = tNow + n.start * beatSec;
       const stopT = startT + n.duration * beatSec;
+
+      // primary oscillator
+      const osc = this.ctx.createOscillator();
+      osc.type = s.type;
+      osc.frequency.value = freq;
+
+      // optional secondary oscillator for fatter timbre
+      let osc2 = null;
+      if (s.type2 && s.mix > 0) {
+        osc2 = this.ctx.createOscillator();
+        osc2.type = s.type2;
+        osc2.frequency.value = freq;
+      }
+
+      // optional vibrato
+      let lfo = null, lfoGain = null;
+      if (s.vibrato > 0) {
+        lfo = this.ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = s.vibrato;
+        lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = freq * 0.01; // ~1% pitch mod
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        if (osc2) lfoGain.connect(osc2.frequency);
+        lfo.start(startT);
+        lfo.stop(stopT + 0.05);
+      }
+
+      // filter for tone
+      const filt = this.ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = s.cutoff || 4000;
+      filt.Q.value = 0.7;
+
+      // ADSR envelope
+      const env = this.ctx.createGain();
+      const noteDur = Math.max(0.02, stopT - startT);
+      const attack = Math.min(s.attack, noteDur * 0.4);
+      const decay = Math.min(s.decay, noteDur * 0.4);
+      const sustain = s.sustain;
+      const release = s.release;
       env.gain.setValueAtTime(0, startT);
-      env.gain.linearRampToValueAtTime(v * 0.6, startT + 0.01);
-      env.gain.linearRampToValueAtTime(v * 0.4, startT + 0.05);
-      env.gain.linearRampToValueAtTime(0, stopT);
-      osc.connect(env);
+      env.gain.linearRampToValueAtTime(v, startT + attack);
+      env.gain.linearRampToValueAtTime(v * sustain, startT + attack + decay);
+      env.gain.setValueAtTime(v * sustain, stopT);
+      env.gain.linearRampToValueAtTime(0, stopT + release);
+
+      // wiring
+      osc.connect(filt);
+      if (osc2) {
+        const mixGain = this.ctx.createGain();
+        mixGain.gain.value = s.mix;
+        osc2.connect(mixGain);
+        mixGain.connect(filt);
+        osc2.start(startT);
+        osc2.stop(stopT + release + 0.05);
+        this.midiOscillators.push(osc2);
+      }
+      filt.connect(env);
       env.connect(this.eqLow);
+
       osc.start(startT);
-      osc.stop(stopT + 0.02);
+      osc.stop(stopT + release + 0.05);
       this.midiOscillators.push(osc);
+      if (lfo) this.midiOscillators.push(lfo);
     }
     this.isPlaying = true;
     this.startedAt = this.ctx.currentTime + 0.05;
-    // schedule cleanup
-    const total = this.duration * beatSec;
-    setTimeout(() => { this.isPlaying = false; this.midiOscillators = []; }, total * 1000 + 200);
+    const total = (this.duration || 1) * beatSec;
+    setTimeout(() => { this.isPlaying = false; this.midiOscillators = []; }, total * 1000 + 500);
   }
   stop() {
     if (this.source) {
@@ -183,6 +300,45 @@ export class RibaEngine {
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     return this.ctx;
+  }
+  // === stems export ===
+  async renderTrackToWav(trackId, bpm = 120) {
+    const t = this.tracks.get(trackId);
+    if (!t) return null;
+    if (t.isMIDI && t.midiNotes.length) {
+      const beatSec = 60 / bpm;
+      const totalSec = Math.max(2, (t.duration || 4) * beatSec + 1);
+      const oCtx = new OfflineAudioContext(2, Math.ceil(totalSec * 48000), 48000);
+      const masterOut = oCtx.createGain();
+      masterOut.gain.value = 1.0;
+      masterOut.connect(oCtx.destination);
+      const preset = GM_INSTRUMENTS[t.instrumentIndex] || GM_INSTRUMENTS[0];
+      const s = preset.synth;
+      for (const n of t.midiNotes) {
+        const freq = 440 * Math.pow(2, (n.pitch - 69) / 12);
+        const v = Math.max(0.05, Math.min(0.9, n.velocity / 127));
+        const startT = n.start * beatSec;
+        const stopT = startT + n.duration * beatSec;
+        const osc = oCtx.createOscillator();
+        osc.type = s.type;
+        osc.frequency.value = freq;
+        const env = oCtx.createGain();
+        env.gain.setValueAtTime(0, startT);
+        env.gain.linearRampToValueAtTime(v, startT + s.attack);
+        env.gain.linearRampToValueAtTime(v * s.sustain, startT + s.attack + s.decay);
+        env.gain.setValueAtTime(v * s.sustain, stopT);
+        env.gain.linearRampToValueAtTime(0, stopT + s.release);
+        osc.connect(env);
+        env.connect(masterOut);
+        osc.start(startT);
+        osc.stop(stopT + s.release + 0.05);
+      }
+      const rendered = await oCtx.startRendering();
+      return audioBufferToWavBlob(rendered);
+    } else if (t.audioBuffer) {
+      return audioBufferToWavBlob(t.audioBuffer);
+    }
+    return null;
   }
   setMasterVolume(v) {
     this.ensureCtx();
@@ -358,3 +514,35 @@ export class RibaEngine {
 }
 
 export const engine = new RibaEngine();
+
+// === WAV encoder ===
+export function audioBufferToWavBlob(buffer) {
+  const numCh = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const length = buffer.length * numCh * 2 + 44;
+  const arrayBuffer = new ArrayBuffer(length);
+  const view = new DataView(arrayBuffer);
+  let offset = 0;
+  const writeString = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(offset++, s.charCodeAt(i)); };
+  writeString('RIFF');
+  view.setUint32(offset, length - 8, true); offset += 4;
+  writeString('WAVE');
+  writeString('fmt ');
+  view.setUint32(offset, 16, true); offset += 4;
+  view.setUint16(offset, 1, true); offset += 2;
+  view.setUint16(offset, numCh, true); offset += 2;
+  view.setUint32(offset, sampleRate, true); offset += 4;
+  view.setUint32(offset, sampleRate * numCh * 2, true); offset += 4;
+  view.setUint16(offset, numCh * 2, true); offset += 2;
+  view.setUint16(offset, 16, true); offset += 2;
+  writeString('data');
+  view.setUint32(offset, buffer.length * numCh * 2, true); offset += 4;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let ch = 0; ch < numCh; ch++) {
+      let s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+      s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      view.setInt16(offset, s, true); offset += 2;
+    }
+  }
+  return new Blob([arrayBuffer], { type: 'audio/wav' });
+}

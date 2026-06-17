@@ -5,12 +5,20 @@ export const TID = {
   stopAll: 'transport-stop-all',
   recordBtn: 'transport-record',
   metronomeBtn: 'transport-metronome',
+  loopBtn: 'transport-loop',
   themeBtn: 'transport-theme',
   manualBtn: 'transport-manual',
   exportBtn: 'transport-export',
   clearBtn: 'transport-clear',
   saveBtn: 'transport-save',
   loadBtn: 'transport-load',
+  undoBtn: 'transport-undo',
+  redoBtn: 'transport-redo',
+  stemsBtn: 'transport-stems',
+  mixerBtn: 'transport-mixer',
+  gmBtn: 'transport-gm',
+  vstBtn: 'transport-vst',
+  pluginsBtn: 'transport-plugins',
 
   // Tempo
   tempoSlider: 'tempo-slider',
@@ -18,6 +26,10 @@ export const TID = {
   timeSigSelect: 'timesig-select',
   masterVolSlider: 'master-volume-slider',
   masterProgress: 'master-progress',
+
+  // Timeline / playhead
+  timeline: 'timeline',
+  playhead: 'playhead',
 
   // Add buttons
   addAudio: 'add-audio-track',
@@ -29,12 +41,23 @@ export const TID = {
   midiToAudio: 'midi-to-audio-btn',
   audioToMidi: 'audio-to-midi-btn',
 
+  // Menu bar
+  menuFile: 'menu-file',
+  menuEdit: 'menu-edit',
+  menuTrack: 'menu-track',
+  menuEvent: 'menu-event',
+  menuAudioSuite: 'menu-audiosuite',
+  menuTools: 'menu-tools',
+  menuView: 'menu-view',
+  menuOptions: 'menu-options',
+  menuHelp: 'menu-help',
+
   // Dream dialog
   dreamPromptInput: 'dream-prompt-input',
   dreamGenerateConfirm: 'dream-generate-confirm',
   dreamCloseBtn: 'dream-close-btn',
 
-  // Track row (template, append index)
+  // Track row
   trackRow: (i) => `track-row-${i}`,
   trackPlay: (i) => `track-play-${i}`,
   trackStop: (i) => `track-stop-${i}`,
@@ -48,11 +71,19 @@ export const TID = {
   trackEqBass: (i) => `track-eq-bass-${i}`,
   trackEqMid: (i) => `track-eq-mid-${i}`,
   trackEqHigh: (i) => `track-eq-high-${i}`,
+  trackReverb: (i) => `track-reverb-${i}`,
+  trackDelay: (i) => `track-delay-${i}`,
+  trackInstrument: (i) => `track-instrument-${i}`,
 
   // Piano roll
   pianoRollClose: 'pianoroll-close',
   pianoRollPlay: 'pianoroll-play',
 
+  // GM / Plugins
+  gmSelect: 'gm-instrument-select',
+  gmApply: 'gm-apply-btn',
+
   // File input
   audioFileInput: 'audio-file-input',
+  projectFileInput: 'project-file-input',
 };
