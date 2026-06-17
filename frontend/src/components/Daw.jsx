@@ -1483,6 +1483,7 @@ export default function Daw() {
         timeSig={timeSig}
         tempo={tempo}
         onLoopWrap={handleLoopWrap}
+        onPositionChange={handlePlayheadChange}
       />
 
       {/* MAIN AREA */}
