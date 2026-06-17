@@ -7,9 +7,16 @@ export function register() {
 
   const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
   const isDev = process.env.NODE_ENV !== 'production';
+  // Inside a Tauri desktop shell the custom protocol (tauri://) is incompatible
+  // with the service worker — skip registration entirely.
+  const isTauri =
+    typeof window !== 'undefined' && (
+      window.__TAURI__ !== undefined ||
+      window.__TAURI_INTERNALS__ !== undefined
+    );
 
-  // In dev mode, unregister to avoid stale caches confusing hot reload.
-  if (isDev || isLocalhost) {
+  // In dev mode or Tauri, unregister to avoid stale caches / protocol mismatch.
+  if (isDev || isLocalhost || isTauri) {
     unregister();
     return;
   }

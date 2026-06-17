@@ -1,0 +1,31 @@
+[package]
+name = "riba"
+version = "1.6.0"
+description = "RIBA · Bantu Digital Audio Workstation"
+authors = ["Emergent Labs"]
+edition = "2021"
+license = "MIT"
+repository = ""
+default-run = "riba"
+
+[lib]
+name = "riba_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "riba"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-shell = "2.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# this feature is used for production builds where `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]

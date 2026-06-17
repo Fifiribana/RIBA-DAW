@@ -32,6 +32,20 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v1.7 (iteration 9 - Feb 2026) — PARITY TESTS + TAURI SKELETON
+- **🧪 Test de parité math backend ↔ frontend** : `/app/backend/tests/test_bantu_parity.py`
+  - Compare `_build_bantu_grid` (Python) vs `computeBantuGrid` (JS via `node`) sur 5 styles × 5 combos (density, bars) = **25 cas, 0 dérive** + 1 sanity test.
+  - Tolérance `1e-4`. **26/26 PASS** — parité byte-identique garantie sur Asiko, Makossa, Bikutsi 4/4, 6/8, 12/24.
+- **🖥️ Squelette Tauri v2** sous `/app/src-tauri/` :
+  - `tauri.conf.json` complet (window 1440×900, dark theme, identifier `com.emergent.riba`, bundle targets `dmg/msi/nsis/deb/appimage/app`)
+  - `Cargo.toml` (tauri 2.0 + tauri-plugin-shell), `build.rs`, `src/main.rs`, `src/lib.rs` (devtools auto en debug, bloc sidecar FastAPI commenté/prêt à activer)
+  - `capabilities/default.json` (permissions core + shell)
+  - Icons 32/128/256/512 PNG + ICO multi-tailles + ICNS placeholder
+  - Helper `/app/frontend/src/lib/runtime.js` détecte `window.__TAURI_INTERNALS__` et bascule sur `127.0.0.1:8001` quand bundlé
+  - `serviceWorkerRegistration.js` patché pour skip en environnement Tauri
+  - `package.json` : ajout `"homepage": "./"` (asset paths relatifs pour Tauri) + scripts `tauri`, `desktop:dev`, `desktop:build`
+  - **`/app/DESKTOP.md`** : guide complet build local (prereqs Rust/Yarn/OS toolchain, dev/build/sidecar/CI GitHub Actions)
+
 ### v1.6 (iteration 8 - Feb 2026) — BANTU VISUAL INNOVATION 🌍
 - **🎨 Markers Bantu Grid sur Timeline** :
   - Lignes verticales asymétriques en arrière-plan (opacity 0.35, box-shadow lueur)

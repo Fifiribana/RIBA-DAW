@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "homepage": "./",
   "dependencies": {
     "@hookform/resolvers": "5.0.1",
     "@phosphor-icons/react": "^2.1.10",
@@ -64,7 +65,10 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
-    "test": "craco test"
+    "test": "craco test",
+    "tauri": "tauri --config ../src-tauri/tauri.conf.json",
+    "desktop:dev": "tauri dev --config ../src-tauri/tauri.conf.json",
+    "desktop:build": "tauri build --config ../src-tauri/tauri.conf.json"
   },
   "browserslist": {
     "production": [

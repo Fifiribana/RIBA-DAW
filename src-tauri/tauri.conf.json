@@ -1,0 +1,76 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RIBA",
+  "version": "1.6.0",
+  "identifier": "com.emergent.riba",
+  "build": {
+    "beforeDevCommand": "yarn --cwd ../frontend start",
+    "beforeBuildCommand": "yarn --cwd ../frontend build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../frontend/build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "RIBA · Bantu Digital Audio Workstation",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "theme": "Dark",
+        "backgroundColor": "#0a0a0c"
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "macOSPrivateApi": false
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg", "msi", "nsis", "deb", "appimage"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Music",
+    "shortDescription": "Pro Tools-inspired Web DAW with exclusive Bantu Oral Grid quantization.",
+    "longDescription": "RIBA is a Digital Audio Workstation that brings the asymmetric rhythmic structures of Central African music (Asiko, Makossa, Bikutsi) to modern music production. Mix, record and produce music with the world's only Bantu Oral Grid quantization engine.",
+    "copyright": "© 2026 Emergent Labs",
+    "publisher": "Emergent Labs",
+    "homepage": "https://riba-studio.preview.emergentagent.com",
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "11.0",
+      "entitlements": null,
+      "exceptionDomain": ""
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": "en-US"
+      },
+      "nsis": {
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
+  }
+}
