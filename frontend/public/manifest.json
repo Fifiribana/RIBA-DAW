@@ -1,0 +1,53 @@
+{
+  "name": "RIBA - Bantu Digital Audio Workstation",
+  "short_name": "RIBA",
+  "description": "Pro Tools-inspired Web DAW with exclusive Bantu Oral Grid quantization (Asiko, Makossa, Bikutsi). Mix, record and produce music directly in your browser.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0a0a0c",
+  "theme_color": "#a820ff",
+  "lang": "fr-FR",
+  "categories": ["music", "productivity", "multimedia"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Audio Track",
+      "short_name": "Audio",
+      "description": "Add a new audio track",
+      "url": "/?action=new-audio"
+    },
+    {
+      "name": "New MIDI Track",
+      "short_name": "MIDI",
+      "description": "Add a new MIDI track",
+      "url": "/?action=new-midi"
+    },
+    {
+      "name": "Dream Track AI",
+      "short_name": "Dream",
+      "description": "Generate music with AI",
+      "url": "/?action=dream"
+    }
+  ]
+}

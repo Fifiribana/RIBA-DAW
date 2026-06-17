@@ -51,6 +51,34 @@ export default function Daw() {
   const [recordTime, setRecordTime] = useState(0);
   const [theme, setTheme] = useState('dark');
 
+  // === PWA install state ===
+  const [pwaPrompt, setPwaPrompt] = useState(null);
+  const [pwaInstalled, setPwaInstalled] = useState(false);
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setPwaPrompt(e); };
+    const installed = () => { setPwaInstalled(true); setPwaPrompt(null); };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', installed);
+    // Detect if running as installed PWA
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      setPwaInstalled(true);
+    }
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installed);
+    };
+  }, []);
+  const handleInstallPwa = useCallback(async () => {
+    if (!pwaPrompt) {
+      setStatusMsg('Install not available. Use browser menu → Install RIBA.');
+      return;
+    }
+    pwaPrompt.prompt();
+    const { outcome } = await pwaPrompt.userChoice;
+    setStatusMsg(outcome === 'accepted' ? 'RIBA installed!' : 'Install dismissed');
+    setPwaPrompt(null);
+  }, [pwaPrompt]);
+
   // === New v1.1 state ===
   const [looping, setLooping] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
@@ -1151,6 +1179,21 @@ export default function Daw() {
     try {
       const sr = enTrk.audioBuffer.sampleRate;
       const ch = enTrk.audioBuffer.numberOfChannels;
+      // ==== REVERSE: in-place reversal of buffer data ====
+      if (type === 'reverse') {
+        const ctx = engine.ensureCtx();
+        const reversed = ctx.createBuffer(ch, enTrk.audioBuffer.length, sr);
+        for (let c = 0; c < ch; c++) {
+          const src = enTrk.audioBuffer.getChannelData(c);
+          const dst = reversed.getChannelData(c);
+          for (let i = 0, n = src.length; i < n; i++) dst[n - 1 - i] = src[i];
+        }
+        enTrk.loadAudio(reversed);
+        const peaks = engine.computePeaks(reversed, 200);
+        setTracks(prev => prev.map(tt => tt.id === t.id ? { ...tt, peaks, displayName: tt.displayName + ' [reversed]' } : tt));
+        setStatusMsg('AudioSuite Reverse applied destructively');
+        return;
+      }
       const dur = enTrk.audioBuffer.duration + (type === 'reverb' ? 1.5 : 0);
       const oCtx = new OfflineAudioContext(ch, Math.ceil(dur * sr), sr);
       const src = oCtx.createBufferSource();
@@ -1377,6 +1420,7 @@ export default function Daw() {
           asGain: () => audioSuiteProcess('gain'),
           asEq: () => audioSuiteProcess('eq'),
           asReverb: () => audioSuiteProcess('reverb'),
+          asReverse: () => audioSuiteProcess('reverse'),
           magic12Sep: magic12Separate,
           magic12Master,
           // Tools
@@ -1393,6 +1437,12 @@ export default function Daw() {
           openGM: () => setGmOpen(true),
           openVst: scanVst,
           openPlugins: () => setPluginsOpen(true),
+          // Event extra
+          autoTempo: () => {
+            const t = tracks.find(x => x.id === selectedTrackId);
+            if (!t) { setStatusMsg('Select an audio track first'); return; }
+            detectTrackBpm(t.id);
+          },
           // Help
           openManual: () => setManualOpen(true),
         }}
@@ -1563,6 +1613,21 @@ export default function Daw() {
         <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="riba-btn riba-btn-icon" data-testid={TID.themeBtn}>
           {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
         </button>
+        {!pwaInstalled && pwaPrompt && (
+          <button
+            onClick={handleInstallPwa}
+            className="riba-btn"
+            data-testid="install-pwa-btn"
+            title="Install RIBA as a desktop app"
+            style={{
+              height: 38,
+              background: 'linear-gradient(135deg, #D946EF 0%, #6366F1 100%)',
+              color: '#fff', border: 'none', fontWeight: 700
+            }}
+          >
+            <DownloadSimple size={14} weight="bold" /> Install
+          </button>
+        )}
         <button onClick={() => setManualOpen(true)} className="riba-btn riba-btn-icon" data-testid={TID.manualBtn} title="Manual (F1)">
           <BookOpen size={14} />
         </button>
@@ -2237,7 +2302,7 @@ const PRO_TOOLS_MENUS = {
     { id: 'edit_copy', label: 'Copy', shortcut: 'Ctrl+C', key: 'copyTrack' },
     { id: 'edit_paste', label: 'Paste', shortcut: 'Ctrl+V', key: 'pasteTrack' },
     { sep: true },
-    { id: 'edit_separate_clip', label: 'Separate Clip At Selection', shortcut: 'Ctrl+E', key: 'separateClip' },
+    { id: 'edit_separate_clip', label: 'Separate Clip at Playhead', shortcut: 'Ctrl+E', key: 'separateClip' },
     { id: 'edit_consolidate', label: 'Consolidate Clip', shortcut: 'Alt+Shift+3', key: 'consolidateClip' },
   ],
   Track: [
@@ -2256,12 +2321,14 @@ const PRO_TOOLS_MENUS = {
     { id: 'event_history', label: 'Dream History', key: 'openHistory' },
     { sep: true },
     { id: 'event_piano', label: 'Open Piano Roll', key: 'openPiano' },
-    { id: 'event_bantu', label: 'Bantu Grid Quantize... 🌍', key: 'openBantu' },
+    { id: 'event_auto_tempo', label: 'Automatic Tempo Detection', key: 'autoTempo' },
+    { id: 'event_bantu_grid', label: 'Quantize to Bantu Oral Grid (Innovation RIBA) 🌍', key: 'openBantu' },
   ],
   AudioSuite: [
     { id: 'as_gain', label: 'Gain (Destructive)', key: 'asGain' },
     { id: 'as_eq', label: 'EQ / Filter', key: 'asEq' },
     { id: 'as_reverb', label: 'Reverb Process', key: 'asReverb' },
+    { id: 'as_reverse', label: 'Reverse Audio', key: 'asReverse' },
     { sep: true },
     { id: 'as_separate', label: 'Magic12 Source Separation', key: 'magic12Sep' },
     { id: 'as_master', label: 'Magic12 AI Mastering', key: 'magic12Master' },
