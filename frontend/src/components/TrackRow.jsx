@@ -111,6 +111,17 @@ export default function TrackRow({ track, index, color, isSelected, onSelect, on
               <PianoKeys size={14} />
             </button>
           )}
+          {!track.isMIDI && (
+            <button
+              data-testid={TID.detectBpmBtn(index)}
+              className="riba-btn riba-btn-icon"
+              onClick={() => onAction('detectBpm', track.id)}
+              title="Auto-detect BPM"
+              style={{ color: '#22D3EE' }}
+            >
+              <span style={{ fontSize: 9, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>BPM</span>
+            </button>
+          )}
           <button
             data-testid={TID.trackDelete(index)}
             className="riba-btn riba-btn-icon"

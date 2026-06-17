@@ -68,7 +68,13 @@ export default function Daw() {
   const [bouncing, setBouncing] = useState(false);
   const [bounceProgress, setBounceProgress] = useState(0);
   const [setupOpen, setSetupOpen] = useState(false);
-  const [setupTab, setSetupTab] = useState('playback'); // playback | io | preferences
+  const [setupTab, setSetupTab] = useState('playback');
+  const [audioDevices, setAudioDevices] = useState({ inputs: [], outputs: [], supported: false, loaded: false });
+  const [bantuOpen, setBantuOpen] = useState(false);
+  const [bantuStyle, setBantuStyle] = useState('bikutsi_44');
+  const [bantuDensity, setBantuDensity] = useState(16);
+  const [bantuBars, setBantuBars] = useState(4);
+  const [bantuStyles, setBantuStyles] = useState([]);
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -302,6 +308,17 @@ export default function Daw() {
       engine.getOrCreateTrack(id).setInstrument(idx);
       updateTrack(id, { instrumentIndex: idx });
       setStatusMsg(`Instrument: ${GM_INSTRUMENTS[idx]?.name || '?'}`);
+    } else if (action === 'detectBpm') {
+      // detectTrackBpm is defined later via useCallback; reference via window-attached or call directly via ref pattern
+      const enTrk = engine.tracks.get(id);
+      if (!enTrk?.audioBuffer) { setStatusMsg('BPM detect only works on audio tracks'); return; }
+      const detected = engine.detectTempo(enTrk.audioBuffer);
+      if (window.confirm(`Detected BPM: ${detected}\nSet as project tempo?`)) {
+        setTempo(Math.round(detected));
+        setStatusMsg(`Tempo set to ${Math.round(detected)} BPM (auto-detected)`);
+      } else {
+        setStatusMsg(`BPM detected: ${detected} (not applied)`);
+      }
     }
   }, [playTrack, deleteTrack, updateTrack]);
 
@@ -1183,6 +1200,81 @@ export default function Daw() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks, selectedTrackId, pushUndo]);
 
+  // --- BPM auto-detect ---
+  const detectTrackBpm = useCallback((trackId) => {
+    const enTrk = engine.tracks.get(trackId);
+    if (!enTrk?.audioBuffer) { setStatusMsg('BPM detect only works on audio tracks'); return; }
+    const detected = engine.detectTempo(enTrk.audioBuffer);
+    if (window.confirm(`Detected BPM: ${detected}\nSet as project tempo?`)) {
+      setTempo(Math.round(detected));
+      setStatusMsg(`Tempo set to ${Math.round(detected)} BPM (auto-detected)`);
+    } else {
+      setStatusMsg(`BPM detected: ${detected} (not applied)`);
+    }
+  }, []);
+
+  // --- Bantu Grid Quantize ---
+  const loadBantuStyles = useCallback(async () => {
+    if (bantuStyles.length) return;
+    try {
+      const res = await axios.get(`${API}/quantize/styles`);
+      setBantuStyles(res.data.styles || []);
+    } catch (e) { /* ignore */ }
+  }, [bantuStyles]);
+
+  const applyBantuGrid = useCallback(async () => {
+    const t = tracks.find(x => x.id === selectedTrackId);
+    if (!t || !t.isMIDI) { setStatusMsg('Select a MIDI track to apply Bantu Grid'); return; }
+    if (!t.midiNotes?.length) { setStatusMsg('Track has no notes'); return; }
+    try {
+      const res = await axios.post(`${API}/quantize/bantu-grid`, {
+        style: bantuStyle, density: bantuDensity, bars: bantuBars,
+      });
+      const grid = res.data.time_stamps_beats || [];
+      if (!grid.length) { setStatusMsg('Empty grid returned'); return; }
+      pushUndo();
+      // snap each note's start to nearest grid point
+      const snapped = t.midiNotes.map(n => {
+        let best = grid[0], bestDiff = Math.abs(n.start - grid[0]);
+        for (const g of grid) {
+          const d = Math.abs(n.start - g);
+          if (d < bestDiff) { best = g; bestDiff = d; }
+        }
+        return { ...n, start: Math.round(best * 1000) / 1000 };
+      });
+      setTracks(prev => prev.map(tt => tt.id === t.id ? {
+        ...tt, midiNotes: snapped,
+        displayName: tt.displayName.replace(/ \[bantu.*?\]$/, '') + ` [bantu:${bantuStyle}]`,
+      } : tt));
+      engine.loadMIDI(t.id, snapped);
+      setStatusMsg(`Bantu Grid "${bantuStyle}" applied — ${snapped.length} notes snapped (${res.data.description})`);
+      setBantuOpen(false);
+    } catch (e) {
+      setStatusMsg('Bantu Grid failed: ' + (e.response?.data?.detail || e.message));
+    }
+  }, [tracks, selectedTrackId, bantuStyle, bantuDensity, bantuBars, pushUndo]);
+
+  const openBantuGrid = useCallback(() => {
+    loadBantuStyles();
+    setBantuOpen(true);
+  }, [loadBantuStyles]);
+
+  // --- Audio devices enumeration ---
+  const loadAudioDevices = useCallback(async () => {
+    const result = await engine.listAudioDevices();
+    setAudioDevices({ ...result, loaded: true });
+    if (result.supported) {
+      try {
+        await axios.post(`${API}/setup/hardware`, {
+          default_input: result.inputs[0]?.label || 'Default Microphone',
+          total_inputs: result.inputs.length,
+          default_output: result.outputs[0]?.label || 'Default Speakers',
+          total_outputs: result.outputs.length,
+        });
+      } catch (_) { /* ignore */ }
+    }
+  }, []);
+
   // === Keyboard shortcuts ===
   useEffect(() => {
     const onKey = (e) => {
@@ -1280,6 +1372,7 @@ export default function Daw() {
           openDream: () => setDreamOpen(true),
           openHistory: loadDreamHistory,
           openPiano: () => { const t = tracks.find(x => x.id === selectedTrackId); if (t && t.isMIDI) setPianoTrackId(t.id); else setStatusMsg('Select a MIDI track first'); },
+          openBantu: openBantuGrid,
           // AudioSuite
           asGain: () => audioSuiteProcess('gain'),
           asEq: () => audioSuiteProcess('eq'),
@@ -1294,8 +1387,8 @@ export default function Daw() {
           openMixer: () => setMixerOpen(true),
           toggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
           // Setup
-          openPlayback: () => { setSetupTab('playback'); setSetupOpen(true); },
-          openIO: () => { setSetupTab('io'); setSetupOpen(true); },
+          openPlayback: () => { setSetupTab('playback'); setSetupOpen(true); loadAudioDevices(); },
+          openIO: () => { setSetupTab('io'); setSetupOpen(true); loadAudioDevices(); },
           openPrefs: () => { setSetupTab('preferences'); setSetupOpen(true); },
           openGM: () => setGmOpen(true),
           openVst: scanVst,
@@ -1957,6 +2050,83 @@ export default function Daw() {
         </div>
       )}
 
+      {bantuOpen && (
+        <Modal title="Bantu Oral Grid · Quantification Africaine 🌍" onClose={() => setBantuOpen(false)}>
+          <div style={{ color: '#A1A1AA', fontSize: 12, marginBottom: 12 }}>
+            Quantification asymétrique inspirée des structures rythmiques d&apos;Afrique Centrale.
+            Sélectionnez la piste MIDI cible (en cliquant dessus), puis le style :
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div>
+              <label className="font-mono-r" style={{ fontSize: 10, color: '#71717A', display: 'block', marginBottom: 4 }}>STYLE RYTHMIQUE</label>
+              <select
+                data-testid={TID.bantuStyleSelect}
+                value={bantuStyle}
+                onChange={(e) => setBantuStyle(e.target.value)}
+                style={{
+                  width: '100%', background: '#09090B', color: '#FAFAFA',
+                  border: '1px solid rgba(217,70,239,0.3)', borderRadius: 6,
+                  padding: '8px 10px', fontSize: 13, fontFamily: 'Manrope, sans-serif'
+                }}
+              >
+                {(bantuStyles.length ? bantuStyles : [
+                  { id: 'asiko_wisdom', label: 'Asiko Wisdom (Sagesse africaine)' },
+                  { id: 'makossa_roots', label: 'Makossa Roots (Cameroun)' },
+                  { id: 'bikutsi_44', label: 'Bikutsi 4/4 (8 ternaire)' },
+                  { id: 'bikutsi_68', label: 'Bikutsi 6/8' },
+                  { id: 'bikutsi_1224', label: 'Bikutsi 12/24 (3-contre-4)' },
+                ]).map(s => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label className="font-mono-r" style={{ fontSize: 10, color: '#71717A', display: 'block', marginBottom: 4 }}>DENSITÉ (points de grille)</label>
+                <input
+                  data-testid={TID.bantuDensity}
+                  type="number" min={4} max={64} value={bantuDensity}
+                  onChange={(e) => setBantuDensity(parseInt(e.target.value) || 16)}
+                  style={{
+                    width: '100%', background: '#09090B', color: '#FAFAFA',
+                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
+                    padding: '8px 10px', fontSize: 13, fontFamily: 'JetBrains Mono, monospace'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="font-mono-r" style={{ fontSize: 10, color: '#71717A', display: 'block', marginBottom: 4 }}>MESURES</label>
+                <input
+                  data-testid={TID.bantuBars}
+                  type="number" min={1} max={16} value={bantuBars}
+                  onChange={(e) => setBantuBars(parseFloat(e.target.value) || 4)}
+                  style={{
+                    width: '100%', background: '#09090B', color: '#FAFAFA',
+                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
+                    padding: '8px 10px', fontSize: 13, fontFamily: 'JetBrains Mono, monospace'
+                  }}
+                />
+              </div>
+            </div>
+            <div style={{ background: 'rgba(217,70,239,0.08)', padding: 10, borderRadius: 6, border: '1px solid rgba(217,70,239,0.2)', fontSize: 11, color: '#E4E4E7' }}>
+              💡 <b>Innovation Riba</b> : aucun autre DAW (Pro Tools, Ableton, FL Studio) ne propose ces grilles. Vos notes MIDI seront snappées sur des positions asymétriques inspirées des proverbes Bantu, du Bikutsi camerounais, du Makossa et de l&apos;Asiko.
+            </div>
+            <div style={{ color: '#A1A1AA', fontSize: 11 }}>
+              Piste cible : {tracks.find(x => x.id === selectedTrackId)?.displayName || <em>aucune sélectionnée — cliquez sur une piste MIDI d&apos;abord</em>}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+            <button className="riba-btn" onClick={() => setBantuOpen(false)}>Annuler</button>
+            <button
+              data-testid={TID.bantuApply}
+              className="riba-btn"
+              style={{ background: 'linear-gradient(135deg, #D946EF, #F59E0B)', color: '#fff', border: 'none' }}
+              onClick={applyBantuGrid}
+            >🌍 Appliquer la grille</button>
+          </div>
+        </Modal>
+      )}
+
       {setupOpen && (
         <Modal title={`Setup · ${setupTab === 'playback' ? 'Playback Engine' : setupTab === 'io' ? 'I/O Setup' : 'Preferences'}`} onClose={() => setSetupOpen(false)}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
@@ -1973,6 +2143,32 @@ export default function Daw() {
               <SetupRow label="Buffer Size" value={`${engine.ctx?.baseLatency ? Math.round(engine.ctx.baseLatency * 1000) : '~'} ms (system)`} />
               <SetupRow label="Output Latency" value={`${engine.ctx?.outputLatency ? Math.round(engine.ctx.outputLatency * 1000) : '~'} ms`} />
               <SetupRow label="State" value={engine.ctx?.state || 'not started'} />
+              <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div className="font-mono-r" style={{ fontSize: 10, color: '#A1A1AA', letterSpacing: '0.1em' }}>DETECTED HARDWARE</div>
+                  <button className="riba-btn" style={{ fontSize: 10, padding: '3px 8px' }} onClick={loadAudioDevices}>Refresh</button>
+                </div>
+                {!audioDevices.loaded ? (
+                  <div style={{ fontSize: 12, color: '#71717A' }}>Click Refresh to enumerate audio devices.</div>
+                ) : !audioDevices.supported ? (
+                  <div style={{ fontSize: 12, color: '#EF4444' }}>enumerateDevices not supported in this browser.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div className="font-mono-r" style={{ fontSize: 10, color: '#71717A' }}>INPUTS ({audioDevices.inputs.length})</div>
+                    {audioDevices.inputs.map((d, i) => (
+                      <div key={d.deviceId || i} style={{ fontSize: 11, color: '#FAFAFA', background: '#09090B', padding: '4px 8px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
+                        🎤 {d.label || `Microphone ${i + 1}`}
+                      </div>
+                    ))}
+                    <div className="font-mono-r" style={{ fontSize: 10, color: '#71717A', marginTop: 4 }}>OUTPUTS ({audioDevices.outputs.length})</div>
+                    {audioDevices.outputs.map((d, i) => (
+                      <div key={d.deviceId || i} style={{ fontSize: 11, color: '#FAFAFA', background: '#09090B', padding: '4px 8px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
+                        🔊 {d.label || `Speaker ${i + 1}`}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div style={{ marginTop: 8, color: '#A1A1AA', fontSize: 11 }}>
                 ⚠️ Native ASIO / CoreAudio drivers cannot be selected in browsers. For lower latency, consider the desktop build (Electron + ASIO host).
               </div>
@@ -2060,6 +2256,7 @@ const PRO_TOOLS_MENUS = {
     { id: 'event_history', label: 'Dream History', key: 'openHistory' },
     { sep: true },
     { id: 'event_piano', label: 'Open Piano Roll', key: 'openPiano' },
+    { id: 'event_bantu', label: 'Bantu Grid Quantize... 🌍', key: 'openBantu' },
   ],
   AudioSuite: [
     { id: 'as_gain', label: 'Gain (Destructive)', key: 'asGain' },

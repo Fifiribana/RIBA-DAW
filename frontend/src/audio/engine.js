@@ -511,6 +511,58 @@ export class RibaEngine {
     }
     return peaks;
   }
+
+  // ==== BPM detection via onset energy ====
+  detectTempo(audioBuffer) {
+    if (!audioBuffer) return 120.0;
+    const data = audioBuffer.getChannelData(0);
+    const sr = audioBuffer.sampleRate;
+    const hop = Math.round(sr * 0.02); // 20ms frames
+    const energy = [];
+    for (let i = 0; i < data.length; i += hop) {
+      let s = 0;
+      const end = Math.min(i + hop, data.length);
+      for (let j = i; j < end; j++) s += data[j] * data[j];
+      energy.push(Math.sqrt(s / (end - i)));
+    }
+    // dynamic threshold = avg * 1.5
+    let avg = 0;
+    for (const v of energy) avg += v;
+    avg /= Math.max(1, energy.length);
+    const threshold = Math.max(0.05, avg * 1.5);
+    const peaks = [];
+    for (let i = 1; i < energy.length - 1; i++) {
+      if (energy[i] > energy[i - 1] && energy[i] > energy[i + 1] && energy[i] > threshold) {
+        peaks.push(i * hop);
+      }
+    }
+    if (peaks.length < 2) return 120.0;
+    const intervals = [];
+    for (let i = 1; i < peaks.length; i++) intervals.push(peaks[i] - peaks[i - 1]);
+    intervals.sort((a, b) => a - b);
+    const median = intervals[Math.floor(intervals.length / 2)];
+    let bpm = 60 / (median / sr);
+    while (bpm < 60) bpm *= 2;
+    while (bpm > 180) bpm /= 2;
+    return Math.round(bpm * 10) / 10;
+  }
+
+  async listAudioDevices() {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      return { inputs: [], outputs: [], supported: false };
+    }
+    try {
+      // request mic permission to unlock real device names
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+    } catch (_) { /* permission denied -> partial info */ }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return {
+      inputs: devices.filter(d => d.kind === 'audioinput'),
+      outputs: devices.filter(d => d.kind === 'audiooutput'),
+      supported: true,
+    };
+  }
 }
 
 export const engine = new RibaEngine();

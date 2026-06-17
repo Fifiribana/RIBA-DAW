@@ -86,4 +86,16 @@ export const TID = {
   // File input
   audioFileInput: 'audio-file-input',
   projectFileInput: 'project-file-input',
+
+  // BPM detect + Bantu Grid
+  detectBpmBtn: (i) => `track-detect-bpm-${i}`,
+  bantuGridBtn: 'bantu-grid-btn',
+  bantuStyleSelect: 'bantu-style-select',
+  bantuApply: 'bantu-apply-btn',
+  bantuDensity: 'bantu-density-input',
+  bantuBars: 'bantu-bars-input',
+
+  // Counter
+  counterToggle: 'transport-counter-toggle',
+  counterValue: 'transport-counter-value',
 };

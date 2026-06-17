@@ -64,6 +64,17 @@ class Session(BaseModel):
 class MasteringRequest(BaseModel):
     track_descriptions: List[str] = []
 
+class BantuGridRequest(BaseModel):
+    style: str = "asiko_wisdom"
+    density: int = 16
+    bars: float = 4.0
+
+class HardwareSetupRequest(BaseModel):
+    default_input: str = ""
+    total_inputs: int = 0
+    default_output: str = ""
+    total_outputs: int = 0
+
 # ==================== HELPERS ====================
 SCALES = {
     "major":      [0, 2, 4, 5, 7, 9, 11],
@@ -245,6 +256,109 @@ async def dream_history():
 async def mastering_suggest(req: MasteringRequest):
     text = await generate_mastering_with_llm(req.track_descriptions)
     return {"suggestions": text}
+
+# ====== Bantu Oral Grid — exclusive Riba quantization ======
+import math
+
+def _build_bantu_grid(style: str, density: int, bars: float):
+    """Generate asymmetric quantization positions (in beats, 1 beat = quarter note)."""
+    if density < 2:
+        density = 2
+    if density > 256:
+        density = 256
+    total_beats = bars * 4.0  # 4 beats per bar
+    # uniform base grid
+    base = [i * (total_beats / density) for i in range(density)]
+    s = style.lower()
+
+    def _apply_swing(arr, offsets):
+        return [arr[i] + offsets[i % len(offsets)] for i in range(len(arr))]
+
+    if s == "asiko_wisdom":
+        # Asiko: 3rd & 7th positions skew
+        out = list(base)
+        for i in range(len(out)):
+            if i % 3 == 0: out[i] += 0.10  # micro-anticipation (sacred swing)
+            elif i % 7 == 0: out[i] -= 0.06
+        description = "Asiko (sagesse): anticipation sur 3e impact, tension retardée sur 7e."
+    elif s == "makossa_roots":
+        swing = [0.0, 0.16, -0.08, 0.04]  # in beats
+        out = _apply_swing(base, swing)
+        description = "Makossa: syncope basse-pulsation, accentuation backbeat ternaire."
+    elif s == "bikutsi_44":
+        # Bikutsi 4/4 - 8 notes ternaires (rapide, accent ternaire)
+        swing = [0.0, 0.20, 0.40, 0.0, 0.20, 0.40, 0.0, 0.20]
+        out = _apply_swing(base, swing[:density % 8 or 8])
+        for i in range(len(out)):
+            if i % 4 == 2: out[i] += 0.08  # accent fort sur "and-of-2"
+        description = "Bikutsi 4/4 (8 ternaire): pulsation rapide, accent sur le contretemps fort."
+    elif s == "bikutsi_68":
+        # 6/8 - groupement 2+2+2 ou 3+3
+        swing = [0.0, 0.18, 0.32, 0.50, 0.66, 0.82]
+        out = []
+        for i in range(density):
+            cycle = i % 6
+            bar_idx = i // 6
+            out.append((swing[cycle] + bar_idx * 1.0) * (total_beats / max(1, density / 6)))
+        description = "Bikutsi 6/8: groupement ternaire, accents 1 et 4."
+    elif s == "bikutsi_1224":
+        # 12/24 - subdivision très fine, polyrythmie 3-contre-4
+        out = []
+        for i in range(density):
+            beat = (i / density) * total_beats
+            # polyrhythmic push every 3rd vs 4th subdivision
+            if i % 3 == 0: beat -= 0.04
+            if i % 4 == 0: beat += 0.05
+            out.append(beat)
+        description = "Bikutsi 12/24: polyrythmie 3-contre-4, micro-décalages denses."
+    else:
+        return None, None
+
+    # clamp to [0, total_beats]
+    out = [max(0.0, min(total_beats, round(v, 4))) for v in out]
+    return out, description
+
+
+@api_router.post("/quantize/bantu-grid")
+async def bantu_grid(req: BantuGridRequest):
+    out, desc = _build_bantu_grid(req.style, req.density, req.bars)
+    if out is None:
+        raise HTTPException(status_code=400, detail=f"Unknown rhythmic style: {req.style}")
+    return {
+        "style": req.style,
+        "density": req.density,
+        "bars": req.bars,
+        "time_stamps_beats": out,
+        "description": desc,
+        "available_styles": ["asiko_wisdom", "makossa_roots", "bikutsi_44", "bikutsi_68", "bikutsi_1224"],
+    }
+
+
+@api_router.get("/quantize/styles")
+async def quantize_styles():
+    return {
+        "styles": [
+            {"id": "asiko_wisdom",  "label": "Asiko Wisdom (Sagesse africaine)",  "family": "Africain"},
+            {"id": "makossa_roots", "label": "Makossa Roots (Racines Camerounaises)", "family": "Cameroun"},
+            {"id": "bikutsi_44",    "label": "Bikutsi 4/4 (8 ternaire)",          "family": "Cameroun"},
+            {"id": "bikutsi_68",    "label": "Bikutsi 6/8",                       "family": "Cameroun"},
+            {"id": "bikutsi_1224",  "label": "Bikutsi 12/24 (polyrythmie 3-contre-4)", "family": "Cameroun"},
+        ]
+    }
+
+
+@api_router.post("/setup/hardware")
+async def setup_hardware(req: HardwareSetupRequest):
+    doc = {
+        "default_input": req.default_input,
+        "total_inputs": req.total_inputs,
+        "default_output": req.default_output,
+        "total_outputs": req.total_outputs,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.hardware_setup.update_one({"_id": "default"}, {"$set": doc}, upsert=True)
+    return {"saved": True, "config": doc}
+
 
 @api_router.post("/session/save")
 async def session_save(session: Session):
