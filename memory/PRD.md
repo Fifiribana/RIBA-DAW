@@ -32,6 +32,22 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v1.5 (iteration 7 - Feb 2026) — REFACTOR
+- **♻️ Refactor Daw.jsx** : 2554 → 2019 lignes (-535 LOC, -21%). 13 nouveaux fichiers créés sous `/app/frontend/src/components/daw/`:
+  - `MenuBar.jsx` (composant + dropdown logic)
+  - `Timeline.jsx` (playhead animation, scrub)
+  - `Modal.jsx` (wrapper réutilisable + SetupRow) — **BONUS** : fermeture ESC ajoutée
+  - `proToolsMenuConfig.js` (config des 9 menus Pro Tools, 1 source de vérité)
+  - `modals/DreamHistoryModal.jsx`
+  - `modals/MasteringModal.jsx`
+  - `modals/ManualModal.jsx`
+  - `modals/GmInstrumentsModal.jsx`
+  - `modals/PluginsModal.jsx`
+  - `modals/MixerModal.jsx` (MASTER strip désormais toujours visible)
+  - `modals/BantuGridModal.jsx`
+  - `modals/SetupModal.jsx`
+- Tests : **iter 7 = 100% PASS, 0 régression** (9 menus, 8 modals, ESC-close, MIDI+Bantu binding, backend 16/16 pytest).
+
 ### v1.4 (iteration 6 - Feb 2026)
 - **🐛 CRITICAL FIX** : `autoTempoDetect is not defined` causait un crash blanc. Re-câblé à `detectTrackBpm(selectedTrack.id)` avec fallback statut "Select an audio track first".
 - **📱 PWA (Installable Web App)** :
