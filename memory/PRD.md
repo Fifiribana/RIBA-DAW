@@ -1,69 +1,51 @@
 # Riba DAW — Product Requirements Document
 
 ## Original Problem Statement
-User provided Windows C++ DAW code (Win32 + WASAPI) for an app named **Riba 12** and asked for a web version with ALL features. Across iterations user extended scope to include:
-- Extended HTML/JS feature set (menu bar, Loop, GM 128, VST scan, Mixer, Stems, Plugins, Undo/Redo)
-- New project JSON format (`id, name, type, instrument, notes, effects`)
-- **Pro Tools-inspired menu bar** with the exact JSON spec (File / Edit / Track / AudioSuite / Setup / etc.)
+User asked for web DAW called Riba, extended over iterations with: full feature set, extended HTML/JS features, Project JSON format, Pro Tools menu structure, and now **Pro Tools MixerStrip + TransportBar refinements, audio device enumeration, BPM auto-detect, and a unique African Bantu Oral Grid quantization system (Bikutsi 4/4 ternaire / 6/8 / 12/24, Makossa, Asiko)**.
 
 ## Architecture
-- **Frontend**: React 19 + Tailwind, WebAudio API (per-track FX bus: EQ → Reverb/Delay → Pan → Gain), MediaRecorder, OfflineAudioContext (stems + bounce mix), Canvas-based waveform/VU/spectrum/playhead, Phosphor Icons.
-- **Backend**: FastAPI + MongoDB + emergentintegrations LLM (gpt-5.4-mini, procedural fallback).
+- **Frontend**: React 19 + Tailwind, WebAudio API, MediaRecorder, OfflineAudioContext, Canvas viz, Phosphor Icons.
+- **Backend**: FastAPI + MongoDB + emergentintegrations LLM.
 
 ## What's Been Implemented
-### v1.0 — initial DAW
-Multi-track audio + MIDI playback, mic recording, metronome, Dream Track AI, save/load, theme, manual.
 
-### v1.1 — extended features
-Menu bar, Loop + L shortcut, animated Timeline+playhead, Undo/Redo (Ctrl+Z/Y), GM 128 instruments, VST scan, Plugins modal, Mixer modal, Stems export (WAV), per-track Reverb + Delay, Project JSON import.
+### v1.0 → v1.2 (previous iterations)
+- Multi-track audio + MIDI, mic recording, metronome with TS, Dream Track AI (LLM), session save/load, theme.
+- Menu bar Pro Tools (File / Edit / Track / Event / AudioSuite / Tools / View / Setup / Help) with shortcuts.
+- Loop button + L shortcut, Timeline + moving playhead, Undo/Redo (Ctrl+Z/Y, 30-step).
+- GM 128 instruments with synth presets, per-track Reverb + Delay, 3-band EQ.
+- Mixer modal, Stems export (real WAV via OfflineAudioContext), VST scan / Plugins modal.
+- Bounce Mix (real WAV mixdown), Freeze ❄️ / Commit / Duplicate / Group / Cut-Copy-Paste / Separate Clip / Consolidate.
+- AudioSuite destructive Gain / EQ / Reverb on audio buffer.
+- Project JSON import (`{project:{tempo, timeSignature, tracks:[{id,name,type,instrument,notes,effects}]}}`).
 
-### v1.2 — Pro Tools menu (this iteration)
-**Menu bar restructured to Pro Tools spec** with 9 menus (File/Edit/Track/Event/AudioSuite/Tools/View/Setup/Help) and all shortcuts displayed:
-
-#### File
-- New Session (Ctrl+N), Open Session (Ctrl+O), Save (Ctrl+S), **Save Copy In**, Import Audio (Ctrl+Shift+I), **Import Session Data**, Import Project JSON, **Bounce Mix** (Ctrl+Alt+B — real WAV via OfflineAudioContext), Export Stems, Export Session JSON
-
-#### Edit
-- Undo (Ctrl+Z), Redo (Ctrl+Y), **Cut/Copy/Paste** (Ctrl+X/C/V on selected track), **Separate Clip At Selection** (Ctrl+E — splits MIDI track at playhead into [L]/[R]), **Consolidate Clip** (deduplicates overlapping notes)
-
-#### Track
-- New MIDI Track (Ctrl+Shift+N), New Audio Track, **Group Tracks** (Ctrl+G — sync colors), **Duplicate Track**, **Freeze Track** (renders MIDI → audio buffer + ❄️ tag, saves CPU), **Commit Track** (Alt+Shift+C — permanent MIDI→audio), Delete Selected
-
-#### AudioSuite (destructive processing on audio tracks)
-- **Gain Destructive** (+4dB baked into buffer), **EQ/Filter** (3-band baked), **Reverb Process** (convolution baked), plus Magic12 Sep / Master entries
-
-#### Setup
-- **Playback Engine modal** (shows Web Audio API, real sample rate, baseLatency, outputLatency, ctx state), **I/O Setup** (mic + speakers + channels), **Preferences** (theme button, tempo, time sig, loop/metronome status, undo history depth), plus GM 128 / VST Scan / Plugins entries
-
-#### Event
-- Dream Track (AI), Dream History, Open Piano Roll
-
-#### Tools / View / Help
-- Toggle Metronome/Loop/Record, Mixer, Toggle Theme, User Manual (F1)
-
-### Track row selection
-- Clicking a track body selects it (border highlighted in track color). The selected track is the target of all Edit/Track/AudioSuite menu actions.
+### v1.3 (this iteration)
+- **Auto-BPM detect** : per audio track, button `BPM` analyses onset peaks and proposes to set as project tempo.
+- **Audio device enumeration** : Setup → Playback Engine now lists detected `audioinput` + `audiooutput` devices (after `getUserMedia` permission). Backend stores the selection in `/api/setup/hardware`.
+- **🌍 Bantu Oral Grid (innovation Riba exclusive)** : 5 styles available, applied as asymmetric MIDI quantization:
+  - `asiko_wisdom` (anticipation sur 3e impact, retard sur 7e)
+  - `makossa_roots` (syncope basse-pulsation)
+  - `bikutsi_44` — **Bikutsi 4/4, 8 ternaire**
+  - `bikutsi_68` — **Bikutsi 6/8**
+  - `bikutsi_1224` — **Bikutsi 12/24 polyrythmie 3-contre-4**
+  - Endpoints: `POST /api/quantize/bantu-grid` (returns `time_stamps_beats`), `GET /api/quantize/styles`
+  - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
+- **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
 ## Testing
-- **Iteration 1 (v1.0)**: 7/7 backend, 100% frontend ✅
-- **Iteration 2 (v1.1)**: all new features verified ✅
-- **Iteration 3 (v1.2)**: Pro Tools menu structure 100% ✅ (with 1 bug found & fixed: Timeline.onPositionChange wiring)
-- **Iteration 4 (regression for fix)**: Separate Clip verified ✅
+- **Iter 5**: **16/16 backend pytest PASS**, all frontend flows PASS (Bantu Grid 5 styles, Auto-BPM, audio device listing, regressions).
 
 ## ⚠️ Known Limitations
-- **MOCKED**: VST/AU plugin loader (browsers can't load native plugins).
-- **MOCKED**: Magic12 stem separation (creates fake stems).
-- **MOCKED**: MIDI→Audio / Audio→MIDI conversions (no real DSP).
+- **MOCKED**: VST plugin loading, Magic12 stem separation, MIDI→Audio / Audio→MIDI conversions (no real DSP).
 - **LLM BUDGET EXCEEDED**: Dream/Mastering fall back to procedural. Top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
-- **P1**: Native desktop build via Electron / Tauri with file system & menu native.
-- **P1**: PWA manifest for "Install Riba" from Chrome/Edge.
+- **P1**: PWA manifest → installable from Chrome/Edge; then Electron packaging for `.exe` / `.dmg`.
 - **P1**: Real MP3 export (lamejs).
+- **P2**: Real Audio→MIDI via CREPE/YIN pitch detection; Spleeter-WASM for real stem separation.
 - **P2**: WebMIDI input for external MIDI keyboards.
-- **P2**: Real Audio→MIDI via CREPE/YIN pitch detection.
-- **P2**: Spleeter-WASM for real stem separation.
+- **P2**: Visualize Bantu Grid markers on Timeline (currently only snapping notes).
 
 ## Next Action Items
-- (User asked about desktop build) — possible next: ship PWA manifest then Electron packaging.
+- User said "we'll do desktop later" — pause on PWA/Electron.
 - Top up Emergent LLM key.
