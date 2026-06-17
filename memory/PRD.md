@@ -32,6 +32,18 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v1.8 (iteration 9 - Feb 2026) — PRO TOOLS WINDOW MENU + WAVEFORM MODES
+- **🪟 Menu Window** (entre View et Setup) avec :
+  - Sous-menu **Configurations** : Window Configuration List (Alt+J), New Configuration (Alt+Shift+J)
+  - Sous-menu **Arrange** : Tile, Tile Horizontal, Tile Vertical, Cascade
+  - **Disk Usage** et **System Usage** (entrées indépendantes)
+- **🌊 View → Waveforms** sous-menu : Peak, Power, Rectified, Outlines, Overlapped Crossfades
+- **🪛 SystemUsageModal** : jauge CPU TOTAL + grille 24 cores (data-testid `core-0`..`core-23`, couleurs cyan/orange/rouge selon charge), jauges Disk + Memory, infos Buffer Underruns / Voices Active / Session uptime, random walk live 220 ms
+- **💾 DiskUsageModal** : table de 5 volumes simulés (Macintosh HD, Sessions SSD, Samples RAID, Backup HDD, RIBA Cloud) avec colonnes Type/Mount/Size/Used/Free/% + **48 kHz 24 Bit Track Min** calculée (17.28 MB/min stereo 24-bit/48 kHz → 1560 GB ≈ 1540.7 hr ✓)
+- **🎨 5 modes de waveform** propagés via `waveformMode` state à `TrackRow` → `Waveform.jsx` (peak/power/rectified/outlines/crossfades)
+- **♻️ MenuBar.jsx réécrit** : nouveau composant `MenuRow` supportant les sous-menus right-flyout (hover-driven, `data-testid='submenu-{id}'`)
+- Tests **iter 9 = 100% PASS** (9/9 scénarios, **42/42 pytest backend**, 0 régression, math Disk Usage validée)
+
 ### v1.7 (iteration 9 - Feb 2026) — PARITY TESTS + TAURI SKELETON
 - **🧪 Test de parité math backend ↔ frontend** : `/app/backend/tests/test_bantu_parity.py`
   - Compare `_build_bantu_grid` (Python) vs `computeBantuGrid` (JS via `node`) sur 5 styles × 5 combos (density, bars) = **25 cas, 0 dérive** + 1 sanity test.
