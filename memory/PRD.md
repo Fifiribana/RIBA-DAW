@@ -32,20 +32,32 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v1.4 (iteration 6 - Feb 2026)
+- **🐛 CRITICAL FIX** : `autoTempoDetect is not defined` causait un crash blanc. Re-câblé à `detectTrackBpm(selectedTrack.id)` avec fallback statut "Select an audio track first".
+- **📱 PWA (Installable Web App)** :
+  - `public/manifest.json` complet (name, short_name, icons 192/512/180, theme #a820ff, display=standalone, shortcuts).
+  - `public/service-worker.js` : strategy network-first pour shell, cache-first pour assets statiques, jamais cache /api.
+  - `src/serviceWorkerRegistration.js` : enregistrement prod-only, dev unregister, listener pour mise à jour.
+  - `public/index.html` : nouveaux meta tags (theme-color, apple-mobile-web-app-*, manifest link, icons), title "RIBA - Bantu Digital Audio Workstation".
+  - Bouton `Install` (data-testid="install-pwa-btn") dans la TopBar, capture `beforeinstallprompt`.
+  - Icônes PNG générées (192/512/180) avec logo magenta + texte RIBA.
+
 ## Testing
-- **Iter 5**: **16/16 backend pytest PASS**, all frontend flows PASS (Bantu Grid 5 styles, Auto-BPM, audio device listing, regressions).
+- **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
 
 ## ⚠️ Known Limitations
 - **MOCKED**: VST plugin loading, Magic12 stem separation, MIDI→Audio / Audio→MIDI conversions (no real DSP).
 - **LLM BUDGET EXCEEDED**: Dream/Mastering fall back to procedural. Top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
-- **P1**: PWA manifest → installable from Chrome/Edge; then Electron packaging for `.exe` / `.dmg`.
+- **P1**: Wrapper Electron / Tauri pour `.exe` / `.dmg` natif.
 - **P1**: Real MP3 export (lamejs).
 - **P2**: Real Audio→MIDI via CREPE/YIN pitch detection; Spleeter-WASM for real stem separation.
 - **P2**: WebMIDI input for external MIDI keyboards.
 - **P2**: Visualize Bantu Grid markers on Timeline (currently only snapping notes).
+- **P2**: Refactor Daw.jsx (2555 lignes) en sous-fichiers /app/frontend/src/components/daw/ (MenuBar, BantuModal, SetupModal).
 
 ## Next Action Items
-- User said "we'll do desktop later" — pause on PWA/Electron.
-- Top up Emergent LLM key.
+- PWA prête → tester l'installation depuis Chrome/Edge desktop (icône "+" dans la barre d'URL).
+- Démarrer le wrapper Electron pour version desktop native.
+- Top up Emergent LLM key pour réactiver Dream Track et Magic12 Master.
