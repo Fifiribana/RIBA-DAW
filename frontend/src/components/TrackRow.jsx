@@ -13,7 +13,7 @@ const TYPE_LABEL = {
   synth: 'SYNTH', dream: 'DREAM', recording: 'REC', other: 'AUDIO'
 };
 
-export default function TrackRow({ track, index, color, isSelected, onSelect, onAction }) {
+export default function TrackRow({ track, index, color, isSelected, onSelect, onAction, waveformMode = 'peak' }) {
   const sliderStyle = (v, c) => ({ color: c, '--val': `${v}%` });
 
   return (
@@ -136,7 +136,7 @@ export default function TrackRow({ track, index, color, isSelected, onSelect, on
 
       {/* Waveform */}
       <div style={{ flex: 1, padding: 6, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, background: '#0B0B0E' }}>
-        <Waveform peaks={track.peaks} color={color} height={48} />
+        <Waveform peaks={track.peaks} color={color} height={48} mode={waveformMode} />
         <VUMeter source="track" trackId={track.id} width={200} height={6} />
         {track.isMIDI && (
           <div className="font-mono-r" style={{ fontSize: 9, color: '#71717A', textAlign: 'right' }}>

@@ -24,6 +24,8 @@ import { PluginsModal } from './daw/modals/PluginsModal';
 import { MixerModal } from './daw/modals/MixerModal';
 import { BantuGridModal } from './daw/modals/BantuGridModal';
 import { SetupModal } from './daw/modals/SetupModal';
+import { SystemUsageModal } from './daw/modals/SystemUsageModal';
+import { DiskUsageModal } from './daw/modals/DiskUsageModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -121,6 +123,10 @@ export default function Daw() {
   const [bantuStyles, setBantuStyles] = useState([]);
   // Show asymmetric grid markers on the timeline (RIBA innovation visual)
   const [showBantuMarkers, setShowBantuMarkers] = useState(false);
+  // Pro Tools-style Window/View extras
+  const [systemUsageOpen, setSystemUsageOpen] = useState(false);
+  const [diskUsageOpen, setDiskUsageOpen] = useState(false);
+  const [waveformMode, setWaveformMode] = useState('peak'); // peak|power|rectified|outlines|crossfades
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -1449,6 +1455,21 @@ export default function Daw() {
           // View
           openMixer: () => setMixerOpen(true),
           toggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+          // View → Waveforms
+          wfPeak:       () => { setWaveformMode('peak');       setStatusMsg('Waveform mode: Peak'); },
+          wfPower:      () => { setWaveformMode('power');      setStatusMsg('Waveform mode: Power'); },
+          wfRectified:  () => { setWaveformMode('rectified');  setStatusMsg('Waveform mode: Rectified'); },
+          wfOutlines:   () => { setWaveformMode('outlines');   setStatusMsg('Waveform mode: Outlines'); },
+          wfCrossfades: () => { setWaveformMode('crossfades'); setStatusMsg('Waveform mode: Overlapped Crossfades'); },
+          // Window
+          openSystemUsage: () => setSystemUsageOpen(true),
+          openDiskUsage:   () => setDiskUsageOpen(true),
+          windowConfigList: () => setStatusMsg('Window Configurations · list (Alt+J)'),
+          windowConfigNew:  () => setStatusMsg('Window Configurations · saved current layout'),
+          arrangeTile:      () => setStatusMsg('Arrange · Tile'),
+          arrangeTileH:     () => setStatusMsg('Arrange · Tile Horizontal'),
+          arrangeTileV:     () => setStatusMsg('Arrange · Tile Vertical'),
+          arrangeCascade:   () => setStatusMsg('Arrange · Cascade'),
           // Setup
           openPlayback: () => { setSetupTab('playback'); setSetupOpen(true); loadAudioDevices(); },
           openIO: () => { setSetupTab('io'); setSetupOpen(true); loadAudioDevices(); },
@@ -1793,6 +1814,7 @@ export default function Daw() {
                 isSelected={t.id === selectedTrackId}
                 onSelect={(id) => setSelectedTrackId(id)}
                 onAction={handleTrackAction}
+                waveformMode={waveformMode}
               />
             ))
           )}
@@ -2032,6 +2054,12 @@ export default function Daw() {
           undoCount={undoStackRef.current.length}
           onClose={() => setSetupOpen(false)}
         />
+      )}
+      {systemUsageOpen && (
+        <SystemUsageModal onClose={() => setSystemUsageOpen(false)} />
+      )}
+      {diskUsageOpen && (
+        <DiskUsageModal onClose={() => setDiskUsageOpen(false)} />
       )}
     </div>
   );

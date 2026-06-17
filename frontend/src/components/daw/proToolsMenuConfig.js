@@ -63,6 +63,41 @@ export const PRO_TOOLS_MENUS = {
   View: [
     { id: 'view_mixer', label: 'Mixer', key: 'openMixer' },
     { id: 'view_theme', label: 'Toggle Theme', key: 'toggleTheme' },
+    { sep: true },
+    {
+      id: 'view_waveforms',
+      label: 'Waveforms',
+      submenu: [
+        { id: 'wf_peak',       label: 'Peak',                 key: 'wfPeak' },
+        { id: 'wf_power',      label: 'Power',                key: 'wfPower' },
+        { id: 'wf_rectified',  label: 'Rectified',            key: 'wfRectified' },
+        { id: 'wf_outlines',   label: 'Outlines',             key: 'wfOutlines' },
+        { id: 'wf_crossfades', label: 'Overlapped Crossfades', key: 'wfCrossfades' },
+      ],
+    },
+  ],
+  Window: [
+    {
+      id: 'window_configurations',
+      label: 'Configurations',
+      submenu: [
+        { id: 'win_cfg_list', label: 'Window Configuration List', shortcut: 'Alt+J', key: 'windowConfigList' },
+        { id: 'win_cfg_new',  label: 'New Configuration...',       shortcut: 'Alt+Shift+J', key: 'windowConfigNew' },
+      ],
+    },
+    {
+      id: 'window_arrange',
+      label: 'Arrange',
+      submenu: [
+        { id: 'arr_tile',         label: 'Tile',            key: 'arrangeTile' },
+        { id: 'arr_tile_h',       label: 'Tile Horizontal', key: 'arrangeTileH' },
+        { id: 'arr_tile_v',       label: 'Tile Vertical',   key: 'arrangeTileV' },
+        { id: 'arr_cascade',      label: 'Cascade',         key: 'arrangeCascade' },
+      ],
+    },
+    { sep: true },
+    { id: 'window_disk_usage',   label: 'Disk Usage',    key: 'openDiskUsage' },
+    { id: 'window_system_usage', label: 'System Usage',  key: 'openSystemUsage' },
   ],
   Setup: [
     { id: 'setup_playback', label: 'Playback Engine...', key: 'openPlayback' },
