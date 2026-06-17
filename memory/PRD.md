@@ -32,6 +32,20 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v1.6 (iteration 8 - Feb 2026) — BANTU VISUAL INNOVATION 🌍
+- **🎨 Markers Bantu Grid sur Timeline** :
+  - Lignes verticales asymétriques en arrière-plan (opacity 0.35, box-shadow lueur)
+  - Couleur dynamique selon le style actif (Asiko #A820FF, Makossa #D946EF, Bikutsi 4/4 #F472B6, 6/8 #FB7185, 12/24 #F59E0B)
+  - Auto-révélés après `applyBantuGrid` ; toggle manuel via bouton "🌍 Grid" dans la TopBar
+- **🎬 BantuTeaser animé dans MenuBar** :
+  - Canvas 60×16 px à côté de "Quantize to Bantu Oral Grid" du menu Event
+  - Animation pulse 200ms en boucle, cycle des 5 styles toutes les 1.4s
+  - Aperçu visuel des micro-décalages avant même de cliquer
+- **♻️ Nouveau module** `daw/bantuGrid.js` : portage JS du `_build_bantu_grid` Python.
+  - Parité math byte-identique vérifiée (asiko_wisdom + bikutsi_44 testés)
+  - Source unique de vérité pour Timeline markers ET BantuTeaser preview
+- Tests **iter 8 = 100% PASS** (9/9 scénarios, 16/16 pytest, 0 régression).
+
 ### v1.5 (iteration 7 - Feb 2026) — REFACTOR
 - **♻️ Refactor Daw.jsx** : 2554 → 2019 lignes (-535 LOC, -21%). 13 nouveaux fichiers créés sous `/app/frontend/src/components/daw/`:
   - `MenuBar.jsx` (composant + dropdown logic)
