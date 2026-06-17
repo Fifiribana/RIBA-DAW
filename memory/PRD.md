@@ -1,97 +1,69 @@
 # Riba DAW — Product Requirements Document
 
 ## Original Problem Statement
-User provided Windows C++ DAW code (Win32 + WASAPI) for an app named **Riba 12**, asked for a web version with ALL features. Later sent an extended HTML/JS reference + a new project JSON format with `id`, `name`, `type`, `instrument`, `notes`, `effects`.
+User provided Windows C++ DAW code (Win32 + WASAPI) for an app named **Riba 12** and asked for a web version with ALL features. Across iterations user extended scope to include:
+- Extended HTML/JS feature set (menu bar, Loop, GM 128, VST scan, Mixer, Stems, Plugins, Undo/Redo)
+- New project JSON format (`id, name, type, instrument, notes, effects`)
+- **Pro Tools-inspired menu bar** with the exact JSON spec (File / Edit / Track / AudioSuite / Setup / etc.)
 
 ## Architecture
-- **Frontend**: React 19 + Tailwind, WebAudio API (per-track FX bus: EQ → Delay/Reverb → Pan → Gain), MediaRecorder, OfflineAudioContext (stems WAV export), Canvas-based waveform/VU/spectrum/playhead, Phosphor Icons.
-- **Backend**: FastAPI + MongoDB (Motor) + emergentintegrations LLM (gpt-5.4-mini fallback to procedural).
-- **Routing**: All backend endpoints under `/api`, frontend uses `REACT_APP_BACKEND_URL`.
-
-## User Personas
-1. **Solo musician / producer** — quick multi-track web sketchpad with AI assistance.
-2. **Hobbyist songwriter** — record voice/instruments via mic and layer simple MIDI ideas.
-3. **AI music explorer** — Dream Track text-to-MIDI prompts and iteration.
-
-## Core Requirements (static)
-- Multi-track audio + MIDI playback with mute/solo/volume/pan/instruments/FX
-- Per-track 3-band EQ (low-shelf 200Hz, peaking 1kHz, high-shelf 5kHz)
-- Per-track Reverb (convolution) + Delay (feedback) toggles
-- Per-track GM 128 instrument selector (oscillator + filter + envelope)
-- Microphone recording → new track
-- Metronome (BPM, time signature) with visual indicator
-- **Transport Loop** (L key) with auto-restart at loop end
-- **Moving playhead timeline** with bar markers + bar.beat display
-- **Undo / Redo** (Ctrl+Z/Y, 30-step stack)
-- **Menu bar** (File/Edit/Track/Event/AudioSuite/Tools/View/Options/Help) with dropdowns
-- Dream Track AI generation (LLM-backed, procedural fallback)
-- Dream history (MongoDB)
-- Magic12 stem separation (simulated)
-- Magic12 AI mastering (LLM suggestions)
-- **GM 128 Instruments dialog** with apply-to-all-MIDI
-- **VST Scan** popup (cosmetic 4,833-plugin progress)
-- **Plugins list modal** (curated 20 representative VSTs)
-- **Mixer dialog** (vertical sliders per track + Master)
-- **Stems export** (one WAV per track via OfflineAudioContext)
-- MIDI ↔ Audio conversion (simulated)
-- Piano roll editor (click to add/remove notes)
-- Waveform thumbnail, real-time VU + spectrum analyzer
-- Master volume, master VU
-- Session save/load (MongoDB), JSON export, **Project JSON import** (new format)
-- Keyboard shortcuts: Space, M, L, F1, 1–9, Ctrl+S/O/E/Z/Y
-- Dark/Light theme toggle
-
-## Project JSON format (importable)
-```json
-{
-  "project": {
-    "tempo": 120,
-    "timeSignature": "4/4",
-    "tracks": [
-      {
-        "id": "track_1",
-        "name": "Melody",
-        "type": "midi",
-        "instrument": "Lead 1 (square)",
-        "notes": [{ "pitch": 60, "velocity": 100, "start": 0, "duration": 0.5 }],
-        "effects": ["reverb", "delay"]
-      }
-    ]
-  }
-}
-```
+- **Frontend**: React 19 + Tailwind, WebAudio API (per-track FX bus: EQ → Reverb/Delay → Pan → Gain), MediaRecorder, OfflineAudioContext (stems + bounce mix), Canvas-based waveform/VU/spectrum/playhead, Phosphor Icons.
+- **Backend**: FastAPI + MongoDB + emergentintegrations LLM (gpt-5.4-mini, procedural fallback).
 
 ## What's Been Implemented
 ### v1.0 — initial DAW
-- Full WebAudio engine, multi-track UI, mic recording, metronome, Dream Track AI, save/load, theme, manual.
+Multi-track audio + MIDI playback, mic recording, metronome, Dream Track AI, save/load, theme, manual.
 
-### v1.1 — extended features (this iteration)
-- Menu bar (File/Edit/Track/Event/AudioSuite/Tools/View/Options/Help) with dropdowns
-- Transport Loop button + L keyboard shortcut + loop wrap restart
-- Self-animating Timeline component (raf-driven playhead, bar.beat label)
-- Undo/Redo with 30-step history + Ctrl+Z/Y
-- GM 128 Instruments registry with oscillator/filter/envelope presets, per-track selector, modal with apply-to-all
-- VST Scan cosmetic popup (4833-plugin animation)
-- Plugins modal (20 curated VST entries: Serum, Pro-Q 3, Valhalla, Ozone 11, etc.)
-- Mixer modal (vertical fader per track + master)
-- Stems export → real WAV file per track via OfflineAudioContext
-- Per-track Reverb (convolution IR) and Delay (feedback) toggles
-- Project JSON import endpoint with mapping of `instrument` name → preset index, `effects[]` → reverb/delay flags
-- 7/7 backend tests pass, all new frontend flows verified by testing agent
+### v1.1 — extended features
+Menu bar, Loop + L shortcut, animated Timeline+playhead, Undo/Redo (Ctrl+Z/Y), GM 128 instruments, VST scan, Plugins modal, Mixer modal, Stems export (WAV), per-track Reverb + Delay, Project JSON import.
+
+### v1.2 — Pro Tools menu (this iteration)
+**Menu bar restructured to Pro Tools spec** with 9 menus (File/Edit/Track/Event/AudioSuite/Tools/View/Setup/Help) and all shortcuts displayed:
+
+#### File
+- New Session (Ctrl+N), Open Session (Ctrl+O), Save (Ctrl+S), **Save Copy In**, Import Audio (Ctrl+Shift+I), **Import Session Data**, Import Project JSON, **Bounce Mix** (Ctrl+Alt+B — real WAV via OfflineAudioContext), Export Stems, Export Session JSON
+
+#### Edit
+- Undo (Ctrl+Z), Redo (Ctrl+Y), **Cut/Copy/Paste** (Ctrl+X/C/V on selected track), **Separate Clip At Selection** (Ctrl+E — splits MIDI track at playhead into [L]/[R]), **Consolidate Clip** (deduplicates overlapping notes)
+
+#### Track
+- New MIDI Track (Ctrl+Shift+N), New Audio Track, **Group Tracks** (Ctrl+G — sync colors), **Duplicate Track**, **Freeze Track** (renders MIDI → audio buffer + ❄️ tag, saves CPU), **Commit Track** (Alt+Shift+C — permanent MIDI→audio), Delete Selected
+
+#### AudioSuite (destructive processing on audio tracks)
+- **Gain Destructive** (+4dB baked into buffer), **EQ/Filter** (3-band baked), **Reverb Process** (convolution baked), plus Magic12 Sep / Master entries
+
+#### Setup
+- **Playback Engine modal** (shows Web Audio API, real sample rate, baseLatency, outputLatency, ctx state), **I/O Setup** (mic + speakers + channels), **Preferences** (theme button, tempo, time sig, loop/metronome status, undo history depth), plus GM 128 / VST Scan / Plugins entries
+
+#### Event
+- Dream Track (AI), Dream History, Open Piano Roll
+
+#### Tools / View / Help
+- Toggle Metronome/Loop/Record, Mixer, Toggle Theme, User Manual (F1)
+
+### Track row selection
+- Clicking a track body selects it (border highlighted in track color). The selected track is the target of all Edit/Track/AudioSuite menu actions.
+
+## Testing
+- **Iteration 1 (v1.0)**: 7/7 backend, 100% frontend ✅
+- **Iteration 2 (v1.1)**: all new features verified ✅
+- **Iteration 3 (v1.2)**: Pro Tools menu structure 100% ✅ (with 1 bug found & fixed: Timeline.onPositionChange wiring)
+- **Iteration 4 (regression for fix)**: Separate Clip verified ✅
 
 ## ⚠️ Known Limitations
-- **MOCKED**: VST/AU plugin scanner & plugin loader (browsers can't load native plugins).
-- **MOCKED**: Magic12 stem separation (creates fake stem tracks).
-- **MOCKED**: MIDI → Audio and Audio → MIDI conversions (no real DSP/pitch detection).
-- **LLM BUDGET**: Emergent universal key budget exceeded — AI features fall back to procedural. User can top up at Profile → Universal Key → Add Balance.
+- **MOCKED**: VST/AU plugin loader (browsers can't load native plugins).
+- **MOCKED**: Magic12 stem separation (creates fake stems).
+- **MOCKED**: MIDI→Audio / Audio→MIDI conversions (no real DSP).
+- **LLM BUDGET EXCEEDED**: Dream/Mastering fall back to procedural. Top up at Profile → Universal Key → Add Balance.
 
-## Prioritized Backlog (P0 → P2)
-- P1: Real audio render-to-WAV for entire mix → MP3 encoder.
-- P1: Real Audio→MIDI via WebAudio pitch detection (YIN / CREPE).
-- P2: Real stem separation via Spleeter-WASM.
-- P2: Drag-and-drop file upload on track lane; loop region with handles.
-- P2: WebMIDI input for external MIDI keyboards.
+## Prioritized Backlog
+- **P1**: Native desktop build via Electron / Tauri with file system & menu native.
+- **P1**: PWA manifest for "Install Riba" from Chrome/Edge.
+- **P1**: Real MP3 export (lamejs).
+- **P2**: WebMIDI input for external MIDI keyboards.
+- **P2**: Real Audio→MIDI via CREPE/YIN pitch detection.
+- **P2**: Spleeter-WASM for real stem separation.
 
 ## Next Action Items
-- Top up Emergent LLM key to enable real AI Dream Track / Mastering.
-- Optional: implement real MP3 export and real Audio→MIDI pitch detection.
+- (User asked about desktop build) — possible next: ship PWA manifest then Electron packaging.
+- Top up Emergent LLM key.
