@@ -1,7 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { TID } from '@/constants/testIds';
+import { computeBantuGrid, BANTU_STYLES } from './bantuGrid';
 
-export function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap, onPositionChange }) {
+export function Timeline({
+  isPlaying, looping, maxBeats, timeSig, tempo,
+  onLoopWrap, onPositionChange,
+  // Bantu Grid overlay
+  showBantuMarkers = false,
+  bantuStyle = 'bikutsi_44',
+  bantuDensity = 16,
+  bantuBars = 4,
+}) {
   const containerRef = useRef(null);
   const headRef = useRef(null);
   const labelRef = useRef(null);
@@ -53,6 +62,15 @@ export function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopW
     beatRef.current = Math.max(0, Math.min(maxBeats, (x / r.width) * maxBeats));
   };
   const measures = Math.ceil(maxBeats / timeSig);
+
+  // === Bantu Oral Grid markers (RIBA innovation) ===
+  // Computed once when style/density/bars change; positions are in beats.
+  const bantuPositions = useMemo(() => {
+    if (!showBantuMarkers) return [];
+    return computeBantuGrid(bantuStyle, bantuDensity, bantuBars);
+  }, [showBantuMarkers, bantuStyle, bantuDensity, bantuBars]);
+  const bantuColor = (BANTU_STYLES.find((s) => s.id === bantuStyle) || BANTU_STYLES[0]).color;
+
   return (
     <div
       ref={containerRef}
@@ -63,6 +81,26 @@ export function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopW
         position: 'relative', overflow: 'hidden', flexShrink: 0, cursor: 'pointer'
       }}
     >
+      {/* Bantu Grid asymmetric markers — render BEHIND measure lines */}
+      {showBantuMarkers && bantuPositions.map((b, i) => {
+        const x = (b / maxBeats) * 100;
+        if (x < 0 || x > 100) return null;
+        return (
+          <div
+            key={`bantu-${i}`}
+            data-testid="bantu-marker"
+            style={{
+              position: 'absolute', left: `${x}%`, top: 0, bottom: 0,
+              width: 1,
+              background: bantuColor,
+              opacity: 0.35,
+              pointerEvents: 'none',
+              boxShadow: `0 0 4px ${bantuColor}66`,
+            }}
+          />
+        );
+      })}
+      {/* Standard measure lines (in front of bantu markers) */}
       {Array.from({ length: measures + 1 }).map((_, m) => {
         const x = ((m * timeSig) / maxBeats) * 100;
         return (

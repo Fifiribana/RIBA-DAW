@@ -1,5 +1,6 @@
 import React from 'react';
 import { PRO_TOOLS_MENUS } from './proToolsMenuConfig';
+import { BantuTeaser } from './BantuTeaser';
 
 export function MenuBar({ openMenu, setOpenMenu, actions }) {
   const close = () => setOpenMenu(null);
@@ -51,12 +52,18 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
                       padding: '6px 10px', fontSize: 12,
                       color: disabled ? '#52525B' : '#E4E4E7',
                       borderRadius: 4, cursor: disabled ? 'not-allowed' : 'pointer',
-                      display: 'flex', justifyContent: 'space-between', gap: 16
+                      display: 'flex', justifyContent: 'space-between', gap: 16,
+                      alignItems: 'center',
                     }}
                     onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#2F2F35'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <span>{item.label}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {item.key === 'openBantu' && (
+                        <BantuTeaser cycle={true} width={56} height={14} />
+                      )}
+                      <span>{item.label}</span>
+                    </span>
                     {item.shortcut && (
                       <span className="font-mono-r" style={{ fontSize: 10, color: '#71717A' }}>{item.shortcut}</span>
                     )}

@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 8 — Validated the two new Bantu visualizations (Timeline markers + animated MenuBar teaser). All 9 review-request scenarios PASS. 0 uncaught runtime errors on page load. Backend regression 16/16 pytest pass.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_bantu_hardware.py",
+    "/app/backend/tests/test_riba_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL polish (no test failure): the review request's stated math ('asiko_wisdom density=16 bars=4 → position[3]≈0.85') was based on a per-bar step of 0.25 (which would be density=16 bars=1). With bars=4 the step is 1.0, so the actual matching value is position[3]=3.10 (verified identical between backend and frontend computeBantuGrid). Math parity between client mirror and backend is exact for asiko_wisdom and bikutsi_44 at density 16 / bars 4. Consider updating the docstring example to bars=1 (0.85) or to bars=4 (3.10) to avoid confusion.",
+    "Carry-over (not introduced this iter): hydration warning '<span> cannot be a child of <option>' from TrackRow's instrument <select> at TrackRow line ~71. Wrap option label as plain text instead of rendering a <span> inside <option>."
+  ],
+  "critical_code_review_comments": [
+    "BantuTeaser.jsx — defensive fallback `BANTU_STYLES[styleIdxRef.current] || BANTU_STYLES[0]` is in place (line 35), bug fix verified. Canvas paints content (240/784 non-zero pixels sampled after 2.5s).",
+    "Timeline.jsx markers correctly rendered BEHIND measure lines (markers in flow first, opacity 0.35, then measure lines). Verified visually: vertical magenta lines render with rgb(244,114,182)=#F472B6 for bikutsi_44 and rgb(168,32,255)=#A820FF for asiko_wisdom, both at opacity 0.35 with subtle box-shadow.",
+    "Daw.jsx applyBantuGrid (line 1286-1317) correctly calls setShowBantuMarkers(true) on success path only (line 1312) AFTER the snapped notes are committed — auto-reveal works end-to-end. Track is renamed with `[bantu:<style>]` suffix as designed.",
+    "bantuGrid.js client mirror produces BYTE-IDENTICAL output to backend /api/quantize/bantu-grid for the two styles I sampled (asiko_wisdom + bikutsi_44 @ density=16 bars=4). Math parity validated → markers will line up exactly with backend snap targets. Audit only sampled 2 of 5 styles; main agent may wish to add a unit test that diffs all 5 styles against the backend.",
+    "MenuBar BantuTeaser canvas uses requestAnimationFrame loop and cleans up with cancelAnimationFrame on unmount — no leak. DPR-scaling logic preserves crispness on retina.",
+    "Grid toggle button in topbar exposes data-testid='bantu-markers-toggle' and data-active state attribute — excellent for testability. Active styling (magenta tint, border, color) matches Riba brand."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (16/16 pytest)",
+    "frontend": "100% — 9/9 scenarios PASS: load no-error, teaser canvas painted, toggle ON→9 markers/OFF→0, magenta lines opacity 0.35, Asiko style #A820FF reflected, MIDI Apply auto-enables markers + renames track + closes modal, all 9 Pro Tools menus open, PWA assets 200/200/200"
+  },
+  "test_credentials": "N/A",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Bantu visualizations (timeline markers + menu teaser) are stable. Key facts to know: (a) BantuGrid modal Apply button label is FRENCH ('Appliquer la grille'), not 'Apply' — adjust playwright selectors accordingly. (b) The toggle 🌍 Grid button exposes data-active='true|false'. (c) Apply auto-closes the modal AND sets showBantuMarkers=true. (d) PWA assets at /manifest.json, /service-worker.js, /icon-192.png all return 200. (e) computeBantuGrid client mirror is exact for asiko_wisdom and bikutsi_44 (density 16 bars 4); future testing agent should write a parity unit test for bikutsi_68 / bikutsi_1224 / makossa_roots before user-visible drift can occur.",
+  "rca of the issue": "No bugs found. The previous undefined .id crash was resolved by the `BANTU_STYLES[styleIdxRef.current] || BANTU_STYLES[0]` fallback (BantuTeaser.jsx line 35). 0 PAGEERRORS observed across 2 separate session runs. The first attempt of the MIDI-track scenario falsely reported failure because the testing script searched for the English 'Apply' button — the modal is actually in French ('Appliquer la grille'). Retesting with the correct selector showed the full flow working: status='Bantu Grid bikutsi_44 applied — 8 notes snapped', 9 markers auto-appeared, toggle data-active flipped to true, modal auto-closed. So this was a TEST script issue, not a product bug."
+}

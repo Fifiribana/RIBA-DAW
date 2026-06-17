@@ -119,6 +119,8 @@ export default function Daw() {
   const [bantuDensity, setBantuDensity] = useState(16);
   const [bantuBars, setBantuBars] = useState(4);
   const [bantuStyles, setBantuStyles] = useState([]);
+  // Show asymmetric grid markers on the timeline (RIBA innovation visual)
+  const [showBantuMarkers, setShowBantuMarkers] = useState(false);
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -1307,6 +1309,7 @@ export default function Daw() {
       } : tt));
       engine.loadMIDI(t.id, snapped);
       setStatusMsg(`Bantu Grid "${bantuStyle}" applied — ${snapped.length} notes snapped (${res.data.description})`);
+      setShowBantuMarkers(true); // auto-reveal asymmetric grid on timeline
       setBantuOpen(false);
     } catch (e) {
       setStatusMsg('Bantu Grid failed: ' + (e.response?.data?.detail || e.message));
@@ -1629,6 +1632,19 @@ export default function Daw() {
         <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="riba-btn riba-btn-icon" data-testid={TID.themeBtn}>
           {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
         </button>
+        <button
+          onClick={() => setShowBantuMarkers(v => !v)}
+          className="riba-btn"
+          data-testid="bantu-markers-toggle"
+          data-active={showBantuMarkers}
+          title={`${showBantuMarkers ? 'Hide' : 'Show'} Bantu Grid markers on timeline`}
+          style={{
+            height: 26, fontSize: 10, padding: '0 8px',
+            background: showBantuMarkers ? 'rgba(168,32,255,0.18)' : undefined,
+            border: showBantuMarkers ? '1px solid rgba(168,32,255,0.5)' : undefined,
+            color: showBantuMarkers ? '#D946EF' : undefined,
+          }}
+        >🌍 Grid</button>
         {!pwaInstalled && pwaPrompt && (
           <button
             onClick={handleInstallPwa}
@@ -1658,6 +1674,10 @@ export default function Daw() {
         tempo={tempo}
         onLoopWrap={handleLoopWrap}
         onPositionChange={handlePlayheadChange}
+        showBantuMarkers={showBantuMarkers}
+        bantuStyle={bantuStyle}
+        bantuDensity={bantuDensity}
+        bantuBars={bantuBars}
       />
 
       {/* MAIN AREA */}
