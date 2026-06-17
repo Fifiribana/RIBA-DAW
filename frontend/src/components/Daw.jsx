@@ -7,16 +7,32 @@ import {
   Repeat, ArrowUUpLeft, ArrowUUpRight, Plug, Package, PianoKeys, Faders, Export
 } from '@phosphor-icons/react';
 import { engine, audioBufferToWavBlob } from '@/audio/engine';
-import { GM_INSTRUMENTS, FAKE_VST_PLUGINS } from '@/audio/instruments';
+import { GM_INSTRUMENTS } from '@/audio/instruments';
 import { TID } from '@/constants/testIds';
 import TrackRow from './TrackRow';
 import Spectrum from './Spectrum';
 import VUMeter from './VUMeter';
 import DreamDialog from './DreamDialog';
 import PianoRoll from './PianoRoll';
+import { MenuBar } from './daw/MenuBar';
+import { Timeline } from './daw/Timeline';
+import { DreamHistoryModal } from './daw/modals/DreamHistoryModal';
+import { MasteringModal } from './daw/modals/MasteringModal';
+import { ManualModal } from './daw/modals/ManualModal';
+import { GmInstrumentsModal } from './daw/modals/GmInstrumentsModal';
+import { PluginsModal } from './daw/modals/PluginsModal';
+import { MixerModal } from './daw/modals/MixerModal';
+import { BantuGridModal } from './daw/modals/BantuGridModal';
+import { SetupModal } from './daw/modals/SetupModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+const kbdStyle = {
+  background: '#27272A', border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: 3, padding: '0 6px', fontSize: 9, marginRight: 6,
+  fontFamily: 'JetBrains Mono, monospace'
+};
 
 const TRACK_COLORS = {
   voice: '#3B82F6', drums: '#22C55E', bass: '#F97316',
@@ -1859,212 +1875,63 @@ export default function Daw() {
       })()}
 
       {historyOpen && (
-        <Modal title="Dream History" onClose={() => setHistoryOpen(false)}>
-          {dreamHistory.length === 0 ? (
-            <div style={{ color: '#A1A1AA' }}>No dream tracks yet.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {dreamHistory.map((d) => (
-                <div key={d.id} style={{ background: '#09090B', borderRadius: 8, padding: 10, border: '1px solid rgba(217, 70, 239, 0.2)' }}>
-                  <div style={{ fontWeight: 600, color: '#D946EF' }}>{d.name}</div>
-                  <div className="font-mono-r" style={{ fontSize: 10, color: '#71717A' }}>
-                    {new Date(d.created_at).toLocaleString()} · {d.notes.length} notes
-                  </div>
-                  <div style={{ fontSize: 12, color: '#A1A1AA', marginTop: 4, fontStyle: 'italic' }}>
-                    &ldquo;{d.prompt}&rdquo;
-                  </div>
-                  <button
-                    className="riba-btn"
-                    style={{ marginTop: 8, fontSize: 11 }}
-                    onClick={() => {
-                      const id = uid();
-                      const notes = d.notes;
-                      const peaks = new Array(80).fill(0).map((_, i) => 0.2 + 0.7 * Math.abs(Math.sin(i * 0.3 + notes.length)));
-                      const newTrack = {
-                        id, displayName: d.name,
-                        trackType: 'dream', color: TRACK_COLORS.dream,
-                        isPlaying: false, isMuted: false, isSolo: false, isMIDI: true,
-                        volume: 80, pan: 0, peaks,
-                        eq: { bass: 50, mid: 50, high: 50, enabled: false },
-                        midiNotes: notes, dreamPrompt: d.prompt, description: d.description,
-                      };
-                      engine.loadMIDI(id, notes);
-                      engine.getOrCreateTrack(id).setVolume(0.8);
-                      setTracks(prev => [...prev, newTrack]);
-                      setHistoryOpen(false);
-                      setStatusMsg(`Loaded "${d.name}" into project`);
-                    }}
-                  >Load to Project</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </Modal>
+        <DreamHistoryModal
+          dreamHistory={dreamHistory}
+          onClose={() => setHistoryOpen(false)}
+          onLoad={(d) => {
+            const id = uid();
+            const notes = d.notes;
+            const peaks = new Array(80).fill(0).map((_, i) => 0.2 + 0.7 * Math.abs(Math.sin(i * 0.3 + notes.length)));
+            const newTrack = {
+              id, displayName: d.name,
+              trackType: 'dream', color: TRACK_COLORS.dream,
+              isPlaying: false, isMuted: false, isSolo: false, isMIDI: true,
+              volume: 80, pan: 0, peaks,
+              eq: { bass: 50, mid: 50, high: 50, enabled: false },
+              midiNotes: notes, dreamPrompt: d.prompt, description: d.description,
+            };
+            engine.loadMIDI(id, notes);
+            engine.getOrCreateTrack(id).setVolume(0.8);
+            setTracks(prev => [...prev, newTrack]);
+            setHistoryOpen(false);
+            setStatusMsg(`Loaded "${d.name}" into project`);
+          }}
+        />
       )}
 
       {masteringOpen && (
-        <Modal title="Magic12 · AI Mastering" onClose={() => setMasteringOpen(false)}>
-          {masteringLoading ? (
-            <div style={{ color: '#A1A1AA', textAlign: 'center', padding: 20 }}>
-              <div className="font-heading" style={{ fontSize: 16 }}>Analyzing mix…</div>
-              <div style={{ marginTop: 16, height: 6, background: '#27272A', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', background: 'linear-gradient(90deg, #D946EF, #6366F1)', width: '70%', animation: 'pulse 1.5s ease-in-out infinite' }} />
-              </div>
-            </div>
-          ) : (
-            <pre style={{ whiteSpace: 'pre-wrap', color: '#E4E4E7', fontSize: 13, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6 }}>
-              {masterSuggestions}
-            </pre>
-          )}
-        </Modal>
+        <MasteringModal
+          loading={masteringLoading}
+          suggestions={masterSuggestions}
+          onClose={() => setMasteringOpen(false)}
+        />
       )}
 
       {manualOpen && (
-        <Modal title="Riba 12 · User Manual" onClose={() => setManualOpen(false)}>
-          <div style={{ fontSize: 13, color: '#E4E4E7', lineHeight: 1.7 }}>
-            <h3 className="font-heading" style={{ marginTop: 0 }}>Keyboard Shortcuts</h3>
-            <ul>
-              <li><b>Space</b> — Play / Stop all tracks</li>
-              <li><b>M</b> — Toggle Metronome</li>
-              <li><b>1–9</b> — Play track by index</li>
-              <li><b>Ctrl+S</b> — Save session</li>
-              <li><b>Ctrl+O</b> — Load latest session</li>
-              <li><b>Ctrl+E</b> — Export session JSON</li>
-              <li><b>F1</b> — Open this manual</li>
-            </ul>
-            <h3 className="font-heading">Features</h3>
-            <ul>
-              <li>Audio + MIDI multi-track playback (WebAudio)</li>
-              <li>Per-track 3-band EQ, volume, pan, mute, solo</li>
-              <li>Real microphone recording (MediaRecorder)</li>
-              <li>Metronome with visual indicator & time signature</li>
-              <li>Dream Track AI generation via Emergent LLM</li>
-              <li>Magic12 stem separation (simulated)</li>
-              <li>Magic12 AI mastering suggestions (LLM)</li>
-              <li>Piano roll editor (click to add/remove notes)</li>
-              <li>Spectrum analyzer & VU meters</li>
-              <li>Session save/load (MongoDB-backed)</li>
-            </ul>
-          </div>
-        </Modal>
+        <ManualModal onClose={() => setManualOpen(false)} />
       )}
 
       {gmOpen && (
-        <Modal title="General MIDI · 128 Instruments" onClose={() => setGmOpen(false)}>
-          <div style={{ marginBottom: 10, color: '#A1A1AA', fontSize: 12 }}>
-            Pick an instrument and apply to all MIDI tracks, or use per-track selector to set it individually.
-          </div>
-          <select
-            data-testid={TID.gmSelect}
-            value={gmSelectedIdx}
-            onChange={(e) => setGmSelectedIdx(parseInt(e.target.value))}
-            size={14}
-            style={{
-              width: '100%', background: '#09090B', color: '#FAFAFA',
-              border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
-              padding: 6, fontSize: 13, fontFamily: 'JetBrains Mono, monospace'
-            }}
-          >
-            {GM_INSTRUMENTS.map((ins, i) => (
-              <option key={i} value={i}>{String(i + 1).padStart(3, '0')}. {ins.name}</option>
-            ))}
-          </select>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-            <button className="riba-btn" onClick={() => setGmOpen(false)}>Cancel</button>
-            <button
-              data-testid={TID.gmApply}
-              className="riba-btn"
-              style={{ background: 'linear-gradient(135deg, #D946EF, #6366F1)', color: '#fff', border: 'none' }}
-              onClick={() => { applyGmInstrument(gmSelectedIdx); setGmOpen(false); }}
-            >Apply to all MIDI</button>
-          </div>
-        </Modal>
+        <GmInstrumentsModal
+          selectedIdx={gmSelectedIdx}
+          setSelectedIdx={setGmSelectedIdx}
+          onApply={applyGmInstrument}
+          onClose={() => setGmOpen(false)}
+        />
       )}
 
       {pluginsOpen && (
-        <Modal title="Plugins (Simulated VST list)" onClose={() => setPluginsOpen(false)}>
-          <div style={{ color: '#A1A1AA', fontSize: 12, marginBottom: 10 }}>
-            ⚠️ Simulated — web browsers cannot load native VST/AU plugins. This is a curated representative list.
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 400, overflow: 'auto' }}>
-            {FAKE_VST_PLUGINS.map((p, i) => (
-              <div key={i} style={{
-                background: '#09090B', borderRadius: 6, padding: '8px 10px',
-                border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10
-              }}>
-                <div style={{
-                  background: '#27272A', color: '#A1A1AA', padding: '2px 6px',
-                  borderRadius: 3, fontSize: 9, fontFamily: 'JetBrains Mono, monospace', minWidth: 36, textAlign: 'center'
-                }}>{p.format}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                  <div style={{ fontSize: 10, color: '#71717A' }} className="font-mono-r">
-                    {p.vendor} · {p.category}
-                  </div>
-                </div>
-                <div style={{ fontSize: 10, color: '#52525B' }} className="font-mono-r">{p.path}</div>
-              </div>
-            ))}
-          </div>
-        </Modal>
+        <PluginsModal onClose={() => setPluginsOpen(false)} />
       )}
 
       {mixerOpen && (
-        <Modal title="Mixer · All Tracks" onClose={() => setMixerOpen(false)}>
-          {tracks.length === 0 ? (
-            <div style={{ color: '#A1A1AA', padding: 20, textAlign: 'center' }}>No tracks in session.</div>
-          ) : (
-            <div style={{ display: 'flex', gap: 8, overflow: 'auto', padding: '4px 0' }}>
-              {tracks.map((t, i) => (
-                <div key={t.id} style={{
-                  minWidth: 100, background: '#09090B',
-                  border: `1px solid ${t.color}33`, borderRadius: 8, padding: 8,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8
-                }}>
-                  <div style={{
-                    background: t.color, color: '#000', fontSize: 9, fontWeight: 700,
-                    padding: '2px 6px', borderRadius: 3
-                  }} className="font-mono-r">#{i + 1}</div>
-                  <div style={{
-                    fontSize: 11, fontWeight: 600, textAlign: 'center',
-                    height: 28, overflow: 'hidden'
-                  }}>{t.displayName.slice(0, 16)}</div>
-                  <VUMeter source="track" trackId={t.id} width={20} height={120} />
-                  <input
-                    type="range" min={0} max={100} value={t.volume}
-                    onChange={(e) => handleTrackAction('volume', t.id, parseInt(e.target.value))}
-                    className="riba-slider"
-                    style={{ width: 80, color: t.color, '--val': `${t.volume}%` }}
-                  />
-                  <div className="font-mono-r" style={{ fontSize: 10, color: '#A1A1AA' }}>{t.volume}</div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button className="riba-btn riba-btn-icon" data-active={t.isMuted}
-                      onClick={() => handleTrackAction('mute', t.id)}
-                      style={{ width: 28, height: 22, fontSize: 9 }}>M</button>
-                    <button className="riba-btn riba-btn-icon" data-active={t.isSolo}
-                      onClick={() => handleTrackAction('solo', t.id)}
-                      style={{ width: 28, height: 22, fontSize: 9, color: t.isSolo ? '#000' : '#EAB308' }}>S</button>
-                  </div>
-                </div>
-              ))}
-              <div style={{
-                minWidth: 100, background: '#09090B',
-                border: '2px solid #FFFFFF22', borderRadius: 8, padding: 8,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8
-              }}>
-                <div style={{ background: '#FAFAFA', color: '#000', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 3 }} className="font-mono-r">MASTER</div>
-                <div style={{ fontSize: 11, fontWeight: 600 }}>Out</div>
-                <VUMeter width={20} height={120} />
-                <input type="range" min={0} max={100} value={masterVol}
-                  onChange={(e) => setMasterVol(parseInt(e.target.value))}
-                  className="riba-slider"
-                  style={{ width: 80, color: '#FAFAFA', '--val': `${masterVol}%` }}
-                />
-                <div className="font-mono-r" style={{ fontSize: 10, color: '#A1A1AA' }}>{masterVol}</div>
-              </div>
-            </div>
-          )}
-        </Modal>
+        <MixerModal
+          tracks={tracks}
+          masterVol={masterVol}
+          setMasterVol={setMasterVol}
+          onTrackAction={handleTrackAction}
+          onClose={() => setMixerOpen(false)}
+        />
       )}
 
       {vstScanning && (
@@ -2116,439 +1983,37 @@ export default function Daw() {
       )}
 
       {bantuOpen && (
-        <Modal title="Bantu Oral Grid · Quantification Africaine 🌍" onClose={() => setBantuOpen(false)}>
-          <div style={{ color: '#A1A1AA', fontSize: 12, marginBottom: 12 }}>
-            Quantification asymétrique inspirée des structures rythmiques d&apos;Afrique Centrale.
-            Sélectionnez la piste MIDI cible (en cliquant dessus), puis le style :
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div>
-              <label className="font-mono-r" style={{ fontSize: 10, color: '#71717A', display: 'block', marginBottom: 4 }}>STYLE RYTHMIQUE</label>
-              <select
-                data-testid={TID.bantuStyleSelect}
-                value={bantuStyle}
-                onChange={(e) => setBantuStyle(e.target.value)}
-                style={{
-                  width: '100%', background: '#09090B', color: '#FAFAFA',
-                  border: '1px solid rgba(217,70,239,0.3)', borderRadius: 6,
-                  padding: '8px 10px', fontSize: 13, fontFamily: 'Manrope, sans-serif'
-                }}
-              >
-                {(bantuStyles.length ? bantuStyles : [
-                  { id: 'asiko_wisdom', label: 'Asiko Wisdom (Sagesse africaine)' },
-                  { id: 'makossa_roots', label: 'Makossa Roots (Cameroun)' },
-                  { id: 'bikutsi_44', label: 'Bikutsi 4/4 (8 ternaire)' },
-                  { id: 'bikutsi_68', label: 'Bikutsi 6/8' },
-                  { id: 'bikutsi_1224', label: 'Bikutsi 12/24 (3-contre-4)' },
-                ]).map(s => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <label className="font-mono-r" style={{ fontSize: 10, color: '#71717A', display: 'block', marginBottom: 4 }}>DENSITÉ (points de grille)</label>
-                <input
-                  data-testid={TID.bantuDensity}
-                  type="number" min={4} max={64} value={bantuDensity}
-                  onChange={(e) => setBantuDensity(parseInt(e.target.value) || 16)}
-                  style={{
-                    width: '100%', background: '#09090B', color: '#FAFAFA',
-                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
-                    padding: '8px 10px', fontSize: 13, fontFamily: 'JetBrains Mono, monospace'
-                  }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label className="font-mono-r" style={{ fontSize: 10, color: '#71717A', display: 'block', marginBottom: 4 }}>MESURES</label>
-                <input
-                  data-testid={TID.bantuBars}
-                  type="number" min={1} max={16} value={bantuBars}
-                  onChange={(e) => setBantuBars(parseFloat(e.target.value) || 4)}
-                  style={{
-                    width: '100%', background: '#09090B', color: '#FAFAFA',
-                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
-                    padding: '8px 10px', fontSize: 13, fontFamily: 'JetBrains Mono, monospace'
-                  }}
-                />
-              </div>
-            </div>
-            <div style={{ background: 'rgba(217,70,239,0.08)', padding: 10, borderRadius: 6, border: '1px solid rgba(217,70,239,0.2)', fontSize: 11, color: '#E4E4E7' }}>
-              💡 <b>Innovation Riba</b> : aucun autre DAW (Pro Tools, Ableton, FL Studio) ne propose ces grilles. Vos notes MIDI seront snappées sur des positions asymétriques inspirées des proverbes Bantu, du Bikutsi camerounais, du Makossa et de l&apos;Asiko.
-            </div>
-            <div style={{ color: '#A1A1AA', fontSize: 11 }}>
-              Piste cible : {tracks.find(x => x.id === selectedTrackId)?.displayName || <em>aucune sélectionnée — cliquez sur une piste MIDI d&apos;abord</em>}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-            <button className="riba-btn" onClick={() => setBantuOpen(false)}>Annuler</button>
-            <button
-              data-testid={TID.bantuApply}
-              className="riba-btn"
-              style={{ background: 'linear-gradient(135deg, #D946EF, #F59E0B)', color: '#fff', border: 'none' }}
-              onClick={applyBantuGrid}
-            >🌍 Appliquer la grille</button>
-          </div>
-        </Modal>
+        <BantuGridModal
+          styles={bantuStyles}
+          style={bantuStyle}
+          setStyle={setBantuStyle}
+          density={bantuDensity}
+          setDensity={setBantuDensity}
+          bars={bantuBars}
+          setBars={setBantuBars}
+          selectedTrack={tracks.find(x => x.id === selectedTrackId)}
+          onApply={applyBantuGrid}
+          onClose={() => setBantuOpen(false)}
+        />
       )}
 
       {setupOpen && (
-        <Modal title={`Setup · ${setupTab === 'playback' ? 'Playback Engine' : setupTab === 'io' ? 'I/O Setup' : 'Preferences'}`} onClose={() => setSetupOpen(false)}>
-          <div style={{ display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
-            {[['playback', 'Playback Engine'], ['io', 'I/O Setup'], ['preferences', 'Preferences']].map(([k, l]) => (
-              <button key={k} className="riba-btn" data-active={setupTab === k}
-                onClick={() => setSetupTab(k)}
-                style={{ fontSize: 11 }}>{l}</button>
-            ))}
-          </div>
-          {setupTab === 'playback' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-              <SetupRow label="Audio Engine" value="Web Audio API" />
-              <SetupRow label="Sample Rate" value={`${engine.ctx?.sampleRate || 48000} Hz`} />
-              <SetupRow label="Buffer Size" value={`${engine.ctx?.baseLatency ? Math.round(engine.ctx.baseLatency * 1000) : '~'} ms (system)`} />
-              <SetupRow label="Output Latency" value={`${engine.ctx?.outputLatency ? Math.round(engine.ctx.outputLatency * 1000) : '~'} ms`} />
-              <SetupRow label="State" value={engine.ctx?.state || 'not started'} />
-              <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <div className="font-mono-r" style={{ fontSize: 10, color: '#A1A1AA', letterSpacing: '0.1em' }}>DETECTED HARDWARE</div>
-                  <button className="riba-btn" style={{ fontSize: 10, padding: '3px 8px' }} onClick={loadAudioDevices}>Refresh</button>
-                </div>
-                {!audioDevices.loaded ? (
-                  <div style={{ fontSize: 12, color: '#71717A' }}>Click Refresh to enumerate audio devices.</div>
-                ) : !audioDevices.supported ? (
-                  <div style={{ fontSize: 12, color: '#EF4444' }}>enumerateDevices not supported in this browser.</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div className="font-mono-r" style={{ fontSize: 10, color: '#71717A' }}>INPUTS ({audioDevices.inputs.length})</div>
-                    {audioDevices.inputs.map((d, i) => (
-                      <div key={d.deviceId || i} style={{ fontSize: 11, color: '#FAFAFA', background: '#09090B', padding: '4px 8px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
-                        🎤 {d.label || `Microphone ${i + 1}`}
-                      </div>
-                    ))}
-                    <div className="font-mono-r" style={{ fontSize: 10, color: '#71717A', marginTop: 4 }}>OUTPUTS ({audioDevices.outputs.length})</div>
-                    {audioDevices.outputs.map((d, i) => (
-                      <div key={d.deviceId || i} style={{ fontSize: 11, color: '#FAFAFA', background: '#09090B', padding: '4px 8px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
-                        🔊 {d.label || `Speaker ${i + 1}`}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div style={{ marginTop: 8, color: '#A1A1AA', fontSize: 11 }}>
-                ⚠️ Native ASIO / CoreAudio drivers cannot be selected in browsers. For lower latency, consider the desktop build (Electron + ASIO host).
-              </div>
-            </div>
-          )}
-          {setupTab === 'io' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-              <SetupRow label="Input" value="Default microphone (getUserMedia)" />
-              <SetupRow label="Output" value="Default speakers (AudioDestinationNode)" />
-              <SetupRow label="Active Input Channels" value="1 (mono mic capture)" />
-              <SetupRow label="Active Output Channels" value="2 (stereo)" />
-              <SetupRow label="Master Bus" value="Master Gain → Analyser → Destination" />
-            </div>
-          )}
-          {setupTab === 'preferences' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-              <SetupRow label="Theme" value={
-                <button className="riba-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{ fontSize: 11 }}>
-                  {theme === 'dark' ? 'Dark (click to switch)' : 'Light (click to switch)'}
-                </button>
-              } />
-              <SetupRow label="Tempo" value={`${tempo} BPM`} />
-              <SetupRow label="Time Signature" value={`${timeSig}/4`} />
-              <SetupRow label="Loop" value={looping ? 'ON' : 'OFF'} />
-              <SetupRow label="Metronome" value={metronomeOn ? 'ON' : 'OFF'} />
-              <SetupRow label="Auto-save" value="Disabled (use Ctrl+S manually)" />
-              <SetupRow label="Undo History" value={`${undoStackRef.current.length} / 30 steps`} />
-            </div>
-          )}
-        </Modal>
+        <SetupModal
+          setupTab={setupTab}
+          setSetupTab={setSetupTab}
+          audioDevices={audioDevices}
+          onRefreshDevices={loadAudioDevices}
+          theme={theme}
+          setTheme={setTheme}
+          tempo={tempo}
+          timeSig={timeSig}
+          looping={looping}
+          metronomeOn={metronomeOn}
+          undoCount={undoStackRef.current.length}
+          onClose={() => setSetupOpen(false)}
+        />
       )}
     </div>
   );
 }
 
-function SetupRow({ label, value }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
-      <span style={{ color: '#A1A1AA' }}>{label}</span>
-      <span className="font-mono-r" style={{ color: '#FAFAFA', fontSize: 12 }}>{value}</span>
-    </div>
-  );
-}
-
-// ====== MenuBar component (Pro Tools-style) ======
-const PRO_TOOLS_MENUS = {
-  File: [
-    { id: 'file_new_session', label: 'New Session...', shortcut: 'Ctrl+N', key: 'newSession' },
-    { id: 'file_open_session', label: 'Open Session...', shortcut: 'Ctrl+O', key: 'loadSession' },
-    { id: 'file_save', label: 'Save', shortcut: 'Ctrl+S', key: 'saveSession' },
-    { id: 'file_save_copy_in', label: 'Save Copy In...', key: 'saveCopyIn' },
-    { sep: true },
-    { id: 'file_import_audio', label: 'Import Audio...', shortcut: 'Ctrl+Shift+I', key: 'importAudio' },
-    { id: 'file_import_session_data', label: 'Import Session Data...', key: 'importSessionData' },
-    { id: 'file_import_project_json', label: 'Import Project JSON...', key: 'openProject' },
-    { sep: true },
-    { id: 'file_bounce_mix', label: 'Bounce Mix...', shortcut: 'Ctrl+Alt+B', key: 'bounceMix' },
-    { id: 'file_export_stems', label: 'Export Stems (WAV)', key: 'exportStems' },
-    { id: 'file_export_json', label: 'Export Session JSON', key: 'exportSession' },
-  ],
-  Edit: [
-    { id: 'edit_undo', label: 'Undo', shortcut: 'Ctrl+Z', key: 'undo' },
-    { id: 'edit_redo', label: 'Redo', shortcut: 'Ctrl+Y', key: 'redo' },
-    { sep: true },
-    { id: 'edit_cut', label: 'Cut', shortcut: 'Ctrl+X', key: 'cutTrack' },
-    { id: 'edit_copy', label: 'Copy', shortcut: 'Ctrl+C', key: 'copyTrack' },
-    { id: 'edit_paste', label: 'Paste', shortcut: 'Ctrl+V', key: 'pasteTrack' },
-    { sep: true },
-    { id: 'edit_separate_clip', label: 'Separate Clip at Playhead', shortcut: 'Ctrl+E', key: 'separateClip' },
-    { id: 'edit_consolidate', label: 'Consolidate Clip', shortcut: 'Alt+Shift+3', key: 'consolidateClip' },
-  ],
-  Track: [
-    { id: 'track_new_midi', label: 'New MIDI Track', shortcut: 'Ctrl+Shift+N', key: 'addMIDI' },
-    { id: 'track_new_audio', label: 'New Audio Track (import)', key: 'addAudio' },
-    { id: 'track_group', label: 'Group Tracks...', shortcut: 'Ctrl+G', key: 'groupTracks' },
-    { id: 'track_duplicate', label: 'Duplicate Track...', key: 'duplicateTrack' },
-    { sep: true },
-    { id: 'track_freeze', label: 'Freeze Track', key: 'freezeTrack' },
-    { id: 'track_commit', label: 'Commit Track...', shortcut: 'Alt+Shift+C', key: 'commitTrack' },
-    { sep: true },
-    { id: 'track_delete', label: 'Delete Selected', key: 'deleteSelected' },
-  ],
-  Event: [
-    { id: 'event_dream', label: 'Dream Track (AI)', key: 'openDream' },
-    { id: 'event_history', label: 'Dream History', key: 'openHistory' },
-    { sep: true },
-    { id: 'event_piano', label: 'Open Piano Roll', key: 'openPiano' },
-    { id: 'event_auto_tempo', label: 'Automatic Tempo Detection', key: 'autoTempo' },
-    { id: 'event_bantu_grid', label: 'Quantize to Bantu Oral Grid (Innovation RIBA) 🌍', key: 'openBantu' },
-  ],
-  AudioSuite: [
-    { id: 'as_gain', label: 'Gain (Destructive)', key: 'asGain' },
-    { id: 'as_eq', label: 'EQ / Filter', key: 'asEq' },
-    { id: 'as_reverb', label: 'Reverb Process', key: 'asReverb' },
-    { id: 'as_reverse', label: 'Reverse Audio', key: 'asReverse' },
-    { sep: true },
-    { id: 'as_separate', label: 'Magic12 Source Separation', key: 'magic12Sep' },
-    { id: 'as_master', label: 'Magic12 AI Mastering', key: 'magic12Master' },
-  ],
-  Tools: [
-    { id: 'tools_metronome', label: 'Toggle Metronome', shortcut: 'M', key: 'toggleMetronome' },
-    { id: 'tools_loop', label: 'Toggle Loop', shortcut: 'L', key: 'toggleLoop' },
-    { id: 'tools_record', label: 'Toggle Record', key: 'toggleRecord' },
-  ],
-  View: [
-    { id: 'view_mixer', label: 'Mixer', key: 'openMixer' },
-    { id: 'view_theme', label: 'Toggle Theme', key: 'toggleTheme' },
-  ],
-  Setup: [
-    { id: 'setup_playback', label: 'Playback Engine...', key: 'openPlayback' },
-    { id: 'setup_io', label: 'I/O Setup...', key: 'openIO' },
-    { id: 'setup_preferences', label: 'Preferences...', key: 'openPrefs' },
-    { sep: true },
-    { id: 'setup_gm', label: 'GM 128 Instruments', key: 'openGM' },
-    { id: 'setup_vst', label: 'VST Scan', key: 'openVst' },
-    { id: 'setup_plugins', label: 'Plugins List', key: 'openPlugins' },
-  ],
-  Help: [
-    { id: 'help_manual', label: 'User Manual...', shortcut: 'F1', key: 'openManual' },
-  ],
-};
-
-function MenuBar({ openMenu, setOpenMenu, actions }) {
-  const close = () => setOpenMenu(null);
-  return (
-    <div style={{
-      height: 32, background: '#0B0B0E', borderBottom: '1px solid rgba(255,255,255,0.05)',
-      display: 'flex', alignItems: 'stretch', padding: '0 8px', position: 'relative', flexShrink: 0
-    }}
-      onMouseLeave={close}
-    >
-      {Object.keys(PRO_TOOLS_MENUS).map((key, idx) => (
-        <div
-          key={key}
-          data-testid={`menu-${key.toLowerCase()}`}
-          onMouseEnter={() => openMenu && setOpenMenu(key)}
-          onClick={() => setOpenMenu(openMenu === key ? null : key)}
-          style={{
-            padding: '0 12px', display: 'flex', alignItems: 'center',
-            fontSize: 12, color: openMenu === key ? '#FAFAFA' : '#A1A1AA',
-            cursor: 'pointer', background: openMenu === key ? '#1F1F23' : 'transparent',
-            borderRadius: 3, marginLeft: idx === Object.keys(PRO_TOOLS_MENUS).length - 1 ? 'auto' : 0,
-            position: 'relative', userSelect: 'none'
-          }}
-        >
-          {key}
-          {openMenu === key && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0,
-              background: '#1F1F23', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 6, padding: 4, minWidth: 280, zIndex: 50,
-              boxShadow: '0 8px 20px rgba(0,0,0,0.5)'
-            }}>
-              {PRO_TOOLS_MENUS[key].map((item, i) => {
-                if (item.sep) {
-                  return <div key={`sep-${i}`} style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />;
-                }
-                const fn = actions[item.key];
-                const disabled = !fn;
-                return (
-                  <div
-                    key={item.id}
-                    data-testid={`menuitem-${item.id}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!disabled) { fn(); close(); }
-                    }}
-                    style={{
-                      padding: '6px 10px', fontSize: 12,
-                      color: disabled ? '#52525B' : '#E4E4E7',
-                      borderRadius: 4, cursor: disabled ? 'not-allowed' : 'pointer',
-                      display: 'flex', justifyContent: 'space-between', gap: 16
-                    }}
-                    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#2F2F35'; }}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <span>{item.label}</span>
-                    {item.shortcut && (
-                      <span className="font-mono-r" style={{ fontSize: 10, color: '#71717A' }}>{item.shortcut}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ====== Timeline component (self-animating; owns playhead state) ======
-function Timeline({ isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap, onPositionChange }) {
-  const containerRef = useRef(null);
-  const headRef = useRef(null);
-  const labelRef = useRef(null);
-  const beatRef = useRef(0);
-
-  // reset on play start
-  useEffect(() => {
-    if (isPlaying) beatRef.current = 0;
-  }, [isPlaying]);
-
-  useEffect(() => {
-    let raf = 0;
-    let last = performance.now();
-    const tick = () => {
-      const now = performance.now();
-      const dt = (now - last) / 1000;
-      last = now;
-      if (isPlaying) {
-        const cur = beatRef.current + (dt * tempo) / 60;
-        if (cur >= maxBeats) {
-          if (looping) {
-            beatRef.current = 0;
-            if (onLoopWrap) onLoopWrap();
-          } else {
-            beatRef.current = maxBeats;
-          }
-        } else {
-          beatRef.current = cur;
-        }
-      }
-      const beat = beatRef.current;
-      if (onPositionChange) onPositionChange(beat);
-      const pct = Math.min(100, (beat / maxBeats) * 100);
-      if (headRef.current) headRef.current.style.left = pct + '%';
-      if (labelRef.current) {
-        const m = Math.floor(beat / timeSig) + 1;
-        const b = Math.floor(beat % timeSig) + 1;
-        labelRef.current.textContent = `${m}.${b} · ${beat.toFixed(2)} beats · ${((beat * 60) / tempo).toFixed(2)}s`;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [isPlaying, looping, maxBeats, timeSig, tempo, onLoopWrap, onPositionChange]);
-
-  const handleClick = (e) => {
-    const r = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    beatRef.current = Math.max(0, Math.min(maxBeats, (x / r.width) * maxBeats));
-  };
-  const measures = Math.ceil(maxBeats / timeSig);
-  return (
-    <div
-      ref={containerRef}
-      data-testid={TID.timeline}
-      onClick={handleClick}
-      style={{
-        height: 28, background: '#0B0B0E', borderBottom: '1px solid rgba(255,255,255,0.05)',
-        position: 'relative', overflow: 'hidden', flexShrink: 0, cursor: 'pointer'
-      }}
-    >
-      {Array.from({ length: measures + 1 }).map((_, m) => {
-        const x = ((m * timeSig) / maxBeats) * 100;
-        return (
-          <div key={m} style={{
-            position: 'absolute', left: `${x}%`, top: 0, bottom: 0,
-            width: 1, background: m === 0 ? 'transparent' : 'rgba(255,255,255,0.08)'
-          }}>
-            <span style={{
-              position: 'absolute', top: 4, left: 4, fontSize: 9, color: '#52525B',
-              fontFamily: 'JetBrains Mono, monospace'
-            }}>{m + 1}</span>
-          </div>
-        );
-      })}
-      <div
-        ref={headRef}
-        data-testid={TID.playhead}
-        style={{
-          position: 'absolute', top: 0, bottom: 0,
-          left: '0%',
-          width: 2, background: '#EF4444', boxShadow: '0 0 8px #EF4444',
-          pointerEvents: 'none'
-        }}
-      />
-      <div
-        ref={labelRef}
-        style={{
-          position: 'absolute', right: 8, top: 6, fontSize: 10, color: '#A1A1AA',
-          fontFamily: 'JetBrains Mono, monospace', background: 'rgba(0,0,0,0.5)',
-          padding: '1px 6px', borderRadius: 3
-        }}
-      >1.1 · 0.00 beats · 0.00s</div>
-    </div>
-  );
-}
-
-const kbdStyle = {
-  background: '#27272A', border: '1px solid rgba(255,255,255,0.06)',
-  borderRadius: 3, padding: '0 6px', fontSize: 9, marginRight: 6,
-  fontFamily: 'JetBrains Mono, monospace'
-};
-
-function Modal({ title, onClose, children }) {
-  return (
-    <div
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backdropFilter: 'blur(4px)'
-      }}>
-      <div style={{
-        background: '#18181B', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
-        width: 'min(600px, 92vw)', maxHeight: '85vh', padding: 22, display: 'flex', flexDirection: 'column', gap: 12
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="font-heading" style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
-          <button className="riba-btn" onClick={onClose}>Close</button>
-        </div>
-        <div style={{ overflowY: 'auto' }}>{children}</div>
-      </div>
-    </div>
-  );
-}

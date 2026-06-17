@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 7: Verified Daw.jsx refactor (2554 -> 2019 lines, -535 LOC). All 13 new files under /app/frontend/src/components/daw/ and /modals/ resolve correctly with NO regression. App loads cleanly (title 'RIBA - Bantu Digital Audio Workstation', 0 page errors). All 9 Pro Tools menus (File, Edit, Track, Event, AudioSuite, Tools, View, Setup, Help) open via data-testid='menu-{key}' and render their submenus (6 absolute-positioned dropdowns per click). All 8 extracted modals open correctly: Mixer (title 'Mixer · All Tracks'), Setup/Playback (Refresh button), GM 128 (exactly 128 options, Apply closes), Plugins, Manual, Dream History, BantuGrid (5 styles dropdown), Mastering. BONUS: ESC-to-close newly added in Modal.jsx works (verified on Mixer modal -- title disappears after Escape). Critical regression: MIDI track + Bantu Grid shows 'Piste cible' text bound to the new track (confirmed via inner_text scan). AudioSuite > Reverse Audio and Event > Automatic Tempo Detection both still callable without crash (RIBA brand remains visible, status bar shows 'Select an audio track first'). Backend regression: 16/16 pytest pass; GET /api/quantize/styles returns 5 styles, POST /api/quantize/bantu-grid {bikutsi_44, density:16, bars:4} returns 16 time_stamps_beats.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "MixerModal empty state", "issues": ["When tracks.length === 0, MixerModal renders only the text 'No tracks in session.' and does NOT render the MASTER strip. User's review request explicitly expects: 'shows MASTER strip when no tracks'. Decide intent: either always render the MASTER strip (move it outside the ternary in MixerModal.jsx) or update the spec. This is the only spec deviation found in the refactor."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_bantu_hardware.py",
+    "/app/backend/tests/test_riba_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: in /app/frontend/src/components/daw/modals/MixerModal.jsx, move the MASTER strip block (currently inside the `tracks.length > 0` branch) outside the ternary so it always shows (matches user's stated expectation 'shows MASTER strip when no tracks').",
+    "Carry-over (pre-existing, NOT a refactor regression): console hydration warning 'In HTML, <span> cannot be a child of <option>' likely originates from TrackRow's instrument <select><option> rendering an icon span. Strip span/icon out of option text content."
+  ],
+  "critical_code_review_comments": [
+    "Refactor quality: GOOD. Daw.jsx imports the 8 modals + MenuBar + Timeline cleanly (lines 17-26). proToolsMenuConfig.js cleanly enumerates 9 menus; Modal.jsx now has ESC + click-outside close. SetupRow extracted alongside Modal in same file as suggested.",
+    "Modal.jsx ESC handler attaches a global window 'keydown' listener per mounted modal. If two modals were ever rendered simultaneously, both onClose would fire. Currently impossible (single openModal state), but worth flagging.",
+    "MixerModal MASTER strip rendering is tied to non-empty tracks (line 8 ternary). Spec says it should always show — refactor copied the original conditional faithfully but this is the one place where the refactor could go further.",
+    "Daw.jsx still 2019 lines — most of the bulk is action handlers + state. Future targets: extract recording engine, dream-track flow, and the import/export session helpers into hooks/services.",
+    "Bantu Grid style <select> dropdown was clicked in test and returned 5 options (correct). 128-count earlier was the track's instrument select, not the bantu select — confirmed by selector ambiguity, not a code bug.",
+    "Carry-over from iter 6: html lang=en vs manifest lang=fr-FR inconsistency still present.",
+    "Carry-over: backend _build_bantu_grid bikutsi_44 swing slice `swing[:density % 8 or 8]` still suspicious for density not multiple of 8."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100% (16/16 pytest)", "frontend": "100% — 9/9 menus open, 8/8 modals open, ESC-close works, MIDI+Bantu binding works, AS Reverse and AutoTempo no-crash; 0 page errors" },
+  "test_credentials": "N/A - app has no auth",
+  "seed_data_creation": "None new (test_riba_api creates/deletes TEST_session_1 transiently).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Refactor is functionally complete and regression-free. All 9 menus + 8 modals verified via data-testid='menu-{key}'. Use page.locator(\"[data-testid='menu-event']\").click() then page.locator('text=Quantize to Bantu').click() to open Bantu modal. Note: counting all <select> on page returns the instrument <select> from TrackRow too — scope queries to the modal container when validating dropdowns. Only minor spec deviation: MixerModal empty state lacks MASTER strip (line 8 of MixerModal.jsx).",
+  "rca of the issue": "No bugs to RCA. The refactor preserved all behavior. The only spec gap (Mixer empty state) is a faithful copy of pre-refactor logic and not introduced by this iteration."
+}
