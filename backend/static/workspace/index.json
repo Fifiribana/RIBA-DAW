@@ -1,5 +1,26 @@
 [
   {
+    "kind": "music",
+    "prompt": "Bikutsi, traditional drums, magnetic groove",
+    "style": "Bikutsi, traditional drums, magnetic groove",
+    "title": "Bikutsi Traditional Drums Magnetic",
+    "tags": [
+      "BIKUTSI",
+      "BIKUTSI",
+      "TRADITIONAL",
+      "DRUMS"
+    ],
+    "duration": 30,
+    "instrumental": true,
+    "id": "dff8e439-776c-4b3e-8e3f-ce4c4053333e",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/dff8e439-776c-4b3e-8e3f-ce4c4053333e",
+    "source_url": "https://v3b.fal.media/files/b/0a9ed959/J-JZXKKhdhee_YuQgMEZl_tmphx9sl7j8.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 5292078,
+    "created_at": 1781824900
+  },
+  {
     "kind": "lyrics",
     "prompt": "TEST_no_wav_marker",
     "style": "Highlife",
@@ -1526,36 +1547,6 @@
     "message": "fal.ai key not configured — generated placeholder card only.",
     "audio_url": null,
     "id": "52c62ccd-0577-4823-b2c7-7184f4c329b1",
-    "created_at": 1781820961
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "66e2fbc2-173d-4f78-b221-63ec1cc157ec",
     "created_at": 1781820961
   }
 ]

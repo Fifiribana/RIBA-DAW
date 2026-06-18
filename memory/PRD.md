@@ -174,6 +174,19 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
 - **Iter 15 (Feb 2026)** : **59/59 backend pytest PASS** (-m "not slow"), 1 slow deselected (Demucs heavy). FAL_KEY actif via clé utilisateur, mode "full" sur tous les status endpoints.
 
+### v2.5 (iter 16 - Feb 2026) — SPLASH SCREEN CINÉMATOGRAPHIQUE
+- **🎬 SplashScreen.jsx** (nouveau `/app/frontend/src/components/daw/`):
+  - Boot sequence 2.6s avec logo RIBA pulsé (halo magenta/violet radial, scale 1→1.04, brightness +18%)
+  - Wordmark "RIBA" en gradient blanc 56 px letter-spacing 0.42em + tagline "BANTU · DIGITAL AUDIO WORKSTATION" monospace 10 px 0.46em
+  - **Bantu Oral Grid Bikutsi 4/4 animé** : 16 traits asymétriques (swing ternaire [0, 0.20, 0.40, …]) pulsent en cascade avec delay = position × 1.1s
+  - Boot lines monospace progressivement révélées (init WebAudio → Bantu Grid → fal.ai → Demucs → ready 100%)
+  - Progress bar gradient indigo→magenta→orange (4 keyframes cubic-bezier 0.4,0,0.2,1)
+  - Vignette radial + grain conique 5% opacity overlay
+  - Skip via clic / ESC / SPACE (debounce 250 ms anti-misclick)
+  - Cycle de vie : boot → fadeout (650 ms) → unmount complet
+- **App.js** : sessionStorage `riba-splash-seen` → splash uniquement au premier boot d'un onglet (skip pendant les hot reloads).
+- E2E Crash Test Magic Re-mix (iter 15) ✓ validé : Demucs 4 stems + fal.ai bantu_groove en 137s sur localhost (mode=full).
+
 ### v2.4 (iter 15 - Feb 2026) — MAGIC RE-MIX + LIFESPAN + TESTS RÉPARÉS
 - **🎛 Magic Re-mix (P1)** : nouvelle chaîne RIBA exclusive
   - Backend `/app/backend/ai/remix.py` : `GET /api/ai/remix-status` + `POST /api/ai/magic-remix` (multipart: file, bantu_style, density, bars, regenerate, regen_prompt, regen_duration)
@@ -196,16 +209,15 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
-- **P1**: Splash screen cinématographique (loading screen DAW immersif).
+- **P1**: 💡 **"Share Re-mix as Bantu Reel"** — auto-bounce Magic Re-mix output → MP3 + vidéo carrée 1080×1080 avec spectre animé + watermark "Made with RIBA · Bantu Oral Grid" + label du style Bantu actif → upload TikTok/Instagram via API. Outil viral exclusif RIBA. **Validé par l'utilisateur le 18 Feb 2026.**
 - **P1**: Studio Live Session (WebRTC + Y.js pour collaboration temps réel sur Bantu Grid).
 - **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
 - **P2**: WebMIDI input pour claviers MIDI externes.
-- **P2**: Real MP3 export (lamejs).
+- **P2**: Real MP3 export (lamejs) — peut être bénéfique pour le Bantu Reel.
 - **P2**: Vue Bantu Heatmap.
 - **P2**: Refactor `engine.js` (audio engine large) en React hooks.
 - **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py` (importé par server.py + remix.py) pour DRY parité math.
 
 ## Next Action Items
-- Magic Re-mix : tester un vrai workflow end-to-end UI (upload WAV court → 4 stems + bantu_groove → import timeline).
-- Démarrer Splash Screen cinématographique OU Studio Live Session selon choix utilisateur.
-- Tauri local build (icons prêts, code Rust en place ; juste `yarn desktop:build` à exécuter sur OS hôte).
+- 🟢 **Bantu Reel (P1 next)** : implémenter le bounce timeline → MP3 (lamejs) + vidéo carrée Canvas (spectre + style overlay) + intégration partage social.
+- Studio Live Session OU Tauri local build selon priorité utilisateur ultérieure.
