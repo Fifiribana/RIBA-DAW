@@ -67,13 +67,13 @@ def _separate_file(in_path: Path) -> dict[str, bytes]:
     wav, sr = torchaudio.load(str(in_path))
     wav = convert_audio(wav, sr, model.samplerate, model.audio_channels)
     ref = wav.mean(0)
-    wav = (wav - ref.mean()) / ref.std()
+    wav = (wav - ref.mean()) / (ref.std() + 1e-8)
     with torch.no_grad():
         sources = apply_model(
             model, wav[None].to(device),
             split=True, overlap=0.25, progress=False
         )[0]
-    sources = sources * ref.std() + ref.mean()
+    sources = sources * (ref.std() + 1e-8) + ref.mean()
 
     out: dict[str, bytes] = {}
     for name, tensor in zip(model.sources, sources):

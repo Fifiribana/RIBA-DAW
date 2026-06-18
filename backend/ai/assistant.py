@@ -89,13 +89,14 @@ async def ai_assistant(req: AssistantRequest):
 
     try:
         reply = await chat.send_message(UserMessage(text=req.message))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — keep service available on any LLM error
         # Graceful fallback when LLM budget is exhausted or network fails
         return {
             "session_id": session_id,
-            "speech": f"AI unavailable: {type(exc).__name__}. Using local interpreter fallback.",
+            "speech": "Working in offline mode — please top up Universal Key for full AI features.",
             "actions": _local_fallback(req.message),
             "fallback": True,
+            "fallback_reason": type(exc).__name__,
         }
 
     text = str(reply).strip()
@@ -121,18 +122,74 @@ async def ai_assistant(req: AssistantRequest):
 
 
 def _local_fallback(msg: str) -> list[dict]:
-    """Tiny offline interpreter — covers a handful of common phrases when the LLM is down."""
+    """Offline interpreter — handles common phrases when the LLM is unavailable.
+
+    Uses word-boundary regex to be robust to articles ("add a midi track"),
+    extracts tempo numbers, and supports compound sentences joined by "and"/", ".
+    """
+    import re
     m = msg.lower()
-    if any(k in m for k in ["add audio", "ajoute une piste audio", "nouvelle piste audio"]):
-        return [{"type": "add_track", "kind": "audio"}]
-    if any(k in m for k in ["add midi", "ajoute midi", "nouvelle piste midi"]):
-        return [{"type": "add_track", "kind": "midi"}]
-    if "play" in m or "lecture" in m or "joue" in m:
-        return [{"type": "play"}]
-    if "stop" in m or "arrête" in m or "arret" in m:
-        return [{"type": "stop"}]
-    if "metronome" in m or "métronome" in m:
-        return [{"type": "toggle_metronome", "value": True}]
-    if "reverb" in m or "réverb" in m or "reverberation" in m:
-        return [{"type": "apply_effect", "selector": "selected", "effect": "reverb", "amount": 0.4}]
-    return []
+    actions: list[dict] = []
+
+    # add audio / midi
+    if re.search(r"\b(add|new|create|nouvelle|ajoute)\b.*\b(midi)\b", m):
+        actions.append({"type": "add_track", "kind": "midi"})
+    if re.search(r"\b(add|new|create|nouvelle|ajoute)\b.*\b(audio)\b", m):
+        actions.append({"type": "add_track", "kind": "audio"})
+
+    # tempo extraction
+    mt = re.search(r"(\d{2,3})\s*(?:bpm|tempo)", m)
+    if not mt:
+        mt = re.search(r"tempo\s*(?:to|à|a|de)?\s*(\d{2,3})", m)
+    if mt:
+        bpm = int(mt.group(1))
+        if 40 <= bpm <= 240:
+            actions.append({"type": "set_tempo", "bpm": bpm})
+
+    # transport
+    if re.search(r"\b(stop|arr[êe]te|arret)\b", m):
+        actions.append({"type": "stop"})
+    elif re.search(r"\b(play|lecture|joue|start)\b", m) and "stop" not in m:
+        actions.append({"type": "play"})
+    if re.search(r"\b(record|enregistre|rec)\b", m):
+        actions.append({"type": "record"})
+
+    # metronome
+    if re.search(r"metro\w*|m[ée]tro\w*", m):
+        on = not re.search(r"(off|d[ée]sactiv|disable|stop)\s*metro", m)
+        actions.append({"type": "toggle_metronome", "value": on})
+
+    # loop
+    if re.search(r"\bloop\b|\bboucle\b", m):
+        actions.append({"type": "toggle_loop", "value": True})
+
+    # effects
+    fx_map = [("reverb", "reverb"), ("réverb", "reverb"), ("delay", "delay"),
+              ("eq", "eq"), ("filter", "filter"), ("reverse", "reverse"), ("gain", "gain")]
+    for needle, fx in fx_map:
+        if needle in m:
+            actions.append({"type": "apply_effect", "selector": "selected", "effect": fx, "amount": 0.4})
+            break
+
+    # bantu / swing
+    if re.search(r"swing", m):
+        actions.append({"type": "toggle_bantu_swing", "value": True, "intensity": 0.7})
+    for style_key in ("asiko_wisdom", "makossa_roots", "bikutsi_1224", "bikutsi_68", "bikutsi_44"):
+        # match either the explicit id or the human form ("bikutsi 4/4")
+        human = style_key.replace("_", " ").replace("44", "4/4").replace("68", "6/8").replace("1224", "12/24")
+        if style_key in m or human in m or human.split()[0] in m:
+            actions.append({"type": "set_bantu_grid", "style": style_key, "density": 16, "bars": 4})
+            break
+
+    # open modals
+    modal_map = {
+        "mixer": "mixer", "bantu": "bantu", "setup": "setup", "dream": "dream",
+        "history": "history", "disk": "disk_usage", "system": "system_usage",
+        "plugin": "plugins", "manual": "manual",
+    }
+    for key, modal in modal_map.items():
+        if re.search(rf"\bopen\b.*\b{key}\b|\bouvre\b.*\b{key}\b|\b{key}\b.*\b(open|ouvre)\b", m):
+            actions.append({"type": "open_modal", "modal": modal})
+            break
+
+    return actions

@@ -32,6 +32,25 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v2.0 (iteration 12 - Feb 2026) — REAL AI INTEGRATIONS 🤖
+- **🧠 RIBA AI Assistant** (`/api/ai/assistant`) — Emergent LLM Key → Claude Sonnet 4-6
+  - Module `/app/backend/ai/assistant.py` : SYSTEM_PROMPT avec schéma JSON strict de 21 action types couvrant tracks/mixer/transport/effets/Bantu/modals
+  - Fallback local robuste (regex word-boundary, multi-actions par phrase, tempo extraction `(\d+) bpm`, FR+EN)
+  - Frontend : nouveau modal `AssistantModal.jsx` (chat avec 5 suggestion chips, action display collapsible, magenta spinner pendant inference)
+  - Daw.jsx : `dispatchLlmActions()` reducer qui mappe les 21 types d'actions sur les handlers existants
+  - Item de menu `Event → AI Assistant (Chat)` avec raccourci Ctrl+I
+- **🎵 fal.ai MusicGen** (`/api/ai/generate-music`) — scaffolding complet
+  - Lit `FAL_KEY` depuis `/app/backend/.env` (placeholder `your_fal_key_here` → endpoint retourne 503 propre avec `detail.code='FAL_KEY_MISSING'`)
+  - Modèles supportés : musicgen-stereo-melody (default), small, medium, large, stereo-large
+  - L'utilisateur n'a qu'à coller sa clé fal.ai dans .env + restart backend pour activer
+- **🎚️ Demucs Stems Separation** (`/api/ai/separate-stems`) — RÉEL
+  - htdemucs (Hybrid Transformer 4-stem) chargé en lazy, modèle 80 MB téléchargé au premier appel
+  - Backend traite l'upload WAV via Demucs CPU, retourne 4 stems (vocals/drums/bass/other) en base64 WAV
+  - Frontend : Magic12 Sep → audioBufferToWavBlob → POST multipart → décode chaque stem en AudioBuffer → 4 nouvelles pistes injectées dans le mixer
+  - `MagentaOverlay` plein écran pendant les 30-60 s de séparation
+- **✨ MagentaSpinner / MagentaOverlay** : composants réutilisables (svg gradient + animation glow magenta) utilisés dans AssistantModal + Demucs overlay
+- **Tests (iter 12)** : 6/6 nouveaux tests AI endpoints PASS, **48/48 pytest total** (16 riba_api + 26 bantu parity + 6 ai endpoints), 0 régression. RCA backend bug local-fallback résolu en cours d'itération (regex word-boundary + multi-action).
+
 ### v1.9 (iterations 10-11 - Feb 2026) — BANTU SWING LIVE 🥁
 - **🥁 Bantu Swing Live** — premier moteur de groove asymétrique appliqué en temps réel sur la lecture, **non destructif** :
   - Bouton TopBar `[data-testid='bantu-swing-toggle']` (label `🥁 Swing` / `🥁 Swing · 70%` en doré quand actif)
