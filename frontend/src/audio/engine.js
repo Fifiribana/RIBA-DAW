@@ -2,6 +2,7 @@
 // Provides per-track playback (audio + MIDI), EQ, panning, volume, master meter, metronome and recording.
 
 import { GM_INSTRUMENTS } from './instruments';
+import { computeBantuGrid } from '../lib/bantuGrid';
 
 // Create a synthetic impulse response for reverb
 function buildImpulseResponse(ctx, duration = 1.8, decay = 2.5) {
