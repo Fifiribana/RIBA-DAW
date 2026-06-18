@@ -135,7 +135,8 @@ def _local_title(prompt: str) -> str:
 
 
 def _local_tags(style: str | None, prompt: str) -> list[str]:
-    base = (style or "BANTU").upper().split()[:1]
+    style_token = re.split(r"[,\s]+", (style or "BANTU"))[0].strip(",")
+    base = [style_token.upper()] if style_token else ["BANTU"]
     extra = [w.upper() for w in re.findall(r"[A-Za-zÀ-ÿ]{4,}", prompt)][:3]
     out = (base + extra + ["RIBA"])[:4]
     return out

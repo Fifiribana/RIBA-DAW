@@ -32,6 +32,20 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v2.2 (iteration 13 - Feb 2026) — MAGIC GENERATOR SUNO-STYLE ✨
+- **🎨 MagicGeneratorModal** (UI à 2 panneaux, ~430 lignes) :
+  - **Gauche** : Simple/Advanced toggle · +Audio/+Voice (cyan) · Prompt textarea · Lyrics 3 onglets (Write/Prompt/Instrumental) · Styles textarea + 7 quick-tags (Asiko · Makossa · Bikutsi · Rumba · Afrobeat · Soukous · Highlife) · Duration (mode Advanced) · gros bouton **⚡ Create** magenta→orange avec glow
+  - **Droite** : Workspace grid responsive (auto-fill 220px), cartes avec **pochettes procédurales 100% CSS** (gradients radiaux uniques par id), titre, tags mono, badge fallback, boutons Play/Import (⤵) / Delete (✕)
+  - **Player audio persistant** en bas du panneau droit (avec backdrop-blur + cover miniature)
+- **Backend** `/app/backend/ai/generator.py` :
+  - `POST /api/ai/generate-lyrics` — Claude Sonnet 4-6 (Emergent LLM) génère paroles JSON structurées `{title, tags, sections[{type:Verse|Chorus|...,text}]}`, fallback offline avec sections génériques Bantu
+  - `POST /api/ai/generate-track` — wrapper fal.ai MusicGen avec flag `instrumental`, download du WAV vers `/app/backend/static/workspace/`, fallback gracieux `FAL_KEY_MISSING`
+  - `GET /api/ai/workspace` — liste persistante (cap 60) via `index.json`
+  - `DELETE /api/ai/workspace/{id}` + `GET /api/ai/workspace/file/{id}` (streaming WAV)
+- **Import to Timeline** : click ⤵ télécharge le WAV, le convertit en File et l'injecte dans `addAudioFile()` → nouvelle piste audio dans le mixer RIBA
+- Item de menu `Event → Magic Generator (Suno-style) ✨`
+- **Tests iter 13** : **55/55 pytest PASS** (48 régression + 7 nouveaux generator_endpoints), 0 bug fonctionnel, fix cosmétique tag trailing comma appliqué
+
 ### v2.1 (iteration 13 - Feb 2026) — OFFICIAL RIBA BRAND
 - **🎨 Script d'icônes universel** `/app/backend/setup_icons.py` :
   - Cherche `Gemini_Generated_Image_upm9x0upm9x0upm9_3.png` dans `/app`, `/app/assets`, `/app/backend`, `/app/frontend/public`
