@@ -32,6 +32,17 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v1.9 (iterations 10-11 - Feb 2026) — BANTU SWING LIVE 🥁
+- **🥁 Bantu Swing Live** — premier moteur de groove asymétrique appliqué en temps réel sur la lecture, **non destructif** :
+  - Bouton TopBar `[data-testid='bantu-swing-toggle']` (label `🥁 Swing` / `🥁 Swing · 70%` en doré quand actif)
+  - Click gauche : toggle ON/OFF + status bar
+  - Click droit : cycle intensity 30 → 50 → 70 → 100 % (l'utilisateur peut ajuster le "feel" de l'humanisation)
+  - Engine : `bantuSwing` config + `setBantuSwing(cfg)` + `_swingPositions()` (cache LRU sur key `style|density|bars`) + `_swingBeat(beat)` (modulo cycle + nearest-neighbour snap × intensity)
+  - `playMIDI(bpm, swingFn)` reçoit `this._swingBeat.bind(this)` depuis `play()` et `playAll()` → ne mute PAS `midiNotes[]`, applique seulement le delta au scheduling Web Audio
+- **♻️ Réorganisation** : `bantuGrid.js` déplacé de `components/daw/` → `lib/` (module math pur, accessible depuis l'audio engine sans cross-tree weird imports). Imports mis à jour dans Timeline, BantuTeaser, engine, test_bantu_parity.py.
+- **🐛 Bug critique iter 10** : import `computeBantuGrid` manquant dans engine.js → `ReferenceError` au PLAY avec Swing ON. **Fixé en iter 11** (1 ligne ajoutée).
+- Tests **iter 11 = 100% PASS** : PLAY+Swing OK, PLAY sans Swing OK, 10 menus, Disk/System Usage modals, View→Waveforms→Rectified, **42/42 pytest backend**.
+
 ### v1.8 (iteration 9 - Feb 2026) — PRO TOOLS WINDOW MENU + WAVEFORM MODES
 - **🪟 Menu Window** (entre View et Setup) avec :
   - Sous-menu **Configurations** : Window Configuration List (Alt+J), New Configuration (Alt+Shift+J)
