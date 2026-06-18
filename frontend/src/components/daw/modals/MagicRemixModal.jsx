@@ -40,8 +40,18 @@ export function MagicRemixModal({ onClose, onImportStems }) {
   const [chainStatus, setChainStatus] = useState({ ready: false, fal_ready: false, demucs_ready: false, mode: 'unavailable' });
   const [lastResult, setLastResult] = useState(null);
 
+  // === Bantu Reel state ===
+  const [reelStatus, setReelStatus] = useState({ available: false });
+  const [reelBusy, setReelBusy] = useState(false);
+  const [reelMsg, setReelMsg] = useState('');
+  const [reelOutput, setReelOutput] = useState(null); // { mp4_url, mp3_url, ... }
+  const [reelTitle, setReelTitle] = useState('Bantu Phoenix');
+  const [reelFormat, setReelFormat] = useState('square_1080');
+  const [reelDuration, setReelDuration] = useState(30);
+
   useEffect(() => {
     fetch(`${API}/ai/remix-status`).then((r) => r.json()).then(setChainStatus).catch(() => {});
+    fetch(`${API}/ai/reel-status`).then((r) => r.json()).then(setReelStatus).catch(() => {});
   }, []);
 
   const onPick = (e) => { setFile(e.target.files?.[0] || null); setLastResult(null); setStatus(''); };
@@ -87,6 +97,106 @@ export function MagicRemixModal({ onClose, onImportStems }) {
     if (!lastResult) return;
     if (typeof onImportStems === 'function') onImportStems(lastResult);
     onClose();
+  };
+
+  /** Mix all stems together via OfflineAudioContext and return a stereo WAV blob. */
+  async function _stemsToMixWav(stemsObj, durationSec) {
+    const sr = 44100;
+    const ctx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, Math.ceil(sr * durationSec), sr);
+    const decoders = [];
+    const live = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      for (const [name, s] of Object.entries(stemsObj)) {
+        if (!s?.wav_base64) continue;
+        const bin = Uint8Array.from(atob(s.wav_base64), (c) => c.charCodeAt(0));
+        // decode in a live context (Offline cannot decode by itself in some browsers)
+        const buf = await live.decodeAudioData(bin.buffer.slice(0));
+        decoders.push({ name, buf });
+      }
+      // simple equal-amplitude mix; bantu_groove gets a slight -3 dB to sit under
+      for (const { name, buf } of decoders) {
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const gain = ctx.createGain();
+        gain.gain.value = name === 'bantu_groove' ? 0.7 : 0.85;
+        src.connect(gain).connect(ctx.destination);
+        src.start(0);
+      }
+    } finally {
+      try { await live.close(); } catch { /* ignore */ }
+    }
+    const rendered = await ctx.startRendering();
+    return _audioBufferToWavBlob(rendered);
+  }
+
+  /** Minimal RIFF/WAV encoder (16-bit PCM stereo/mono). */
+  function _audioBufferToWavBlob(buf) {
+    const numCh = buf.numberOfChannels;
+    const sr = buf.sampleRate;
+    const len = buf.length;
+    const bytesPerSample = 2;
+    const dataSize = len * numCh * bytesPerSample;
+    const out = new ArrayBuffer(44 + dataSize);
+    const v = new DataView(out);
+    const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+    writeStr(0, 'RIFF'); v.setUint32(4, 36 + dataSize, true); writeStr(8, 'WAVE');
+    writeStr(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, numCh, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * numCh * bytesPerSample, true);
+    v.setUint16(32, numCh * bytesPerSample, true); v.setUint16(34, 16, true);
+    writeStr(36, 'data'); v.setUint32(40, dataSize, true);
+    let off = 44;
+    const channels = [];
+    for (let c = 0; c < numCh; c++) channels.push(buf.getChannelData(c));
+    for (let i = 0; i < len; i++) {
+      for (let c = 0; c < numCh; c++) {
+        let s = Math.max(-1, Math.min(1, channels[c][i]));
+        s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        v.setInt16(off, s, true); off += 2;
+      }
+    }
+    return new Blob([out], { type: 'audio/wav' });
+  }
+
+  const makeReel = async () => {
+    if (!lastResult?.stems) { setReelMsg('Run Magic Re-mix first.'); return; }
+    if (!reelStatus.available) { setReelMsg('Server ffmpeg unavailable.'); return; }
+    setReelBusy(true); setReelOutput(null);
+    setReelMsg('🎬 Mixing 5 stems → mixdown WAV…');
+    try {
+      const wavBlob = await _stemsToMixWav(lastResult.stems, Math.min(60, reelDuration));
+      setReelMsg('🎬 Encoding 1080×1080 MP4 with CQT spectrum + brand overlays…');
+      const styleLabel = (() => {
+        const map = {
+          bikutsi_44: 'Bikutsi 4/4',
+          bikutsi_68: 'Bikutsi 6/8',
+          bikutsi_1224: 'Bikutsi 12/24',
+          makossa_roots: 'Makossa Roots',
+          asiko_wisdom: 'Asiko Wisdom',
+        };
+        return map[lastResult.bantu?.style] || 'Bantu Groove';
+      })();
+      const fd = new FormData();
+      fd.append('file', wavBlob, `${reelTitle || 'bantu'}.wav`);
+      fd.append('style_label', styleLabel);
+      fd.append('title', reelTitle || 'RIBA');
+      fd.append('format', reelFormat);
+      fd.append('duration_max_sec', String(reelDuration));
+      fd.append('with_mp3', 'true');
+      const r = await fetch(`${API}/ai/bantu-reel`, { method: 'POST', body: fd });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${r.status}`);
+      }
+      const data = await r.json();
+      setReelOutput(data);
+      const mp3 = data.mp3_url ? ` + MP3 ${Math.round((data.mp3_bytes || 0) / 1024)} KB` : '';
+      setReelMsg(`✓ Reel ready · MP4 ${Math.round(data.mp4_bytes / 1024)} KB${mp3}`);
+    } catch (e) {
+      setReelMsg(`Reel failed: ${e.message}`);
+    } finally {
+      setReelBusy(false);
+    }
   };
 
   const chainBadge = (txt, ok) => (
@@ -251,6 +361,139 @@ export function MagicRemixModal({ onClose, onImportStems }) {
             <div style={{ fontSize: 10, color: '#71717A', fontStyle: 'italic' }}>
               Bantu: {lastResult.bantu?.description}
             </div>
+          </div>
+        )}
+
+        {/* === Bantu Reel section — viral export === */}
+        {lastResult && (
+          <div
+            data-testid="bantu-reel-panel"
+            style={{
+              background: 'linear-gradient(135deg, rgba(217,70,239,0.06), rgba(99,102,241,0.06))',
+              border: '1px solid rgba(217,70,239,0.25)', borderRadius: 10, padding: 12,
+              display: 'flex', flexDirection: 'column', gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: '#FAFAFA', letterSpacing: '-0.01em' }}>
+                🎬 Bantu Reel
+              </span>
+              <span className="font-mono-r" style={{ fontSize: 9, color: '#A1A1AA', letterSpacing: '0.14em' }}>
+                MP4 + MP3 · TIKTOK / INSTAGRAM / YOUTUBE SHORTS
+              </span>
+              {!reelStatus.available && (
+                <span style={{ marginLeft: 'auto', fontSize: 9, color: '#F59E0B' }}>ffmpeg unavailable</span>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 8 }}>
+              <input
+                data-testid="reel-title"
+                value={reelTitle}
+                onChange={(e) => setReelTitle(e.target.value)}
+                placeholder="Reel title"
+                style={input}
+              />
+              <select
+                data-testid="reel-format"
+                value={reelFormat}
+                onChange={(e) => setReelFormat(e.target.value)}
+                style={input}
+              >
+                <option value="square_1080">Square 1080</option>
+                <option value="reel_1080">Vertical 1080×1920</option>
+                <option value="landscape_1080">Landscape 1920×1080</option>
+              </select>
+              <input
+                data-testid="reel-duration"
+                type="number" min={5} max={60}
+                value={reelDuration}
+                onChange={(e) => setReelDuration(parseInt(e.target.value || '30', 10))}
+                style={input}
+              />
+            </div>
+
+            <button
+              data-testid="reel-generate-btn"
+              className="riba-btn"
+              disabled={reelBusy || !reelStatus.available}
+              onClick={makeReel}
+              style={{
+                padding: '10px 0', fontSize: 12, fontWeight: 800,
+                background: reelBusy
+                  ? 'rgba(217,70,239,0.4)'
+                  : 'linear-gradient(135deg, #D946EF, #F59E0B)',
+                color: '#fff', border: 'none', borderRadius: 8,
+                boxShadow: '0 0 14px rgba(217,70,239,0.35)',
+                cursor: reelBusy ? 'wait' : 'pointer',
+              }}
+            >
+              {reelBusy ? '🎬 Rendering reel…' : '📱 Generate Bantu Reel (MP4 + MP3)'}
+            </button>
+
+            {reelMsg && (
+              <div data-testid="reel-status" style={{
+                fontSize: 11, color: reelBusy ? '#D946EF' : '#A1A1AA',
+                fontFamily: 'JetBrains Mono, monospace',
+                background: '#0B0B0E', padding: '6px 9px', borderRadius: 6,
+                border: '1px solid rgba(255,255,255,0.05)',
+              }}>{reelMsg}</div>
+            )}
+
+            {reelOutput && (
+              <div data-testid="reel-output" style={{
+                display: 'flex', gap: 10, alignItems: 'center',
+                background: '#09090B', borderRadius: 8, padding: 10,
+                border: '1px solid rgba(34,211,238,0.25)',
+              }}>
+                <video
+                  data-testid="reel-mp4-preview"
+                  src={`${BACKEND_URL}${reelOutput.mp4_url}`}
+                  controls muted loop playsInline
+                  style={{
+                    width: 120, height: reelOutput.format === 'reel_1080' ? 213 : reelOutput.format === 'landscape_1080' ? 67 : 120,
+                    borderRadius: 6, background: '#050507', flexShrink: 0,
+                  }}
+                />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#FAFAFA' }}>
+                    {reelOutput.title} · {reelOutput.style_label}
+                  </div>
+                  <div style={{ fontSize: 9, color: '#71717A' }} className="font-mono-r">
+                    {reelOutput.width}×{reelOutput.height} · {reelOutput.duration}s · MP4 {Math.round(reelOutput.mp4_bytes / 1024)}KB
+                    {reelOutput.mp3_bytes ? ` · MP3 ${Math.round(reelOutput.mp3_bytes / 1024)}KB` : ''}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <a
+                      data-testid="reel-download-mp4"
+                      href={`${BACKEND_URL}${reelOutput.mp4_url}`}
+                      download={`${reelOutput.title}-${reelOutput.id.slice(0, 6)}.mp4`}
+                      className="riba-btn"
+                      style={{
+                        flex: 1, textAlign: 'center', textDecoration: 'none',
+                        fontSize: 10, padding: '5px 0', fontWeight: 700,
+                        background: 'linear-gradient(135deg, #D946EF, #F59E0B)',
+                        color: '#fff', border: 'none', borderRadius: 6,
+                      }}
+                    >⬇ Download MP4</a>
+                    {reelOutput.mp3_url && (
+                      <a
+                        data-testid="reel-download-mp3"
+                        href={`${BACKEND_URL}${reelOutput.mp3_url}`}
+                        download={`${reelOutput.title}-${reelOutput.id.slice(0, 6)}.mp3`}
+                        className="riba-btn"
+                        style={{
+                          fontSize: 10, padding: '5px 10px', fontWeight: 700,
+                          textDecoration: 'none', color: '#22D3EE',
+                          background: 'rgba(34,211,238,0.1)',
+                          border: '1px solid rgba(34,211,238,0.3)', borderRadius: 6,
+                        }}
+                      >⬇ MP3</a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

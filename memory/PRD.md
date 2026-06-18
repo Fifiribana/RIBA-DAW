@@ -174,6 +174,25 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
 - **Iter 15 (Feb 2026)** : **59/59 backend pytest PASS** (-m "not slow"), 1 slow deselected (Demucs heavy). FAL_KEY actif via clé utilisateur, mode "full" sur tous les status endpoints.
 
+### v2.6 (iter 17 - Feb 2026) — BANTU REEL : MOTEUR D'EXPORT VIRAL 🎬
+- **Backend** `/app/backend/ai/reel.py` — pipeline ffmpeg :
+  - `GET /api/ai/reel-status` → { available, ffmpeg_version, formats, watermark, default_format }
+  - `POST /api/ai/bantu-reel` (multipart) → MP4 1080×1080 / 1080×1920 / 1920×1080 + MP3 192 kbps
+  - `GET /api/ai/workspace/reel/{id}.mp4` + `.mp3` ; `DELETE` aussi exposé. Path traversal bloqué.
+  - filter_complex : `showcqt` (CQT spectrum reactive, cscheme=`0.85|0.27|0.94|0.39|0.40|0.95` magenta→indigo) + 3 couches `drawtext` (title bold + style badge avec box magenta + watermark "Made with RIBA · Bantu Oral Grid")
+  - Encoding H.264 yuv420p / AAC 192k / movflags faststart pour streaming
+  - `subprocess.run` via `asyncio.to_thread` → ne bloque pas l'event loop
+  - **Rendu mesuré : 1.0-2.5 s pour 5 s de WAV (5× temps réel)**
+- **Frontend** `MagicRemixModal.jsx` — nouvelle section Bantu Reel (gradient magenta/indigo) :
+  - Apparaît automatiquement quand `lastResult` est prêt
+  - Mixe les 5 stems via `OfflineAudioContext` (bantu_groove à -3 dB pour sit under) → WAV blob
+  - Inputs : title, format (Square 1080 / Vertical 1080×1920 / Landscape), duration 5-60 s
+  - POST `/api/ai/bantu-reel` → preview MP4 inline (<video> avec controls + loop) + boutons download MP4 / MP3
+- **Tests** `test_reel_endpoint.py` (5 tests) : status, format invalide → 400, no file → 422, E2E génération MP4+MP3 + download via ingress public, path traversal bloqué. Tous **PASS en 1.74 s**.
+- **Suite complète : 65/65 PASS** (60 pré-existants + 5 nouveaux).
+- Validation visuelle : analyse Gemini Vision d'une frame extraite à 2.5 s → wordmark + badge style + spectre CQT magenta/indigo + watermark tous confirmés visibles et bien composés.
+- Stack ajoutée : **ffmpeg 5.1.9** (apt-installé) + fonts LiberationSans/Mono (Debian stock).
+
 ### v2.5 (iter 16 - Feb 2026) — SPLASH SCREEN CINÉMATOGRAPHIQUE
 - **🎬 SplashScreen.jsx** (nouveau `/app/frontend/src/components/daw/`):
   - Boot sequence 2.6s avec logo RIBA pulsé (halo magenta/violet radial, scale 1→1.04, brightness +18%)
@@ -209,15 +228,15 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
-- **P1**: 💡 **"Share Re-mix as Bantu Reel"** — auto-bounce Magic Re-mix output → MP3 + vidéo carrée 1080×1080 avec spectre animé + watermark "Made with RIBA · Bantu Oral Grid" + label du style Bantu actif → upload TikTok/Instagram via API. Outil viral exclusif RIBA. **Validé par l'utilisateur le 18 Feb 2026.**
+- **P1**: 🎬 **Boot Cinematic** (8s intro vidéo template) — variante du Splash Screen sur `?cinematic=1` ou Setup toggle, avec sous-titres "Pioneered in Yaoundé · Polyrhythmics from Central Africa · Bantu Oral Grid by RIBA". Réutilisera le moteur ffmpeg du Bantu Reel comme template d'export.
 - **P1**: Studio Live Session (WebRTC + Y.js pour collaboration temps réel sur Bantu Grid).
 - **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
 - **P2**: WebMIDI input pour claviers MIDI externes.
-- **P2**: Real MP3 export (lamejs) — peut être bénéfique pour le Bantu Reel.
+- **P2**: Auto-share : intégration TikTok / Instagram Reels API (publication directe depuis le Bantu Reel modal).
 - **P2**: Vue Bantu Heatmap.
 - **P2**: Refactor `engine.js` (audio engine large) en React hooks.
-- **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py` (importé par server.py + remix.py) pour DRY parité math.
+- **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py` (DRY parité math).
 
 ## Next Action Items
-- 🟢 **Bantu Reel (P1 next)** : implémenter le bounce timeline → MP3 (lamejs) + vidéo carrée Canvas (spectre + style overlay) + intégration partage social.
+- 🟢 **Boot Cinematic (P1 next)** : étendre le SplashScreen avec mode "intro long" déclenché manuellement, en réutilisant les briques ffmpeg du Bantu Reel pour pouvoir exporter aussi l'intro comme template vidéo.
 - Studio Live Session OU Tauri local build selon priorité utilisateur ultérieure.
