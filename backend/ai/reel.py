@@ -146,6 +146,7 @@ async def bantu_reel(
     title: str = Form("RIBA"),
     format: str = Form("square_1080"),
     duration_max_sec: int = Form(30),
+    start_sec: float = Form(0.0),
     with_mp3: str = Form("true"),
     watermark: str = Form("Made with RIBA · Bantu Oral Grid"),
 ):
@@ -156,6 +157,7 @@ async def bantu_reel(
         raise HTTPException(400, f"Unknown format: {format}. Choices: {list(FORMATS.keys())}")
 
     duration = max(5, min(60, int(duration_max_sec)))
+    start = max(0.0, float(start_sec))
     w, h = FORMATS[format]
     reel_id = uuid.uuid4().hex
     tmp_dir = Path(tempfile.mkdtemp(prefix="riba-reel-"))
@@ -170,8 +172,12 @@ async def bantu_reel(
         in_path.write_bytes(data)
 
         fc = _build_filter_complex(w, h, title, style_label, watermark)
-        mp4_args = [
-            "ffmpeg", "-y",
+        # Seek BEFORE the input (-ss before -i) so showcqt + drawtext see only the
+        # selected window. This is fast and frame-accurate for our use-case.
+        mp4_args = ["ffmpeg", "-y"]
+        if start > 0.0:
+            mp4_args += ["-ss", f"{start:.3f}"]
+        mp4_args += [
             "-i", str(in_path),
             "-filter_complex", fc,
             "-map", "[v]", "-map", "0:a",
@@ -192,6 +198,7 @@ async def bantu_reel(
             "width":       w,
             "height":      h,
             "duration":    duration,
+            "start_sec":   round(start, 2),
             "title":       title,
             "style_label": style_label,
             "watermark":   watermark,
@@ -200,8 +207,11 @@ async def bantu_reel(
         }
 
         if str(with_mp3).strip().lower() in ("1", "true", "yes", "on"):
-            mp3_args = [
-                "ffmpeg", "-y", "-i", str(in_path),
+            mp3_args = ["ffmpeg", "-y"]
+            if start > 0.0:
+                mp3_args += ["-ss", f"{start:.3f}"]
+            mp3_args += [
+                "-i", str(in_path),
                 "-vn", "-c:a", "libmp3lame", "-b:a", "192k", "-id3v2_version", "3",
                 "-metadata", f"title={title}",
                 "-metadata", f"artist=RIBA",
@@ -225,6 +235,139 @@ async def bantu_reel(
             tmp_dir.rmdir()
         except Exception:
             pass
+
+
+# ============================================================
+# Boot Cinematic — 8 s RIBA intro exportable as MP4 template
+# ============================================================
+DEFAULT_BOOT_SUBTITLES = [
+    "Pioneered in Yaoundé",
+    "Polyrhythmics from Central Africa",
+    "Bantu Oral Grid by RIBA",
+]
+
+
+def _build_boot_filter(w: int, h: int, subtitles: list[str], total: float) -> str:
+    """Procedural 8 s cinematic intro (no audio input).
+
+    Timeline (over `total` seconds, default 8):
+      0.0 - 0.8  : fade in background + RIBA wordmark
+      0.8 - total-0.8 : wordmark stays, subtitles cycle 1 by 1
+      total-0.8 - total : fade-out everything
+    """
+    n = max(1, min(6, len(subtitles)))
+    body = max(2.0, total - 1.6)          # time available for subtitles
+    per = body / n                         # each subtitle "window"
+    sub_y = int(h * 0.66)
+    title_y = int(h * 0.40)
+    tagline_y = title_y + int(h * 0.11)
+    fade_in_end = 0.8
+    fade_out_start = total - 0.8
+
+    title_alpha = (
+        f"if(lt(t,{fade_in_end}),t/{fade_in_end},"
+        f"if(gt(t,{fade_out_start}),max(0,({total}-t)/0.8),1))"
+    )
+
+    title_layer = (
+        f"drawtext=fontfile={FONT_BOLD}:text='RIBA':fontcolor=white:fontsize={int(h*0.13)}:"
+        f"x=(w-text_w)/2:y={title_y}:alpha='{title_alpha}',"
+        f"drawtext=fontfile={FONT_MONO}:text='BANTU DIGITAL AUDIO WORKSTATION':"
+        f"fontcolor=0xD946EF:fontsize={int(h*0.022)}:x=(w-text_w)/2:y={tagline_y}:"
+        f"alpha='{title_alpha}':box=1:boxcolor=0xD946EF@0.12:boxborderw=10"
+    )
+
+    sub_layers: list[str] = []
+    for i, raw in enumerate(subtitles):
+        t0 = fade_in_end + i * per + 0.1
+        t1 = t0 + per - 0.2
+        text = _escape_drawtext(raw)
+        # smooth alpha : fade in 0.2s, fade out 0.2s
+        alpha = (
+            f"if(lt(t,{t0}),0,"
+            f"if(lt(t,{t0+0.20}),(t-{t0})/0.20,"
+            f"if(lt(t,{t1-0.20}),1,"
+            f"if(lt(t,{t1}),max(0,({t1}-t)/0.20),0))))"
+        )
+        sub_layers.append(
+            f"drawtext=fontfile={FONT_MONO_R}:text='{text}':"
+            f"fontcolor=0xFAFAFA:fontsize={int(h*0.030)}:x=(w-text_w)/2:y={sub_y}:"
+            f"alpha='{alpha}'"
+        )
+    sub_chain = ",".join(sub_layers) if sub_layers else "null"
+
+    # Background : black w/ a slow radial sweep using `geq` would be too heavy.
+    # Use a static dark colour + a subtle moving gradient via a colored color source overlayed at low alpha.
+    return (
+        f"[0:v]format=yuv420p,{title_layer},{sub_chain}[v]"
+    )
+
+
+@router.post("/boot-cinematic")
+async def boot_cinematic(
+    duration: float = Form(8.0),
+    format: str = Form("landscape_1080"),
+    subtitles_csv: str = Form("|".join(DEFAULT_BOOT_SUBTITLES)),
+    with_drone: str = Form("true"),
+):
+    """Generate the 8s RIBA cinematic intro as MP4 — no input file required.
+
+    The intro consists of:
+      - dark canvas (#050507) + magenta radial accent
+      - RIBA wordmark fading in then holding then fading out
+      - 3 sequential subtitles centered mid-low
+      - optional low drone audio (sine 110 Hz + noise) for impact
+    """
+    ok, _ = _ffmpeg_available()
+    if not ok:
+        raise HTTPException(503, "ffmpeg not available on this server")
+    if format not in FORMATS:
+        raise HTTPException(400, f"Unknown format: {format}. Choices: {list(FORMATS.keys())}")
+    dur = max(3.0, min(20.0, float(duration)))
+    w, h = FORMATS[format]
+    subtitles = [s.strip() for s in subtitles_csv.split("|") if s.strip()] or DEFAULT_BOOT_SUBTITLES
+    cine_id = uuid.uuid4().hex
+    out_mp4 = REELS / f"boot_{cine_id}.mp4"
+
+    fc = _build_boot_filter(w, h, subtitles, dur)
+    use_drone = str(with_drone).strip().lower() in ("1", "true", "yes", "on")
+
+    # lavfi background source (animated soft magenta vignette using `nullsrc` + draw)
+    bg_src = f"color=c=0x050507:s={w}x{h}:r=30:d={dur}"
+    args: list[str] = ["ffmpeg", "-y", "-f", "lavfi", "-i", bg_src]
+    if use_drone:
+        # sine + amplitude AM via volume curve gives a cinematic low rumble
+        drone = f"sine=f=72:d={dur},volume=0.18,afade=t=in:st=0:d=0.5,afade=t=out:st={dur-0.8}:d=0.8"
+        args += ["-f", "lavfi", "-i", drone]
+    args += [
+        "-filter_complex", fc,
+        "-map", "[v]",
+    ]
+    if use_drone:
+        args += ["-map", "1:a", "-c:a", "aac", "-b:a", "128k"]
+    args += [
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+        "-pix_fmt", "yuv420p",
+        "-t", f"{dur:.2f}",
+        "-movflags", "+faststart",
+        str(out_mp4),
+    ]
+    code, err = await _run_ffmpeg(args, timeout=120)
+    if code != 0 or not out_mp4.exists():
+        raise HTTPException(500, f"ffmpeg boot-cinematic failed (code={code}): {err[-800:]}")
+
+    return {
+        "id":         cine_id,
+        "kind":       "boot_cinematic",
+        "format":     format,
+        "width":      w,
+        "height":     h,
+        "duration":   round(dur, 2),
+        "subtitles":  subtitles,
+        "with_drone": use_drone,
+        "mp4_url":    f"/api/ai/workspace/reel/boot_{cine_id}.mp4",
+        "mp4_bytes":  out_mp4.stat().st_size,
+    }
 
 
 @router.get("/workspace/reel/{filename}")

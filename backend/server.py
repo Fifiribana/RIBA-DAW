@@ -409,6 +409,7 @@ from ai import (  # noqa: E402
     stems_router,
     remix_router,
     reel_router,
+    snippets_router,
 )
 api_ai = APIRouter(prefix="/api")
 api_ai.include_router(assistant_router)
@@ -418,6 +419,7 @@ api_ai.include_router(music_router)
 api_ai.include_router(stems_router)
 api_ai.include_router(remix_router)
 api_ai.include_router(reel_router)
+api_ai.include_router(snippets_router)
 app.include_router(api_ai)
 
 app.add_middleware(

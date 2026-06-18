@@ -48,11 +48,21 @@ export function MagicRemixModal({ onClose, onImportStems }) {
   const [reelTitle, setReelTitle] = useState('Bantu Phoenix');
   const [reelFormat, setReelFormat] = useState('square_1080');
   const [reelDuration, setReelDuration] = useState(30);
+  // Reel Snippet Picker
+  const [snippets, setSnippets] = useState(null);        // { candidates:[...] } or null
+  const [snippetBusy, setSnippetBusy] = useState(false);
+  const [pickedOffset, setPickedOffset] = useState(0);   // start_sec of chosen snippet
+  const [pickedName, setPickedName] = useState(null);    // 'peak_energy' | 'bantu_drop' | 'main_hook' | null
 
   useEffect(() => {
     fetch(`${API}/ai/remix-status`).then((r) => r.json()).then(setChainStatus).catch(() => {});
     fetch(`${API}/ai/reel-status`).then((r) => r.json()).then(setReelStatus).catch(() => {});
   }, []);
+
+  // Reset snippet selection when a new remix result lands
+  useEffect(() => {
+    setSnippets(null); setPickedOffset(0); setPickedName(null);
+  }, [lastResult?.id]);
 
   const onPick = (e) => { setFile(e.target.files?.[0] || null); setLastResult(null); setStatus(''); };
 
@@ -164,7 +174,12 @@ export function MagicRemixModal({ onClose, onImportStems }) {
     setReelBusy(true); setReelOutput(null);
     setReelMsg('🎬 Mixing 5 stems → mixdown WAV…');
     try {
-      const wavBlob = await _stemsToMixWav(lastResult.stems, Math.min(60, reelDuration));
+      // Mixdown for the full available material (we trim via start_sec + duration on server)
+      const fullSec = Math.max(...Object.values(lastResult.stems || {}).map((s) => {
+        const bytes = s.bytes || 0;
+        return Math.max(1, bytes / (44100 * 2 * 2)); // rough estimate s16 stereo
+      }));
+      const wavBlob = await _stemsToMixWav(lastResult.stems, Math.min(180, Math.ceil(fullSec)));
       setReelMsg('🎬 Encoding 1080×1080 MP4 with CQT spectrum + brand overlays…');
       const styleLabel = (() => {
         const map = {
@@ -182,6 +197,7 @@ export function MagicRemixModal({ onClose, onImportStems }) {
       fd.append('title', reelTitle || 'RIBA');
       fd.append('format', reelFormat);
       fd.append('duration_max_sec', String(reelDuration));
+      fd.append('start_sec', String(pickedOffset || 0));
       fd.append('with_mp3', 'true');
       const r = await fetch(`${API}/ai/bantu-reel`, { method: 'POST', body: fd });
       if (!r.ok) {
@@ -191,12 +207,49 @@ export function MagicRemixModal({ onClose, onImportStems }) {
       const data = await r.json();
       setReelOutput(data);
       const mp3 = data.mp3_url ? ` + MP3 ${Math.round((data.mp3_bytes || 0) / 1024)} KB` : '';
-      setReelMsg(`✓ Reel ready · MP4 ${Math.round(data.mp4_bytes / 1024)} KB${mp3}`);
+      const tag = pickedName ? ` · @${pickedName.replace('_', ' ')}` : '';
+      setReelMsg(`✓ Reel ready · MP4 ${Math.round(data.mp4_bytes / 1024)} KB${mp3}${tag}`);
     } catch (e) {
       setReelMsg(`Reel failed: ${e.message}`);
     } finally {
       setReelBusy(false);
     }
+  };
+
+  const analyzeSnippets = async () => {
+    if (!lastResult?.stems) return;
+    setSnippetBusy(true); setReelMsg('🔍 Analysing RMS bands for best snippets…');
+    try {
+      // Estimate mix duration from any stem buffer to decide if picking is worth it.
+      const fullSec = Math.max(...Object.values(lastResult.stems || {}).map((s) =>
+        Math.max(1, (s.bytes || 0) / (44100 * 2 * 2))
+      ));
+      const wavBlob = await _stemsToMixWav(lastResult.stems, Math.min(180, Math.ceil(fullSec)));
+      const fd = new FormData();
+      fd.append('file', wavBlob, 'mix.wav');
+      fd.append('window_sec', String(reelDuration));
+      const r = await fetch(`${API}/ai/reel-snippets`, { method: 'POST', body: fd });
+      if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(b.detail || `HTTP ${r.status}`); }
+      const d = await r.json();
+      setSnippets(d);
+      // Auto-pick the highest-scoring candidate as default
+      if (d.candidates?.length) {
+        const top = [...d.candidates].sort((a, b) => b.score - a.score)[0];
+        setPickedOffset(top.start_sec);
+        setPickedName(top.name);
+      }
+      setReelMsg(`✓ ${d.candidates?.length || 0} snippets found · duration=${d.duration}s`);
+    } catch (e) {
+      setReelMsg(`Snippet analysis failed: ${e.message}`);
+    } finally {
+      setSnippetBusy(false);
+    }
+  };
+
+  const pickSnippet = (cand) => {
+    setPickedOffset(cand.start_sec);
+    setPickedName(cand.name);
+    setReelMsg(`🎯 Picked ${cand.label} @${cand.start_sec}s — click Generate Bantu Reel`);
   };
 
   const chainBadge = (txt, ok) => (
@@ -411,6 +464,76 @@ export function MagicRemixModal({ onClose, onImportStems }) {
                 onChange={(e) => setReelDuration(parseInt(e.target.value || '30', 10))}
                 style={input}
               />
+            </div>
+
+            {/* Snippet Picker — analyses the mix and proposes 3 best starting points */}
+            <div data-testid="snippet-picker" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  data-testid="analyze-snippets-btn"
+                  className="riba-btn"
+                  disabled={snippetBusy || !lastResult}
+                  onClick={analyzeSnippets}
+                  style={{
+                    fontSize: 10, padding: '4px 10px',
+                    background: snippets ? 'rgba(34,211,238,0.08)' : 'rgba(217,70,239,0.08)',
+                    border: '1px solid rgba(217,70,239,0.25)',
+                    color: snippets ? '#22D3EE' : '#D946EF',
+                    fontWeight: 700,
+                  }}
+                >
+                  {snippetBusy ? '⚙ analysing…' : snippets ? '🔁 Re-analyse snippets' : '🔍 Find best snippets (RMS multi-band)'}
+                </button>
+                {snippets && (
+                  <span className="font-mono-r" style={{ fontSize: 9, color: '#71717A' }}>
+                    duration={snippets.duration}s · window={snippets.window_sec}s
+                  </span>
+                )}
+              </div>
+              {snippets && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                  {snippets.candidates.map((c) => {
+                    const picked = pickedName === c.name;
+                    return (
+                      <button
+                        key={c.name}
+                        data-testid={`snippet-${c.name}`}
+                        onClick={() => pickSnippet(c)}
+                        className="riba-btn"
+                        style={{
+                          textAlign: 'left', padding: 8, borderRadius: 8,
+                          background: picked
+                            ? 'linear-gradient(135deg, rgba(217,70,239,0.25), rgba(99,102,241,0.20))'
+                            : '#0B0B0E',
+                          border: picked
+                            ? '1px solid rgba(217,70,239,0.6)'
+                            : '1px solid rgba(255,255,255,0.05)',
+                          cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: picked ? '#FAFAFA' : '#E4E4E7' }}>
+                            {c.label}
+                          </span>
+                          {picked && <span style={{ fontSize: 9, color: '#22D3EE', fontWeight: 700 }}>● PICKED</span>}
+                        </div>
+                        <div className="font-mono-r" style={{ fontSize: 10, color: '#71717A' }}>
+                          start @ {c.start_sec}s
+                        </div>
+                        <div style={{
+                          height: 3, borderRadius: 3, marginTop: 2,
+                          background: 'rgba(255,255,255,0.05)', overflow: 'hidden',
+                        }}>
+                          <div style={{
+                            height: '100%', width: `${(c.score_norm * 100).toFixed(0)}%`,
+                            background: 'linear-gradient(90deg, #6366F1, #D946EF, #F59E0B)',
+                          }} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <button

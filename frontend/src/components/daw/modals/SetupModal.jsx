@@ -1,6 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, SetupRow } from '../Modal';
 import { engine } from '@/audio/engine';
+
+function CinematicBootToggle() {
+  const [on, setOn] = useState(() => {
+    try { return localStorage.getItem('riba-cinematic-boot') === '1'; }
+    catch { return false; }
+  });
+  const toggle = () => {
+    const next = !on;
+    try {
+      if (next) localStorage.setItem('riba-cinematic-boot', '1');
+      else localStorage.removeItem('riba-cinematic-boot');
+      // Force the splash to replay on the next reload by clearing the seen flag.
+      sessionStorage.removeItem('riba-splash-seen');
+    } catch { /* ignore */ }
+    setOn(next);
+  };
+  return (
+    <button
+      className="riba-btn"
+      data-testid="setup-cinematic-toggle"
+      onClick={toggle}
+      style={{
+        fontSize: 11,
+        background: on ? 'linear-gradient(135deg, #D946EF, #F59E0B)' : undefined,
+        color: on ? '#fff' : undefined,
+        fontWeight: on ? 700 : 500,
+      }}
+    >
+      {on ? '🎬 ON · 8 s trailer at boot' : 'OFF · short boot'}
+    </button>
+  );
+}
 
 export function SetupModal({
   setupTab, setSetupTab, audioDevices, onRefreshDevices,
@@ -77,6 +109,7 @@ export function SetupModal({
           <SetupRow label="Metronome" value={metronomeOn ? 'ON' : 'OFF'} />
           <SetupRow label="Auto-save" value="Disabled (use Ctrl+S manually)" />
           <SetupRow label="Undo History" value={`${undoCount} / 30 steps`} />
+          <SetupRow label="Boot Cinematic Intro" value={<CinematicBootToggle />} />
         </div>
       )}
     </Modal>

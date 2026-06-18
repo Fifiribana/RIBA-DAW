@@ -174,6 +174,25 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
 - **Iter 15 (Feb 2026)** : **59/59 backend pytest PASS** (-m "not slow"), 1 slow deselected (Demucs heavy). FAL_KEY actif via clé utilisateur, mode "full" sur tous les status endpoints.
 
+### v2.7 (iter 18 - Feb 2026) — BOOT CINEMATIC + REEL SNIPPET PICKER
+- **🎬 Boot Cinematic** (extension du SplashScreen) :
+  - `SplashScreen.jsx` prend désormais un prop `mode='short'|'cinematic'` (8 s)
+  - 3 sous-titres typo cinéma révélés en cascade avec fade-in/out 520 ms cubic-bezier : *Pioneered in Yaoundé · Polyrhythmics from Central Africa · Bantu Oral Grid by RIBA*
+  - Bouton **📥 Export Intro MP4** (gradient magenta→orange) appelle `/api/ai/boot-cinematic` → MP4 1920×1080 (8 s) avec drone sub-bass 72 Hz + drawtext animé alpha. **Rendu mesuré : 0.78 s pour 4 s.**
+  - Activation : `?cinematic=1` URL param **OU** Setup → Preferences → "Boot Cinematic Intro" (toggle `localStorage.riba-cinematic-boot`).
+  - `App.js` re-rejoue le splash à chaque reload en mode cinematic (intro = trailer).
+- **⚡ Reel Snippet Picker** (analyse offline multi-bandes RMS) :
+  - Backend `/app/backend/ai/snippets.py` — utilise **numpy + scipy.signal Butterworth filtfilt** + soundfile
+  - 3 candidats anti-chevauchement (radius=window/2) :
+    - **Peak Energy** : argmax sliding-window mean RMS large-bande
+    - **Bantu Drop** : argmax positive delta de la sous-bande 30-250 Hz vs fenêtre précédente
+    - **Main Hook** : 0.65·mid (200-3000 Hz) + 0.35·low (≤250 Hz)
+  - Endpoint `POST /api/ai/reel-snippets` (multipart file + window_sec 5-120) → `{ duration, candidates:[{name,label,start_sec,score,score_norm}] }`
+  - **Rendu mesuré : 0.32 s pour 60 s d'audio.**
+- **🎯 Intégration Magic Re-mix Modal** : bouton "🔍 Find best snippets" → 3 cartes cliquables avec score bar (gradient indigo→magenta→orange) → la sélection s'envoie comme `start_sec` au `POST /bantu-reel` (le Reel démarre exactement où le user a cliqué).
+- **Tests** : 8 nouveaux tests (`test_boot_and_snippets.py`) + 1 nouveau test `test_bantu_reel_accepts_start_sec` → **suite complète 72/72 PASS**.
+- Stack : **scipy 1.17.1** ajouté à requirements.txt.
+
 ### v2.6 (iter 17 - Feb 2026) — BANTU REEL : MOTEUR D'EXPORT VIRAL 🎬
 - **Backend** `/app/backend/ai/reel.py` — pipeline ffmpeg :
   - `GET /api/ai/reel-status` → { available, ffmpeg_version, formats, watermark, default_format }
@@ -228,15 +247,14 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
-- **P1**: 🎬 **Boot Cinematic** (8s intro vidéo template) — variante du Splash Screen sur `?cinematic=1` ou Setup toggle, avec sous-titres "Pioneered in Yaoundé · Polyrhythmics from Central Africa · Bantu Oral Grid by RIBA". Réutilisera le moteur ffmpeg du Bantu Reel comme template d'export.
 - **P1**: Studio Live Session (WebRTC + Y.js pour collaboration temps réel sur Bantu Grid).
 - **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
+- **P1**: Auto-share TikTok / Instagram / YouTube Shorts API (publication directe depuis le Bantu Reel panel).
 - **P2**: WebMIDI input pour claviers MIDI externes.
-- **P2**: Auto-share : intégration TikTok / Instagram Reels API (publication directe depuis le Bantu Reel modal).
 - **P2**: Vue Bantu Heatmap.
 - **P2**: Refactor `engine.js` (audio engine large) en React hooks.
 - **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py` (DRY parité math).
+- **P2**: Snippet preview audio (lecture inline du 30 s candidat avant export — 1 clic = preview, double-clic = pick).
 
 ## Next Action Items
-- 🟢 **Boot Cinematic (P1 next)** : étendre le SplashScreen avec mode "intro long" déclenché manuellement, en réutilisant les briques ffmpeg du Bantu Reel pour pouvoir exporter aussi l'intro comme template vidéo.
-- Studio Live Session OU Tauri local build selon priorité utilisateur ultérieure.
+- 🟢 Choix utilisateur pour le prochain sprint : **Auto-share Social API** (publication directe Reels) **OU** **Studio Live Session** (collaboration temps réel) **OU** **Tauri local build** (export .exe/.dmg).
