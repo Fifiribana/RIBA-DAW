@@ -192,9 +192,9 @@ async def magic_remix(
             raise HTTPException(400, "Uploaded file is empty.")
         in_path.write_bytes(data)
 
-        # 1) Demucs separation (blocking; runs on CPU 30-60 s)
+        # 1) Demucs separation (off the event loop — CPU bound 30-60 s)
         try:
-            stems_raw = _separate_file(in_path)
+            stems_raw = await asyncio.to_thread(_separate_file, in_path)
         except HTTPException:
             raise
         except Exception as exc:

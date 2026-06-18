@@ -172,20 +172,40 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 
 ## Testing
 - **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
+- **Iter 15 (Feb 2026)** : **59/59 backend pytest PASS** (-m "not slow"), 1 slow deselected (Demucs heavy). FAL_KEY actif via clé utilisateur, mode "full" sur tous les status endpoints.
+
+### v2.4 (iter 15 - Feb 2026) — MAGIC RE-MIX + LIFESPAN + TESTS RÉPARÉS
+- **🎛 Magic Re-mix (P1)** : nouvelle chaîne RIBA exclusive
+  - Backend `/app/backend/ai/remix.py` : `GET /api/ai/remix-status` + `POST /api/ai/magic-remix` (multipart: file, bantu_style, density, bars, regenerate, regen_prompt, regen_duration)
+  - Chain: **Demucs 4 stems → Bantu Oral Grid asymétrique → (optionnel) fal.ai bantu_groove layer**
+  - Modes: `full` (Demucs + Bantu + fal.ai) / `demucs_plus_bantu_only` / `demucs_only` / `unavailable`
+  - `await asyncio.to_thread(_separate_file, …)` pour ne pas bloquer l'event loop (~60s Demucs CPU)
+  - Frontend `/app/frontend/src/components/daw/modals/MagicRemixModal.jsx` : sélecteur de style Bantu (5 styles), density/bars, toggle regenerate avec prompt + duration, chain status badges, résultat avec stems préview
+  - Menu Event → "Magic Re-mix (Demucs ▸ Bantu ▸ fal.ai) 🎛" → ouvre modal → import des stems dans la timeline + activation auto des markers Bantu
+- **♻️ FastAPI lifespan** : migration `@app.on_event("shutdown")` → `@asynccontextmanager async def lifespan(app)` ; warning de dépréciation supprimé.
+- **🔧 5 pytests fixés** (cassés par l'activation de FAL_KEY) :
+  - `test_generator_endpoints.py::TestGenerateTrack` (2 tests) — adaptatif via `_fal_enabled()` probe ; appels lourds sur `localhost:8001` pour bypass timeout Cloudflare (~100s).
+  - `test_genesis_endpoint.py::TestGenesisStatus::test_genesis_status_shape` — branche selon `fal_ready` live.
+  - `test_ai_endpoints.py::TestStatusProbes::test_music_status_shape` + `TestMusicGenLegacy::test_generate_music_behaviour_respects_fal_state` — adaptatifs au state FAL_KEY.
+- **🧪 3 nouveaux tests** : `test_remix_endpoint.py` (status, validation style 400, validation file 422).
+- **📋 `pytest.ini`** : enregistre le marker `slow` pour éliminer le warning cosmétique.
 
 ## ⚠️ Known Limitations
-- **MOCKED**: VST plugin loading, Magic12 stem separation, MIDI→Audio / Audio→MIDI conversions (no real DSP).
-- **LLM BUDGET EXCEEDED**: Dream/Mastering fall back to procedural. Top up at Profile → Universal Key → Add Balance.
+- **MOCKED**: VST plugin loading, MIDI→Audio / Audio→MIDI conversions (no real DSP).
+- **REAL AI ACTIVE** ✓: Demucs (stem separation), fal.ai stable-audio (music generation), Emergent LLM Key/Claude (assistant + lyrics).
+- **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
-- **P1**: Wrapper Electron / Tauri pour `.exe` / `.dmg` natif.
-- **P1**: Real MP3 export (lamejs).
-- **P2**: Real Audio→MIDI via CREPE/YIN pitch detection; Spleeter-WASM for real stem separation.
-- **P2**: WebMIDI input for external MIDI keyboards.
-- **P2**: Visualize Bantu Grid markers on Timeline (currently only snapping notes).
-- **P2**: Refactor Daw.jsx (2555 lignes) en sous-fichiers /app/frontend/src/components/daw/ (MenuBar, BantuModal, SetupModal).
+- **P1**: Splash screen cinématographique (loading screen DAW immersif).
+- **P1**: Studio Live Session (WebRTC + Y.js pour collaboration temps réel sur Bantu Grid).
+- **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
+- **P2**: WebMIDI input pour claviers MIDI externes.
+- **P2**: Real MP3 export (lamejs).
+- **P2**: Vue Bantu Heatmap.
+- **P2**: Refactor `engine.js` (audio engine large) en React hooks.
+- **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py` (importé par server.py + remix.py) pour DRY parité math.
 
 ## Next Action Items
-- PWA prête → tester l'installation depuis Chrome/Edge desktop (icône "+" dans la barre d'URL).
-- Démarrer le wrapper Electron pour version desktop native.
-- Top up Emergent LLM key pour réactiver Dream Track et Magic12 Master.
+- Magic Re-mix : tester un vrai workflow end-to-end UI (upload WAV court → 4 stems + bantu_groove → import timeline).
+- Démarrer Splash Screen cinématographique OU Studio Live Session selon choix utilisateur.
+- Tauri local build (icons prêts, code Rust en place ; juste `yarn desktop:build` à exécuter sur OS hôte).
