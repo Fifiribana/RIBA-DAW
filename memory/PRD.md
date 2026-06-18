@@ -32,6 +32,22 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v2.1 (iteration 13 - Feb 2026) — OFFICIAL RIBA BRAND
+- **🎨 Script d'icônes universel** `/app/backend/setup_icons.py` :
+  - Cherche `Gemini_Generated_Image_upm9x0upm9x0upm9_3.png` dans `/app`, `/app/assets`, `/app/backend`, `/app/frontend/public`
+  - **Fallback procédural** : si fichier introuvable, génère un placeholder 1024×1024 phénix néon (disque magenta + ring cyan + ailes orange embers + monogramme "RIBA" + sous-titre "BANTU · DAW")
+  - Crop carré centré 1:1 automatique
+  - Produit 11 assets en un seul run :
+    - PWA : `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (180), `favicon.png` (64)
+    - Tauri : `32x32.png`, `128x128.png`, `128x128@2x.png` (256), `icon.png` (512), `icon.ico` (multi-tailles 16/32/48/64/128/256), `icon.icns` (placeholder)
+    - UI in-app : `riba-logo.png` (400×400)
+- **🎯 Intégration UI** :
+  - **MenuBar** : miniature 22×22 cerclée avec glow magenta+cyan, placée avant "File" (style Pro Tools) — `data-testid='riba-brand-mark'`
+  - **ManualModal** : logo 96×96 + titre "RIBA 12" + sous-titre "BANTU DIGITAL AUDIO WORKSTATION" cyan + tagline "The world's first DAW with native asymmetric Bantu Oral Grid quantization" — `data-testid='manual-logo'`
+  - **index.html** : favicon 64×64 ajouté en plus des 192/512
+- Tous les assets servis 200 (vérifié via curl sur riba-logo, favicon, icon-192, icon-512, apple-touch-icon, manifest)
+- Pour activer le logo final : place le fichier source sous `/app/` puis relance `python /app/backend/setup_icons.py`
+
 ### v2.0 (iteration 12 - Feb 2026) — REAL AI INTEGRATIONS 🤖
 - **🧠 RIBA AI Assistant** (`/api/ai/assistant`) — Emergent LLM Key → Claude Sonnet 4-6
   - Module `/app/backend/ai/assistant.py` : SYSTEM_PROMPT avec schéma JSON strict de 21 action types couvrant tracks/mixer/transport/effets/Bantu/modals

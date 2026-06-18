@@ -4,6 +4,34 @@ import { Modal } from '../Modal';
 export function ManualModal({ onClose }) {
   return (
     <Modal title="Riba 12 · User Manual" onClose={onClose}>
+      <div style={{
+        display: 'flex', gap: 18, alignItems: 'center', justifyContent: 'center',
+        padding: '8px 0 18px', borderBottom: '1px solid rgba(255,255,255,0.05)',
+        marginBottom: 14,
+      }}>
+        <img
+          src="/riba-logo.png"
+          alt="RIBA logo"
+          width={96}
+          height={96}
+          data-testid="manual-logo"
+          style={{
+            borderRadius: '50%',
+            boxShadow: '0 0 24px rgba(217,70,239,0.55), 0 0 48px rgba(34,211,238,0.3)',
+          }}
+        />
+        <div>
+          <div className="font-heading" style={{ fontSize: 28, fontWeight: 800, color: '#FAFAFA', letterSpacing: '0.02em' }}>
+            RIBA <span style={{ color: '#D946EF' }}>12</span>
+          </div>
+          <div style={{ fontSize: 11, color: '#22D3EE', letterSpacing: '0.18em', fontWeight: 600, marginTop: 2 }} className="font-mono-r">
+            BANTU DIGITAL AUDIO WORKSTATION
+          </div>
+          <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 6, maxWidth: 320 }}>
+            The world's first DAW with native asymmetric Bantu Oral Grid quantization (Asiko · Makossa · Bikutsi).
+          </div>
+        </div>
+      </div>
       <div style={{ fontSize: 13, color: '#E4E4E7', lineHeight: 1.7 }}>
         <h3 className="font-heading" style={{ marginTop: 0 }}>Keyboard Shortcuts</h3>
         <ul>

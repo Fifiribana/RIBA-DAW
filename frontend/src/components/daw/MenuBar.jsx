@@ -103,6 +103,27 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
       }}
       onMouseLeave={close}
     >
+      {/* RIBA brand miniature — Pro Tools-style left-side logo */}
+      <div
+        data-testid="riba-brand-mark"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 10px 0 4px', marginRight: 4, cursor: 'default',
+          borderRight: '1px solid rgba(255,255,255,0.05)',
+        }}
+        title="RIBA · Bantu Digital Audio Workstation"
+      >
+        <img
+          src="/riba-logo.png"
+          alt="RIBA"
+          width={22}
+          height={22}
+          style={{
+            display: 'block', borderRadius: '50%',
+            boxShadow: '0 0 6px rgba(217,70,239,0.55), 0 0 14px rgba(34,211,238,0.25)',
+          }}
+        />
+      </div>
       {Object.keys(PRO_TOOLS_MENUS).map((key, idx) => (
         <div
           key={key}
