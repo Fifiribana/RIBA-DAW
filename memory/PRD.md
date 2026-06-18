@@ -32,6 +32,18 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
   - UI: Event menu → "Bantu Grid Quantize... 🌍" → modal with style/density/bars → "Appliquer la grille" snaps the selected MIDI track's notes to the asymmetric grid.
 - **TransportBar/MixerStrip** : kept the existing implementations (already had vertical fader, dB display, mute/solo, master strip in Mixer modal).
 
+### v2.3 (iteration 14 - Feb 2026) — GENESIS WORKFLOW 🌍 (Chantier 3)
+- **🌍 Genesis** — workflow révolutionnaire qui transforme un prompt textuel en 4 stems multi-pistes prêts à mixer en ~90 s :
+  1. `window.prompt('Genesis · prompt your track:')` (default `Bikutsi tropical house`)
+  2. `POST /api/ai/generate-track` (fal.ai MusicGen, instrumental)
+  3. Fetch du WAV généré → `POST /api/ai/separate-stems` (Demucs htdemucs)
+  4. Crée 4 pistes audio (`Genesis · vocals/drums/bass/other`) dans le mixer + active automatiquement `Bantu Grid Bikutsi 4/4` + `showBantuMarkers`
+- **Bouton TopBar** `[data-testid='genesis-btn']` avec gradient **cyan→magenta→orange** (`#22D3EE → #D946EF → #F59E0B`) + glow caractéristique, positionné à côté du bouton Swing
+- **Backend** `/app/backend/ai/genesis.py` : `GET /api/ai/genesis-status` retourne `{ready, fal_ready, demucs_ready, mode:'full|demucs_only|unavailable', default_style, default_bantu}` — UI peut adapter le label/tooltip dynamiquement
+- **Short-circuit gracieux** : si `FAL_KEY` absent, aucun appel réseau n'est fait, message clair "Genesis: FAL_KEY not configured. Set it in /app/backend/.env then restart."
+- **Bonus Chantier 2** : tags Magic Generator enrichis avec **Ekang** + **Zouk** (9 styles culturels total : Asiko, Makossa, Bikutsi, Rumba, Afrobeat, Soukous, Highlife, Ekang, Zouk)
+- Tests **iter 14 = 56/56 pytest PASS** (55 régression + 1 nouveau test_genesis_endpoint), **0 régression**, **0 bug**. Gradient TopBar vérifié byte-exact par Playwright.
+
 ### v2.2 (iteration 13 - Feb 2026) — MAGIC GENERATOR SUNO-STYLE ✨
 - **🎨 MagicGeneratorModal** (UI à 2 panneaux, ~430 lignes) :
   - **Gauche** : Simple/Advanced toggle · +Audio/+Voice (cyan) · Prompt textarea · Lyrics 3 onglets (Write/Prompt/Instrumental) · Styles textarea + 7 quick-tags (Asiko · Makossa · Bikutsi · Rumba · Afrobeat · Soukous · Highlife) · Duration (mode Advanced) · gros bouton **⚡ Create** magenta→orange avec glow
