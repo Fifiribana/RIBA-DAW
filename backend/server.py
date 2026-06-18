@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -19,7 +20,16 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-app = FastAPI(title="Riba DAW API")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Startup
+    yield
+    # Shutdown
+    client.close()
+
+
+app = FastAPI(title="Riba DAW API", lifespan=lifespan)
 api_router = APIRouter(prefix="/api")
 
 logger = logging.getLogger(__name__)
@@ -391,13 +401,21 @@ async def session_delete(session_id: str):
 app.include_router(api_router)
 
 # === AI routes (LLM assistant + fal.ai MusicGen + Demucs stems) ===
-from ai import assistant_router, generator_router, genesis_router, music_router, stems_router  # noqa: E402
+from ai import (  # noqa: E402
+    assistant_router,
+    generator_router,
+    genesis_router,
+    music_router,
+    stems_router,
+    remix_router,
+)
 api_ai = APIRouter(prefix="/api")
 api_ai.include_router(assistant_router)
 api_ai.include_router(generator_router)
 api_ai.include_router(genesis_router)
 api_ai.include_router(music_router)
 api_ai.include_router(stems_router)
+api_ai.include_router(remix_router)
 app.include_router(api_ai)
 
 app.add_middleware(
@@ -407,7 +425,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()

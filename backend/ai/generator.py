@@ -157,7 +157,8 @@ class MusicGenRequest(BaseModel):
     duration_seconds: int = 30
     style: str | None = None
     instrumental: bool = True
-    model: str = "stereo-melody"
+    # fal.ai endpoint — "stable-audio" verified working 2026-06 (musicgen-* deprecated)
+    model: str = "stable-audio"
 
 
 @router.post("/generate-track")
@@ -193,8 +194,15 @@ async def generate_track(req: MusicGenRequest):
     try:
         import fal_client  # type: ignore
         os.environ["FAL_KEY"] = fal_key
-        slug = f"fal-ai/musicgen-{req.model}" if not req.model.startswith("fal-ai/") else req.model
-        args = {"prompt": full_prompt, "duration": max(5, min(90, int(req.duration_seconds)))}
+        if req.model.startswith("fal-ai/"):
+            slug = req.model
+        elif req.model in ("stable-audio", "lyria"):
+            slug = f"fal-ai/{req.model}"
+        else:
+            slug = "fal-ai/stable-audio"
+        # stable-audio uses `seconds_total`; musicgen used `duration` — pass both for safety
+        dur = max(5, min(90, int(req.duration_seconds)))
+        args = {"prompt": full_prompt, "seconds_total": dur, "duration": dur}
         handler = await fal_client.submit_async(slug, arguments=args)
         result = await asyncio.wait_for(handler.get(), timeout=180)
         audio = result.get("audio_file") or result.get("audio") or {}

@@ -28,6 +28,7 @@ import { SystemUsageModal } from './daw/modals/SystemUsageModal';
 import { DiskUsageModal } from './daw/modals/DiskUsageModal';
 import { AssistantModal } from './daw/modals/AssistantModal';
 import { MagicGeneratorModal } from './daw/modals/MagicGeneratorModal';
+import { MagicRemixModal } from './daw/modals/MagicRemixModal';
 import { MagentaOverlay } from './daw/MagentaSpinner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -137,6 +138,8 @@ export default function Daw() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   // Magic Generator (Suno-style)
   const [magicGenOpen, setMagicGenOpen] = useState(false);
+  // Magic Re-mix (Demucs ▸ Bantu Grid ▸ fal.ai chain)
+  const [magicRemixOpen, setMagicRemixOpen] = useState(false);
   // Genesis workflow (prompt → fal.ai → Demucs → 4 stems + Bantu Grid)
   const [genesisStatus, setGenesisStatus] = useState({ ready: false, mode: 'unavailable' });
   useEffect(() => {
@@ -1648,6 +1651,8 @@ export default function Daw() {
           openAssistant: () => setAssistantOpen(true),
           // Suno-style Magic Generator
           openMagicGen: () => setMagicGenOpen(true),
+          // Magic Re-mix (Demucs ▸ Bantu ▸ fal.ai)
+          openMagicRemix: () => setMagicRemixOpen(true),
           // Setup
           openPlayback: () => { setSetupTab('playback'); setSetupOpen(true); loadAudioDevices(); },
           openIO: () => { setSetupTab('io'); setSetupOpen(true); loadAudioDevices(); },
@@ -2321,6 +2326,57 @@ export default function Daw() {
               setStatusMsg(`Imported "${it.title}" from Magic Generator`);
             } catch (e) {
               setStatusMsg(`Import failed: ${e.message}`);
+            }
+          }}
+        />
+      )}
+      {magicRemixOpen && (
+        <MagicRemixModal
+          onClose={() => setMagicRemixOpen(false)}
+          onImportStems={async (data) => {
+            try {
+              const ctx = engine.ensureCtx();
+              const order = ['vocals', 'drums', 'bass', 'other', 'bantu_groove'];
+              const baseName = (data.source || 'remix').replace(/\.(wav|mp3|ogg|m4a)$/i, '');
+              let added = 0;
+              for (const name of order) {
+                const s = data.stems?.[name];
+                if (!s) continue;
+                const bin = Uint8Array.from(atob(s.wav_base64), (c) => c.charCodeAt(0));
+                const buf = await ctx.decodeAudioData(bin.buffer.slice(0));
+                const tid = uid();
+                const type = name === 'vocals' ? 'voice'
+                           : name === 'drums' ? 'drums'
+                           : name === 'bass' ? 'bass'
+                           : name === 'bantu_groove' ? 'drums'
+                           : 'other';
+                const peaks = new Array(80).fill(0).map((_, k) => 0.1 + 0.6 * Math.abs(Math.sin(k * 0.5 + name.charCodeAt(0))));
+                const t = {
+                  id: tid,
+                  displayName: name === 'bantu_groove'
+                    ? `${baseName} · Bantu Groove ✨`
+                    : `${baseName} · ${name}`,
+                  trackType: type, color: TRACK_COLORS[type] || TRACK_COLORS.other,
+                  isPlaying: false, isMuted: false, isSolo: false, isMIDI: false,
+                  volume: name === 'bantu_groove' ? 70 : 80, pan: 0, peaks,
+                  eq: { bass: 50, mid: 50, high: 50, enabled: false },
+                  fileName: '', isStemSeparated: true, audioBuffer: buf,
+                };
+                engine.getOrCreateTrack(tid).setAudio(buf);
+                engine.getOrCreateTrack(tid).setVolume(t.volume / 100);
+                setTracks((prev) => [...prev, t]);
+                added += 1;
+              }
+              // Activate Bantu Grid markers using the same style the user picked
+              if (data.bantu?.style) {
+                setBantuStyle(data.bantu.style);
+                setBantuDensity(data.bantu.density || 16);
+                setBantuBars(data.bantu.bars || 4);
+                setShowBantuMarkers(true);
+              }
+              setStatusMsg(`🎛 Magic Re-mix ✓ imported ${added} stem${added > 1 ? 's' : ''} · Bantu ${data.bantu?.style} active`);
+            } catch (e) {
+              setStatusMsg(`Magic Re-mix import failed: ${e.message}`);
             }
           }}
         />

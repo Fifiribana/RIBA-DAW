@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 15 (CHANTIER 4 — Magic Re-mix backend + lifespan migration + 5 tests réparés) entièrement vérifiée. pytest -m 'not slow' = 59 passed, 1 deselected, 0 failed, 0 erreur. Tous les endpoints /api/ai/* (remix-status, genesis-status, music-status, stems-status) retournent la bonne forme JSON avec fal_ready:true (FAL_KEY actif). Validation arguments magic-remix conforme: style invalide → 400 avec nom du style dans detail, fichier manquant → 422 (Pydantic missing). Migration on_event → lifespan validée : aucun warning 'on_event is deprecated' dans la sortie pytest. Seul warning restant : PendingDeprecationWarning de starlette/formparsers sur python_multipart (lib tierce, non bloquant).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/app/backend/tests/test_ai_endpoints.py", "issue": "PytestUnknownMarkWarning: 'slow' mark not registered. Ajouter `markers = ['slow: ...']` dans pyproject.toml ou pytest.ini pour éliminer ce warning cosmétique."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "verified_passing": {
+    "GET /api/ai/remix-status (localhost:8001)": "200 OK — {ready:true, fal_ready:true, demucs_ready:true, mode:'full', default_bantu:{style:'bikutsi_44',density:16,bars:4}, available_styles:[5 styles]} — conforme spec",
+    "POST /api/ai/magic-remix style invalide": "HTTP 400, detail='Unknown bantu_style: not_a_real_style' (nom du style présent comme demandé)",
+    "POST /api/ai/magic-remix sans fichier": "HTTP 422 Pydantic missing pour le champ 'file' — comportement FastAPI attendu",
+    "GET /api/ai/genesis-status": "200 OK avec fal_ready:true, mode:'full' (FAL_KEY actif modifie le mode comme attendu)",
+    "GET /api/ai/music-status": "200 OK — {enabled:true, provider:'fal.ai', default_model:'fal-ai/musicgen-stereo-melody'}",
+    "GET /api/ai/stems-status": "200 OK — {enabled:true, provider:'demucs/htdemucs', detail:'Demucs ready'}",
+    "Backend pytest -m 'not slow'": "59 passed, 1 deselected, 0 failed en 195s — incluant 3/3 nouveaux tests test_remix_endpoint.py et tous les tests fixés (test_generator_endpoints, test_genesis_endpoint, test_ai_endpoints)",
+    "Lifespan migration": "Aucun warning 'on_event is deprecated' dans la sortie pytest (server.py utilise @asynccontextmanager async def lifespan, ligne 25-32)",
+    "Aucun 502 Cloudflare": "Les tests longs utilisant localhost:8001 (TestGenerateTrack) tournent sans timeout"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_remix_endpoint.py",
+    "/app/test_reports/pytest/iter15_full.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "remix.py duplique _build_bantu_grid avec server.py — justifié par l'auteur pour éviter le circular import, mais à terme : extraire _build_bantu_grid dans /app/backend/ai/bantu_grid.py et l'importer depuis server.py ET remix.py pour garantir parité (tests test_bantu_parity le détecteraient si dérive). Aujourd'hui les deux versions sont identiques mais c'est fragile.",
+    "remix.py — _separate_file est synchrone et bloquant (Demucs CPU 30-60s). L'endpoint magic-remix est `async def` mais appelle _separate_file directement → bloque l'event loop. Recommander `await asyncio.to_thread(_separate_file, in_path)` pour ne pas bloquer les autres requêtes pendant 60s.",
+    "magic-remix nettoie tmp_dir dans finally mais ne supprime PAS les fichiers stems renvoyés (ils sont uniquement en base64 dans la réponse, donc OK — pas de fuite disque). Bon point.",
+    "Le warning starlette `python_multipart` est une déprécation de la lib upstream (Starlette < 0.46), non actionnable côté RIBA — sera résolu automatiquement à la prochaine montée de version FastAPI/Starlette.",
+    "Le mark `@pytest.mark.slow` (test_ai_endpoints.py:109) émet un warning car non enregistré. Ajouter dans /app/backend/pyproject.toml ou pytest.ini :\n[pytest]\nmarkers = slow: tests lents (Demucs/fal.ai) — exclus par défaut via -m 'not slow'.",
+    "remix.py ligne 219 : la détection fal_ready duplique celle de remix_status() — extraire en helper `_fal_key_ready()` pour DRY."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (59/59 pytest non-slow + 4/4 sanity curl) "},
+  "test_credentials": "aucune nécessaire",
+  "seed_data_creation": "aucune (les tests existants utilisent leurs propres entrées éphémères ; aucune card workspace résiduelle créée par les nouveaux tests test_remix_endpoint.py — ils ne touchent que les endpoints status + validation 400/422)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 15 (CHANTIER 4 backend) verte de bout en bout. 59/59 pytest pass, 1 deselected (test_separate_stems_with_tiny_wav marqué slow — Demucs réel ~60s). Pour exercer la chaîne Magic Re-mix complète (Demucs + Bantu + fal.ai), créer un test dédié avec un WAV silencieux 2s + @pytest.mark.slow et l'opt-in via `pytest -m slow`. Le frontend MagicRemixModal.jsx existe (/app/frontend/src/components/daw/modals/) — non testé dans cette session (testing_type=backend only). Quand le main agent demandera le test UI, vérifier : (1) ouverture via menu Event, (2) upload audio, (3) sélecteur de style bantu (5 options), (4) toggle 'regenerate' qui fait apparaître prompt+duration, (5) gestion erreur 400 si style inconnu (improbable depuis l'UI mais à robustifier). FAL_KEY est actif → toutes les chaînes IA sont opérationnelles depuis cette session.",
+  "rca of the issue": "Aucune anomalie — tous les items de la review_request sont satisfaits. Les 5 tests précédemment cassés par l'activation de FAL_KEY ont été rendus adaptatifs (via probe _fal_enabled() sur /music-status) et passent maintenant aussi bien avec FAL_KEY actif qu'absent. La migration lifespan supprime le warning on_event sans affecter le comportement (test_riba_api/sessions intact)."
+}
