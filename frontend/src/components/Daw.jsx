@@ -27,6 +27,7 @@ import { SetupModal } from './daw/modals/SetupModal';
 import { SystemUsageModal } from './daw/modals/SystemUsageModal';
 import { DiskUsageModal } from './daw/modals/DiskUsageModal';
 import { AssistantModal } from './daw/modals/AssistantModal';
+import { MagicGeneratorModal } from './daw/modals/MagicGeneratorModal';
 import { MagentaOverlay } from './daw/MagentaSpinner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -134,6 +135,8 @@ export default function Daw() {
   const [waveformMode, setWaveformMode] = useState('peak'); // peak|power|rectified|outlines|crossfades
   // AI Assistant chat panel
   const [assistantOpen, setAssistantOpen] = useState(false);
+  // Magic Generator (Suno-style)
+  const [magicGenOpen, setMagicGenOpen] = useState(false);
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -1574,6 +1577,8 @@ export default function Daw() {
           arrangeCascade:   () => setStatusMsg('Arrange · Cascade'),
           // AI Assistant
           openAssistant: () => setAssistantOpen(true),
+          // Suno-style Magic Generator
+          openMagicGen: () => setMagicGenOpen(true),
           // Setup
           openPlayback: () => { setSetupTab('playback'); setSetupOpen(true); loadAudioDevices(); },
           openIO: () => { setSetupTab('io'); setSetupOpen(true); loadAudioDevices(); },
@@ -2218,6 +2223,24 @@ export default function Daw() {
           label="Demucs is splitting your track…"
           subtitle="Hybrid Transformer model — separating vocals, drums, bass and other. This is real AI, so it may take 30-60 s on CPU."
           testId="demucs-overlay"
+        />
+      )}
+      {magicGenOpen && (
+        <MagicGeneratorModal
+          onClose={() => setMagicGenOpen(false)}
+          onImportToTimeline={async (it) => {
+            try {
+              const url = it.audio_url.startsWith('http') ? it.audio_url : `${BACKEND_URL}${it.audio_url}`;
+              const resp = await fetch(url);
+              const blob = await resp.blob();
+              const file = new File([blob], `${it.title || 'magic'}.wav`, { type: 'audio/wav' });
+              await addAudioFile(file);
+              setMagicGenOpen(false);
+              setStatusMsg(`Imported "${it.title}" from Magic Generator`);
+            } catch (e) {
+              setStatusMsg(`Import failed: ${e.message}`);
+            }
+          }}
         />
       )}
     </div>

@@ -42,6 +42,7 @@ export const PRO_TOOLS_MENUS = {
     { id: 'event_dream', label: 'Dream Track (AI)', key: 'openDream' },
     { id: 'event_history', label: 'Dream History', key: 'openHistory' },
     { id: 'event_assistant', label: 'AI Assistant (Chat)', shortcut: 'Ctrl+I', key: 'openAssistant' },
+    { id: 'event_magic_gen', label: 'Magic Generator (Suno-style) \u2728', key: 'openMagicGen' },
     { sep: true },
     { id: 'event_piano', label: 'Open Piano Roll', key: 'openPiano' },
     { id: 'event_auto_tempo', label: 'Automatic Tempo Detection', key: 'autoTempo' },
