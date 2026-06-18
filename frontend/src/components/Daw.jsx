@@ -26,6 +26,8 @@ import { BantuGridModal } from './daw/modals/BantuGridModal';
 import { SetupModal } from './daw/modals/SetupModal';
 import { SystemUsageModal } from './daw/modals/SystemUsageModal';
 import { DiskUsageModal } from './daw/modals/DiskUsageModal';
+import { AssistantModal } from './daw/modals/AssistantModal';
+import { MagentaOverlay } from './daw/MagentaSpinner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -130,6 +132,8 @@ export default function Daw() {
   const [systemUsageOpen, setSystemUsageOpen] = useState(false);
   const [diskUsageOpen, setDiskUsageOpen] = useState(false);
   const [waveformMode, setWaveformMode] = useState('peak'); // peak|power|rectified|outlines|crossfades
+  // AI Assistant chat panel
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -630,32 +634,56 @@ export default function Daw() {
   };
 
   // === Magic12 / converters ===
-  const magic12Separate = () => {
+  const [demucsLoading, setDemucsLoading] = useState(false);
+  const magic12Separate = async () => {
     if (!tracks.length) { setStatusMsg('Add an audio track first'); return; }
-    const target = tracks[tracks.length - 1];
-    setStatusMsg(`Magic12: separating stems from "${target.displayName}"...`);
-    const stems = ['Drums', 'Bass', 'Vocals', 'Other'];
-    let i = 0;
-    const id = setInterval(() => {
-      if (i >= stems.length) { clearInterval(id); setStatusMsg('Magic12 separation complete (simulated)'); return; }
-      const stemName = stems[i];
-      const newId = uid();
-      const type = stemName.toLowerCase() === 'vocals' ? 'voice'
-        : stemName.toLowerCase() === 'drums' ? 'drums'
-          : stemName.toLowerCase() === 'bass' ? 'bass' : 'other';
-      const peaks = new Array(80).fill(0).map((_, k) => 0.1 + 0.6 * Math.abs(Math.sin(k * 0.5 + i)));
-      const t = {
-        id: newId, displayName: `${target.displayName} - ${stemName}`,
-        trackType: type, color: TRACK_COLORS[type],
-        isPlaying: false, isMuted: false, isSolo: false, isMIDI: false,
-        volume: 80, pan: 0, peaks,
-        eq: { bass: 50, mid: 50, high: 50, enabled: false },
-        fileName: '', isStemSeparated: true,
-      };
-      engine.getOrCreateTrack(newId).setVolume(0.8);
-      setTracks(prev => [...prev, t]);
-      i++;
-    }, 600);
+    const target = [...tracks].reverse().find((t) => !t.isMIDI && t.audioBuffer);
+    if (!target) {
+      setStatusMsg('Magic12: no audio track with audio buffer to separate.');
+      return;
+    }
+    setDemucsLoading(true);
+    setStatusMsg(`Magic12: separating "${target.displayName}" with Demucs (real AI, may take 30-60s)…`);
+    try {
+      const wavBlob = audioBufferToWavBlob(target.audioBuffer);
+      const form = new FormData();
+      form.append('file', wavBlob, `${target.displayName || 'track'}.wav`);
+      const resp = await fetch(`${API}/ai/separate-stems`, { method: 'POST', body: form });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.detail?.message || body.detail || `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+      const stems = data.stems || {};
+      const ctx = engine.ensureCtx();
+      const order = ['vocals', 'drums', 'bass', 'other'];
+      for (const name of order) {
+        const s = stems[name];
+        if (!s) continue;
+        const bin = Uint8Array.from(atob(s.wav_base64), (c) => c.charCodeAt(0));
+        const buf = await ctx.decodeAudioData(bin.buffer.slice(0));
+        const newId = uid();
+        const type = name === 'vocals' ? 'voice' : name === 'drums' ? 'drums' : name === 'bass' ? 'bass' : 'other';
+        const peaks = new Array(80).fill(0).map((_, k) => 0.1 + 0.6 * Math.abs(Math.sin(k * 0.5 + name.charCodeAt(0))));
+        const t = {
+          id: newId, displayName: `${target.displayName} · ${name}`,
+          trackType: type, color: TRACK_COLORS[type] || TRACK_COLORS.other,
+          isPlaying: false, isMuted: false, isSolo: false, isMIDI: false,
+          volume: 80, pan: 0, peaks,
+          eq: { bass: 50, mid: 50, high: 50, enabled: false },
+          fileName: '', isStemSeparated: true,
+          audioBuffer: buf,
+        };
+        engine.getOrCreateTrack(newId).setAudio(buf);
+        engine.getOrCreateTrack(newId).setVolume(0.8);
+        setTracks((prev) => [...prev, t]);
+      }
+      setStatusMsg(`Magic12 ✓ Demucs separated ${Object.keys(stems).length} stems from "${target.displayName}"`);
+    } catch (e) {
+      setStatusMsg(`Magic12 separation failed: ${e.message}`);
+    } finally {
+      setDemucsLoading(false);
+    }
   };
 
   const magic12Master = async () => {
@@ -1341,6 +1369,66 @@ export default function Daw() {
     });
   }, [bantuSwingEnabled, bantuStyle, bantuDensity, bantuBars, bantuSwingIntensity]);
 
+  // === LLM action dispatcher — maps Claude's JSON output to existing handlers ===
+  const dispatchLlmActions = useCallback((actions) => {
+    if (!Array.isArray(actions)) return;
+    const findTrack = (selector) => {
+      if (!selector || selector === 'selected') return tracks.find(t => t.id === selectedTrackId);
+      if (selector.startsWith('index:')) return tracks[parseInt(selector.slice(6), 10)];
+      if (selector.startsWith('name:')) return tracks.find(t => t.displayName.toLowerCase().includes(selector.slice(5).toLowerCase()));
+      return null;
+    };
+    for (const a of actions) {
+      switch (a.type) {
+        case 'add_track':
+          if (a.kind === 'midi') addMIDITrack();
+          else setStatusMsg('AI: please upload an audio file (browser cannot create empty audio tracks).');
+          break;
+        case 'play':  playAll();   break;
+        case 'stop':  engine.stopAll(); break;
+        case 'set_tempo':           if (a.bpm) setTempo(a.bpm); break;
+        case 'toggle_metronome':    setMetronomeOn(!!a.value); break;
+        case 'toggle_loop':         setLooping(!!a.value); break;
+        case 'set_volume': {
+          const t = findTrack(a.selector);
+          if (t) handleTrackAction('volume', t.id, Math.round(a.volume_percent || 80));
+          break;
+        }
+        case 'mute': { const t = findTrack(a.selector); if (t) handleTrackAction('mute', t.id); break; }
+        case 'solo': { const t = findTrack(a.selector); if (t) handleTrackAction('solo', t.id); break; }
+        case 'set_bantu_grid':
+          if (a.style)   setBantuStyle(a.style);
+          if (a.density) setBantuDensity(a.density);
+          if (a.bars)    setBantuBars(a.bars);
+          setShowBantuMarkers(true);
+          break;
+        case 'toggle_bantu_swing':
+          setBantuSwingEnabled(!!a.value);
+          if (typeof a.intensity === 'number') setBantuSwingIntensity(a.intensity);
+          break;
+        case 'toggle_bantu_markers': setShowBantuMarkers(!!a.value); break;
+        case 'set_waveform_mode':    if (a.mode) setWaveformMode(a.mode); break;
+        case 'open_modal':
+          if (a.modal === 'mixer')        setMixerOpen(true);
+          else if (a.modal === 'bantu')   setBantuOpen(true);
+          else if (a.modal === 'setup')   setSetupOpen(true);
+          else if (a.modal === 'dream')   setDreamOpen(true);
+          else if (a.modal === 'history') loadDreamHistory();
+          else if (a.modal === 'disk_usage')   setDiskUsageOpen(true);
+          else if (a.modal === 'system_usage') setSystemUsageOpen(true);
+          else if (a.modal === 'plugins') setPluginsOpen(true);
+          else if (a.modal === 'gm')      setGmOpen(true);
+          else if (a.modal === 'manual')  setManualOpen(true);
+          break;
+        case 'separate_stems': magic12Separate(); break;
+        case 'generate_dream': if (a.prompt) generateDream(a.prompt, tempo); break;
+        default:
+          setStatusMsg(`Unknown action from AI: ${a.type}`);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks, selectedTrackId, tempo]);
+
   // --- Audio devices enumeration ---
   const loadAudioDevices = useCallback(async () => {
     const result = await engine.listAudioDevices();
@@ -1484,6 +1572,8 @@ export default function Daw() {
           arrangeTileH:     () => setStatusMsg('Arrange · Tile Horizontal'),
           arrangeTileV:     () => setStatusMsg('Arrange · Tile Vertical'),
           arrangeCascade:   () => setStatusMsg('Arrange · Cascade'),
+          // AI Assistant
+          openAssistant: () => setAssistantOpen(true),
           // Setup
           openPlayback: () => { setSetupTab('playback'); setSetupOpen(true); loadAudioDevices(); },
           openIO: () => { setSetupTab('io'); setSetupOpen(true); loadAudioDevices(); },
@@ -2106,6 +2196,29 @@ export default function Daw() {
       )}
       {diskUsageOpen && (
         <DiskUsageModal onClose={() => setDiskUsageOpen(false)} />
+      )}
+      {assistantOpen && (
+        <AssistantModal
+          context={{
+            tempo, timeSig,
+            tracks: tracks.map((t, i) => ({
+              i, name: t.displayName, type: t.trackType,
+              isMIDI: t.isMIDI, volume: t.volume, isMuted: t.isMuted, isSolo: t.isSolo,
+              selected: t.id === selectedTrackId,
+            })),
+            bantuStyle, bantuSwingEnabled, bantuSwingIntensity, showBantuMarkers,
+            metronomeOn, looping, waveformMode,
+          }}
+          onActions={(actions) => dispatchLlmActions(actions)}
+          onClose={() => setAssistantOpen(false)}
+        />
+      )}
+      {demucsLoading && (
+        <MagentaOverlay
+          label="Demucs is splitting your track…"
+          subtitle="Hybrid Transformer model — separating vocals, drums, bass and other. This is real AI, so it may take 30-60 s on CPU."
+          testId="demucs-overlay"
+        />
       )}
     </div>
   );

@@ -1,0 +1,74 @@
+{
+  "summary": "Tested new RIBA AI integrations (assistant / stems / music) end-to-end. 5/6 backend tests pass + 42/42 regression pytest pass. Frontend assistant modal works, dispatcher fires reducer actions (verified Metro indicator). One real backend bug found: local fallback interpreter is too narrow — fails the spec's primary happy-path phrase 'Add a MIDI track and set tempo to 95 bpm', returning actions:[] instead of the required [{type:'add_track',kind:'midi'}, ...].",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/ai/assistant",
+        "issue": "When EMERGENT_LLM budget is exhausted (current state), the fallback _local_fallback() in /app/backend/ai/assistant.py only matches the substring 'add midi' (no article). The spec's canonical test query 'Add a MIDI track and set tempo to 95 bpm' lowercased is 'add a midi track and set tempo to 95 bpm' — contains 'a midi', not 'add midi' — so fallback returns []. Spec requires at minimum [{type:'add_track', kind:'midi'}]. Also no tempo extraction. RCA: substring whitelist too tight.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/ai/assistant",
+        "issue": "When the Emergent LLM throws, the speech is 'AI unavailable: ChatError. Using local interpreter fallback.' — that string leaks an internal exception class name to the end user. Consider a friendlier copy."
+      },
+      {
+        "endpoint": "POST /api/ai/separate-stems",
+        "issue": "Tiny WAV (0.5s mono 22.05kHz sine) test was skipped to keep iteration fast — Demucs htdemucs on CPU on a half-second clip can still take 30-90s. Endpoint shape + 400 on missing input verified. Recommend a long-running integration test in a separate suite."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "AI Assistant → Add MIDI track + set tempo 95",
+        "issue": "Tempo BPM in TopBar stays 120 (action list was empty because of the backend fallback bug above). Indirectly caused by backend. Once backend fallback is fixed, the dispatcher should set BPM to 95 (the reducer already supports set_tempo per Daw.jsx).",
+        "affected_selectors": ["[data-testid='assistant-input']", "[data-testid='chat-msg-assistant']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "verified_passing": {
+    "GET /api/ai/music-status": "{enabled:false, provider:null, default_model:'fal-ai/musicgen-stereo-melody'} ✅",
+    "GET /api/ai/stems-status": "{enabled:true, provider:'demucs/htdemucs'} ✅",
+    "POST /api/ai/generate-music (no FAL_KEY)": "HTTP 503 detail.code='FAL_KEY_MISSING' ✅",
+    "POST /api/ai/separate-stems (no input)": "HTTP 400 ✅",
+    "POST /api/ai/assistant 'toggle metronome'": "fallback returns 1 action, frontend dispatcher fires set_metronome → Metro button shows active yellow dot in TopBar ✅",
+    "Assistant Modal UI": "Event → AI Assistant (Chat) opens modal; [data-testid='assistant-input'], [data-testid='assistant-send'] present; 5 suggestion chips render; 1 system bubble; [data-testid='assistant-spinner'] visible while loading; [data-testid='chat-msg-assistant'] bubble received within ~3s ✅",
+    "MagentaSpinner reuse": "[data-testid='assistant-spinner'] (MagentaSpinner with label='thinking…') renders inside AssistantModal during fetch ✅",
+    "Magic12 Sep no-audio path": "Clicking sidebar Magic12 Sep without an audio track does NOT mount [data-testid='demucs-overlay'] (no crash) ✅",
+    "Regression pytest": "42/42 passing in test_riba_api / test_bantu_hardware / test_bantu_parity ✅"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ai_endpoints.py",
+    "/app/test_reports/pytest/ai_endpoints.xml",
+    "/app/test_reports/pytest/regression.xml"
+  ],
+  "action_items": [
+    "Fix /app/backend/ai/assistant.py _local_fallback(): broaden matching. Suggested logic: (a) if regex (add|new|create).*\\b(midi)\\b → add_track kind=midi; (b) if (add|new|create).*\\b(audio)\\b → add_track kind=audio; (c) regex r'(\\d+)\\s*bpm' or 'tempo .* (\\d+)' → set_tempo bpm=N; (d) chain multiple matches in one message (split on 'and'/','). This makes the spec's canonical test phrase return [{type:'add_track',kind:'midi'},{type:'set_tempo',bpm:95}] when LLM is down.",
+    "(Nice-to-have) Replace the 'AI unavailable: ChatError.' speech with a friendlier message that doesn't leak internal exception class names.",
+    "(Optional) Wire a quick demucs smoke test gated by an env flag (e.g. RUN_DEMUCS_E2E=1) so CI doesn't pay the CPU cost on every run but devs can opt in."
+  ],
+  "critical_code_review_comments": [
+    "assistant.py SYSTEM_PROMPT is well-structured (strict JSON schema, no markdown fences, action enum). However the fallback interpreter has only ~7 hard-coded substrings — it diverges from the schema breadth and gives the impression of a broken assistant when LLM is down. Should mirror the canonical action set at least for: add_track, set_tempo, toggle_metronome, play/stop, open_modal, apply_effect.",
+    "music.py: good defensive 503 with structured detail. Suggestion: also include current_model_default in the 503 payload for UI display.",
+    "stems.py: lazy load is correct. Note that _separate_file does `(wav - ref.mean()) / ref.std()` — when input is silent or a tiny WAV, ref.std() can be 0 and produce NaN. Add a small epsilon: `ref.std() + 1e-8`. Low priority but will hit tiny test fixtures.",
+    "Daw.jsx: dispatchLlmActions reducer is good — confirmed metronome action flips UI state. Recommend also surfacing fallback:true in the status bar so users know they're on the offline interpreter.",
+    "AssistantModal.jsx: input is disabled during loading (good UX) and onActions invoked only when acts.length>0 (correct)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_ai_endpoints.py (NEW — 7 tests, 6 fast + 1 slow-marked)"
+  ],
+  "success_rate": {
+    "backend": "85% (5/6 of new AI endpoint tests pass — 1 fail is the local fallback bug; 42/42 pre-existing regression still pass)",
+    "frontend": "95% (modal open, send, spinner, assistant bubble, action dispatcher all verified; only the e2e add-MIDI+tempo path is blocked by the backend fallback bug)"
+  },
+  "test_credentials": "none required",
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter12 added /app/backend/tests/test_ai_endpoints.py for the new AI router (assistant/stems/music). The single failing test (TestAssistant::test_assistant_happy_path_add_midi_and_tempo) is a real backend bug in _local_fallback() — it returns [] for 'Add a MIDI track and set tempo to 95 bpm'. After main agent broadens the fallback regex (or LLM budget is refreshed), re-run: `pytest backend/tests/test_ai_endpoints.py -v -m 'not slow'`. The slow-marked test runs the full Demucs htdemucs CPU inference path and was deliberately skipped; opt in with `pytest -m slow` when verifying real stem separation. Frontend testIds confirmed: assistant-input, assistant-send, assistant-spinner, chat-msg-system, chat-msg-user, chat-msg-assistant, magenta-spinner, magenta-overlay, demucs-overlay (only mounted when Demucs is actively separating a real audio buffer).",
+  "rca of the issue": "ROOT CAUSE — /app/backend/ai/assistant.py:_local_fallback(): the function lower-cases the message and checks substring membership with phrases like 'add midi'. For the spec's primary happy-path 'Add a MIDI track and set tempo to 95 bpm', the lowercased form is 'add a midi track and set tempo to 95 bpm' — substring 'add midi' is NOT present (it's 'add a midi'), so the matcher falls through and returns []. There is also no extraction logic for tempo numbers. REPRODUCTION: `curl -s -X POST https://riba-studio.preview.emergentagent.com/api/ai/assistant -H 'Content-Type: application/json' -d '{\"message\":\"Add a MIDI track and set tempo to 95 bpm\"}'` → `{\"actions\":[], \"fallback\":true}`. MITIGATION: broaden matchers to use word-boundary regex (e.g. `re.search(r'\\b(add|new|create)\\b.*\\bmidi\\b', m)`) and parse `(\\d+)\\s*bpm` for tempo so the fallback emits both actions for the canonical phrase."
+}
