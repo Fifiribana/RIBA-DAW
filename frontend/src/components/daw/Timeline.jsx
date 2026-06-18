@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { TID } from '@/constants/testIds';
-import { computeBantuGrid, BANTU_STYLES } from './bantuGrid';
+import { computeBantuGrid, BANTU_STYLES } from '@/lib/bantuGrid';
 
 export function Timeline({
   isPlaying, looping, maxBeats, timeSig, tempo,

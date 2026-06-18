@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { computeBantuGrid, BANTU_STYLES } from './bantuGrid';
+import { computeBantuGrid, BANTU_STYLES } from '@/lib/bantuGrid';
 
 /**
  * BantuTeaser — animated mini visualization of an asymmetric Bantu groove.

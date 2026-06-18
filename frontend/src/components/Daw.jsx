@@ -123,6 +123,9 @@ export default function Daw() {
   const [bantuStyles, setBantuStyles] = useState([]);
   // Show asymmetric grid markers on the timeline (RIBA innovation visual)
   const [showBantuMarkers, setShowBantuMarkers] = useState(false);
+  // Bantu Swing Live — non-destructive humanization during playback
+  const [bantuSwingEnabled, setBantuSwingEnabled] = useState(false);
+  const [bantuSwingIntensity, setBantuSwingIntensity] = useState(0.7);
   // Pro Tools-style Window/View extras
   const [systemUsageOpen, setSystemUsageOpen] = useState(false);
   const [diskUsageOpen, setDiskUsageOpen] = useState(false);
@@ -1327,6 +1330,17 @@ export default function Daw() {
     setBantuOpen(true);
   }, [loadBantuStyles]);
 
+  // === Bantu Swing Live — keep the engine in sync with UI state ===
+  useEffect(() => {
+    engine.setBantuSwing({
+      enabled: bantuSwingEnabled,
+      style: bantuStyle,
+      density: bantuDensity,
+      bars: bantuBars,
+      intensity: bantuSwingIntensity,
+    });
+  }, [bantuSwingEnabled, bantuStyle, bantuDensity, bantuBars, bantuSwingIntensity]);
+
   // --- Audio devices enumeration ---
   const loadAudioDevices = useCallback(async () => {
     const result = await engine.listAudioDevices();
@@ -1666,6 +1680,38 @@ export default function Daw() {
             color: showBantuMarkers ? '#D946EF' : undefined,
           }}
         >🌍 Grid</button>
+        <button
+          onClick={() => {
+            const next = !bantuSwingEnabled;
+            setBantuSwingEnabled(next);
+            setStatusMsg(next
+              ? `🥁 Bantu Swing Live ENABLED · ${bantuStyle} @ ${Math.round(bantuSwingIntensity * 100)}% intensity`
+              : '🥁 Bantu Swing Live disabled — straight grid restored');
+          }}
+          onContextMenu={(e) => {
+            // Right-click cycles intensity 30% → 50% → 70% → 100% → 30%
+            e.preventDefault();
+            const next = bantuSwingIntensity >= 1 ? 0.3 :
+                         bantuSwingIntensity >= 0.7 ? 1.0 :
+                         bantuSwingIntensity >= 0.5 ? 0.7 : 0.5;
+            setBantuSwingIntensity(next);
+            setStatusMsg(`🥁 Swing intensity → ${Math.round(next * 100)}%`);
+          }}
+          className="riba-btn"
+          data-testid="bantu-swing-toggle"
+          data-active={bantuSwingEnabled}
+          title={`${bantuSwingEnabled ? 'Disable' : 'Enable'} Bantu Swing Live — non-destructive groove humanization during playback. Right-click to cycle intensity.`}
+          style={{
+            height: 26, fontSize: 10, padding: '0 10px',
+            background: bantuSwingEnabled
+              ? 'linear-gradient(135deg, rgba(245,158,11,0.35), rgba(217,70,239,0.35))'
+              : undefined,
+            border: bantuSwingEnabled ? '1px solid rgba(245,158,11,0.6)' : undefined,
+            color: bantuSwingEnabled ? '#F59E0B' : undefined,
+            fontWeight: bantuSwingEnabled ? 700 : 500,
+            boxShadow: bantuSwingEnabled ? '0 0 12px rgba(245,158,11,0.35)' : undefined,
+          }}
+        >🥁 Swing{bantuSwingEnabled ? ` · ${Math.round(bantuSwingIntensity * 100)}%` : ''}</button>
         {!pwaInstalled && pwaPrompt && (
           <button
             onClick={handleInstallPwa}

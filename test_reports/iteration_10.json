@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 10 — Tested Bantu Swing Live + iter 8/9 regression. UI/toggle behavior 100% PASS (visibility, ON label, status bar, right-click intensity cycle 70->100->30->50->70, OFF). HOWEVER a CRITICAL runtime crash exists when PLAY is pressed while Swing is enabled: ReferenceError: computeBantuGrid is not defined (engine.js line 319). The import statement is MISSING from /app/frontend/src/audio/engine.js — the review request says 'lines ~5 import computeBantuGrid' but no such import is present. All other regression flows PASS. Backend pytest 42/42 still pass after bantuGrid.js move.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "PLAY with Bantu Swing enabled",
+        "issue": "ReferenceError: computeBantuGrid is not defined — crashes the React app with the Uncaught runtime errors overlay. Root cause: /app/frontend/src/audio/engine.js uses computeBantuGrid() at line 319 (RibaEngine._swingPositions) but never imports it. Only line 4 imports GM_INSTRUMENTS — the computeBantuGrid import from '@/lib/bantuGrid' (or relative '../lib/bantuGrid') is missing entirely.",
+        "affected_selectors": ["[data-testid='bantu-swing-toggle']", "button:has-text('PLAY')"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_riba_api.py",
+    "/app/backend/tests/test_bantu_parity.py",
+    "/app/backend/tests/test_bantu_hardware.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Add `import { computeBantuGrid } from '../lib/bantuGrid';` (or via @/lib/bantuGrid alias) near the top of /app/frontend/src/audio/engine.js. Without this, _swingPositions() throws ReferenceError on the FIRST scheduled MIDI note when Swing is ON, taking down the playback scheduler.",
+    "CARRY-OVER (still present, was flagged in iter_8 & iter_9): TrackRow.jsx line 71 renders a <span> inside <option> causing hydration warning. Wrap the option label as plain text instead of a <span>.",
+    "OPTIONAL: Expose RibaEngine on window (e.g., window.__riba_engine = engine) in dev builds to allow direct programmatic verification of _swingBeat() via Playwright `page.evaluate`. Currently no global handle is available so engine plumbing has to be inferred via UI status only."
+  ],
+  "critical_code_review_comments": [
+    "engine.js — Bantu Swing config object (bantuSwing) is well-structured with cached positions keyed by style|density|bars; cache invalidated on setBantuSwing(). _swingBeat() uses modulo cycle (bars*4) + nearest-neighbour snap with intensity-scaled delta. Logic is sound BUT the dependency import is missing — see CRITICAL action item.",
+    "Daw.jsx — Swing button (lines 1683-1714) is clean: data-testid='bantu-swing-toggle', data-active toggling, golden gradient when active, label dynamically appends ' · NN%'. onContextMenu cycle 70->100->30->50->70 verified to step in the correct order. Status bar messages are well-formed.",
+    "bantuGrid.js move — Successfully migrated to /app/frontend/src/lib/bantuGrid.js. Old location no longer exists. Timeline.jsx, BantuTeaser.jsx, test_bantu_parity.py all reference the new path. 25/25 parity tests + js_module_resolves still pass.",
+    "MISSING global handle — engine is exported as a module-level singleton but not attached to window in dev mode, so the optional `window.__riba_swing_test = engine._swingBeat(0.5)` verification from the review request could not be executed directly. UI assertions were used instead.",
+    "Tracks counter does not increment visibly when sidebar 'MIDI' button is clicked in headless test — likely because the test clicks on the wrong MIDI button. Not a regression (works manually per smoke test). Worth verifying that 'MIDI' sidebar add-track button has a unique data-testid for testability."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (42/42 pytest pass)",
+    "frontend": "85% — Swing button visibility, toggle, label transitions, status bar text, intensity cycle, OFF transition, Grid markers, Window menu with all 4 submenus, View > Waveforms, Event > Quantize Bantu Oral Grid all PASS. PLAY-with-Swing crashes with computeBantuGrid ReferenceError (1 critical integration bug)."
+  },
+  "test_credentials": "N/A",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After main agent adds the missing import to engine.js, re-test: (1) add a MIDI track via sidebar (use button having text 'MIDI Track' in centre 'Empty Workspace' card OR sidebar MIDI button), (2) enable Swing, (3) press PLAY — verify NO 'Uncaught runtime errors' overlay appears and PLAY button toggles label to 'STOP' (or stays 'PLAY' depending on UI design — at minimum the click should not crash). Top-level menu data-testids are `menu-{lowercase}` (e.g., menu-window) and items inside are `menuitem-{item.id}`. Engine is NOT exposed on window; rely on UI assertions. The page error overlay is from webpack-dev-server; assertion: page.locator('text=Uncaught runtime errors').is_visible() should be False.",
+  "rca of the issue": "ROOT CAUSE: engine.js was patched to add bantuSwing config + setBantuSwing() + _swingPositions() + _swingBeat() — but the corresponding `import { computeBantuGrid } from '../lib/bantuGrid'` statement was never added. The smoke test in the original review request only exercised the UI toggle (which lives entirely in Daw.jsx and never invokes _swingPositions) — it did NOT press PLAY with Swing enabled, so the missing import was not surfaced. REPRO STEPS: (1) load app, (2) add a MIDI track, (3) click 🥁 Swing to enable, (4) click PLAY — overlay appears showing ReferenceError stack: RibaEngine._swingPositions -> RibaEngine._swingBeat -> TrackNode.playMIDI -> RibaEngine.playAll. MITIGATION: one-line fix — add the import at the top of engine.js."
+}

@@ -26,8 +26,7 @@ JS_FILE = (
     BACKEND_DIR.parent
     / "frontend"
     / "src"
-    / "components"
-    / "daw"
+    / "lib"
     / "bantuGrid.js"
 )
 

@@ -160,7 +160,7 @@ class TrackNode {
     this.isPlaying = true;
     src.onended = () => { if (this.source === src) { this.isPlaying = false; } };
   }
-  playMIDI(bpm) {
+  playMIDI(bpm, swingFn = null) {
     if (!this.midiNotes.length) return;
     this.stop();
     const beatSec = 60 / bpm;
@@ -170,7 +170,9 @@ class TrackNode {
     for (const n of this.midiNotes) {
       const freq = 440 * Math.pow(2, (n.pitch - 69) / 12);
       const v = Math.max(0.05, Math.min(0.9, n.velocity / 127));
-      const startT = tNow + n.start * beatSec;
+      // Apply Bantu Swing Live (non-destructive: only schedule offset)
+      const swungStart = swingFn ? swingFn(n.start) : n.start;
+      const startT = tNow + swungStart * beatSec;
       const stopT = startT + n.duration * beatSec;
 
       // primary oscillator
@@ -287,6 +289,55 @@ export class RibaEngine {
     this.mediaRecorder = null;
     this.recordedChunks = [];
     this.recordStream = null;
+
+    // === Bantu Swing Live (non-destructive humanization) ===
+    this.bantuSwing = {
+      enabled: false,
+      style: 'bikutsi_44',
+      density: 16,
+      bars: 4,
+      intensity: 1.0,
+      _cachedPositions: null,
+      _cacheKey: null,
+    };
+  }
+
+  /**
+   * Configure live, non-destructive Bantu groove application during playback.
+   * MIDI note data is NOT mutated — only schedule times are adjusted.
+   */
+  setBantuSwing(cfg) {
+    this.bantuSwing = { ...this.bantuSwing, ...cfg };
+    this.bantuSwing._cachedPositions = null;
+    this.bantuSwing._cacheKey = null;
+  }
+
+  _swingPositions() {
+    const sw = this.bantuSwing;
+    const key = `${sw.style}|${sw.density}|${sw.bars}`;
+    if (sw._cacheKey !== key) {
+      sw._cachedPositions = computeBantuGrid(sw.style, sw.density, sw.bars);
+      sw._cacheKey = key;
+    }
+    return sw._cachedPositions;
+  }
+
+  _swingBeat(beat) {
+    const sw = this.bantuSwing;
+    if (!sw.enabled) return beat;
+    const positions = this._swingPositions();
+    if (!positions || positions.length === 0) return beat;
+    const cycle = sw.bars * 4;
+    const cycleIdx = Math.floor(beat / cycle);
+    const mod = beat - cycleIdx * cycle;
+    let best = positions[0];
+    let bestDist = Math.abs(mod - best);
+    for (let i = 1; i < positions.length; i++) {
+      const d = Math.abs(mod - positions[i]);
+      if (d < bestDist) { bestDist = d; best = positions[i]; }
+    }
+    const delta = (best - mod) * sw.intensity;
+    return beat + delta;
   }
   ensureCtx() {
     if (!this.ctx) {
@@ -372,7 +423,7 @@ export class RibaEngine {
   play(id) {
     const t = this.tracks.get(id);
     if (!t) return;
-    if (t.isMIDI) t.playMIDI(this.tempo); else t.playAudio(true);
+    if (t.isMIDI) t.playMIDI(this.tempo, this._swingBeat.bind(this)); else t.playAudio(true);
   }
   stop(id) {
     const t = this.tracks.get(id);
@@ -385,7 +436,7 @@ export class RibaEngine {
       // soloed
       if (solo.size > 0 && !solo.has(id)) { t.stop(); continue; }
       if (t.muted) { t.stop(); continue; }
-      if (t.isMIDI) t.playMIDI(this.tempo); else t.playAudio(true);
+      if (t.isMIDI) t.playMIDI(this.tempo, this._swingBeat.bind(this)); else t.playAudio(true);
     }
   }
   stopAll() {
