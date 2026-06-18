@@ -137,6 +137,75 @@ export default function Daw() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   // Magic Generator (Suno-style)
   const [magicGenOpen, setMagicGenOpen] = useState(false);
+  // Genesis workflow (prompt → fal.ai → Demucs → 4 stems + Bantu Grid)
+  const [genesisStatus, setGenesisStatus] = useState({ ready: false, mode: 'unavailable' });
+  useEffect(() => {
+    fetch(`${API}/ai/genesis-status`).then(r => r.json()).then(setGenesisStatus).catch(() => {});
+  }, []);
+
+  const runGenesis = useCallback(async () => {
+    const prompt = window.prompt(
+      'Genesis · prompt your track:\n\nExamples:\n• "Bikutsi tropical house, 110 bpm"\n• "Afrobeat groove with mbira and slap bass"\n• "Sweet rumba ballad, late night Kinshasa"',
+      'Bikutsi tropical house'
+    );
+    if (!prompt || !prompt.trim()) return;
+
+    if (!genesisStatus.fal_ready) {
+      setStatusMsg('🌍 Genesis: FAL_KEY not configured. Set it in /app/backend/.env then restart.');
+      return;
+    }
+    setDemucsLoading(true);
+    setStatusMsg('🌍 Genesis · step 1/3: generating music via fal.ai…');
+    try {
+      // Step 1 — generate
+      const gen = await fetch(`${API}/ai/generate-track`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, duration_seconds: 30, instrumental: true, style: 'Bantu groove' }),
+      }).then(r => r.json());
+      if (!gen.audio_url) throw new Error(`Generation failed: ${gen.fallback_reason || 'unknown'}`);
+
+      // Step 2 — fetch WAV + send to Demucs
+      setStatusMsg('🌍 Genesis · step 2/3: Demucs separating 4 stems…');
+      const audioUrl = gen.audio_url.startsWith('http') ? gen.audio_url : `${BACKEND_URL}${gen.audio_url}`;
+      const wav = await (await fetch(audioUrl)).blob();
+      const form = new FormData();
+      form.append('file', wav, `${gen.title || 'genesis'}.wav`);
+      const sep = await fetch(`${API}/ai/separate-stems`, { method: 'POST', body: form })
+        .then(async (r) => { if (!r.ok) throw new Error(`Demucs ${r.status}`); return r.json(); });
+
+      // Step 3 — create 4 tracks + enable Bantu Grid
+      setStatusMsg('🌍 Genesis · step 3/3: building 4 multi-tracks…');
+      const ctx = engine.ensureCtx();
+      for (const name of ['vocals', 'drums', 'bass', 'other']) {
+        const s = sep.stems[name];
+        if (!s) continue;
+        const bin = Uint8Array.from(atob(s.wav_base64), c => c.charCodeAt(0));
+        const buf = await ctx.decodeAudioData(bin.buffer.slice(0));
+        const tid = uid();
+        const type = name === 'vocals' ? 'voice' : name === 'drums' ? 'drums' : name === 'bass' ? 'bass' : 'other';
+        const peaks = new Array(80).fill(0).map((_, k) => 0.1 + 0.6 * Math.abs(Math.sin(k * 0.5 + name.charCodeAt(0))));
+        const t = {
+          id: tid, displayName: `Genesis · ${name}`,
+          trackType: type, color: TRACK_COLORS[type] || TRACK_COLORS.other,
+          isPlaying: false, isMuted: false, isSolo: false, isMIDI: false,
+          volume: 80, pan: 0, peaks,
+          eq: { bass: 50, mid: 50, high: 50, enabled: false },
+          fileName: '', isStemSeparated: true, audioBuffer: buf,
+        };
+        engine.getOrCreateTrack(tid).setAudio(buf);
+        engine.getOrCreateTrack(tid).setVolume(0.8);
+        setTracks(prev => [...prev, t]);
+      }
+      // Activate Bantu Grid + Markers
+      setBantuStyle('bikutsi_44'); setBantuDensity(16); setBantuBars(4);
+      setShowBantuMarkers(true);
+      setStatusMsg(`🌍 Genesis ✓ "${gen.title}" → 4 stems + Bantu Grid Bikutsi 4/4 active`);
+    } catch (e) {
+      setStatusMsg(`🌍 Genesis failed: ${e.message}`);
+    } finally {
+      setDemucsLoading(false);
+    }
+  }, [genesisStatus.fal_ready]);
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -1807,6 +1876,19 @@ export default function Daw() {
             boxShadow: bantuSwingEnabled ? '0 0 12px rgba(245,158,11,0.35)' : undefined,
           }}
         >🥁 Swing{bantuSwingEnabled ? ` · ${Math.round(bantuSwingIntensity * 100)}%` : ''}</button>
+        <button
+          onClick={runGenesis}
+          className="riba-btn"
+          data-testid="genesis-btn"
+          title={`🌍 Genesis Workflow — prompt → fal.ai MusicGen → Demucs 4 stems → Bantu Grid active. Mode: ${genesisStatus.mode}`}
+          style={{
+            height: 26, fontSize: 10, padding: '0 12px', fontWeight: 800,
+            background: 'linear-gradient(135deg, #22D3EE 0%, #D946EF 60%, #F59E0B 100%)',
+            color: '#fff', border: 'none',
+            boxShadow: '0 0 14px rgba(217,70,239,0.45), 0 0 28px rgba(34,211,238,0.25)',
+            letterSpacing: '0.04em',
+          }}
+        >🌍 Genesis</button>
         {!pwaInstalled && pwaPrompt && (
           <button
             onClick={handleInstallPwa}

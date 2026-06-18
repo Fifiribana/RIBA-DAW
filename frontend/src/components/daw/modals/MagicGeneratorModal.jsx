@@ -13,6 +13,8 @@ const STYLE_TAGS = [
   { id: 'afrobeat', label: 'Afrobeat' },
   { id: 'soukous',  label: 'Soukous' },
   { id: 'highlife', label: 'Highlife' },
+  { id: 'ekang',    label: 'Ekang' },
+  { id: 'zouk',     label: 'Zouk' },
 ];
 
 const LYRICS_TABS = [

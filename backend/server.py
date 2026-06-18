@@ -391,10 +391,11 @@ async def session_delete(session_id: str):
 app.include_router(api_router)
 
 # === AI routes (LLM assistant + fal.ai MusicGen + Demucs stems) ===
-from ai import assistant_router, generator_router, music_router, stems_router  # noqa: E402
+from ai import assistant_router, generator_router, genesis_router, music_router, stems_router  # noqa: E402
 api_ai = APIRouter(prefix="/api")
 api_ai.include_router(assistant_router)
 api_ai.include_router(generator_router)
+api_ai.include_router(genesis_router)
 api_ai.include_router(music_router)
 api_ai.include_router(stems_router)
 app.include_router(api_ai)
