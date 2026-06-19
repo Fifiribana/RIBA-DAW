@@ -24,8 +24,18 @@ db = client[os.environ['DB_NAME']]
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Startup
+    try:
+        from ai import start_scheduler
+        start_scheduler()
+    except Exception as exc:
+        logging.getLogger(__name__).warning("scheduler start failed: %s", exc)
     yield
     # Shutdown
+    try:
+        from ai import shutdown_scheduler
+        shutdown_scheduler()
+    except Exception:
+        pass
     client.close()
 
 
@@ -411,6 +421,9 @@ from ai import (  # noqa: E402
     reel_router,
     snippets_router,
     share_router,
+    album_router,
+    start_scheduler,
+    shutdown_scheduler,
 )
 api_ai = APIRouter(prefix="/api")
 api_ai.include_router(assistant_router)
@@ -422,6 +435,7 @@ api_ai.include_router(remix_router)
 api_ai.include_router(reel_router)
 api_ai.include_router(snippets_router)
 api_ai.include_router(share_router)
+api_ai.include_router(album_router)
 app.include_router(api_ai)
 
 app.add_middleware(

@@ -373,12 +373,14 @@ async def share_publish(platform: str, req: PublishRequest):
     _missing_creds(platform)
     reel = _reel_mp4(req.reel_id)
 
-    # Schedule guard for platforms without native scheduling
+    # Schedule guard for platforms without native scheduling — persist via APScheduler.
     if req.schedule_at and platform in ("tiktok", "instagram"):
+        from .scheduler import schedule_publish_job
+        rec = schedule_publish_job(platform, req.model_dump(), req.schedule_at)
         job = _push_job(platform, req.reel_id, "scheduled",
                         schedule_at=req.schedule_at, description=req.description,
-                        hashtags=req.hashtags, note="Will be processed by external cron worker.")
-        return {"scheduled": True, "platform": platform, "job": job}
+                        hashtags=req.hashtags, note="APScheduler will publish at the due time.")
+        return {"scheduled": True, "platform": platform, "job": job, "persisted": rec}
 
     try:
         if platform == "tiktok":
@@ -399,4 +401,12 @@ async def share_publish(platform: str, req: PublishRequest):
 
 @router.get("/share/jobs")
 def share_jobs():
+    """In-memory recent jobs (resets on restart) — quick UI dashboard."""
     return {"jobs": _JOBS}
+
+
+@router.get("/share/scheduled")
+def share_scheduled():
+    """Persisted scheduled jobs handled by APScheduler — survives restarts."""
+    from .scheduler import list_scheduled_jobs
+    return {"jobs": list_scheduled_jobs()}

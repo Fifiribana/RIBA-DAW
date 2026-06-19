@@ -174,6 +174,27 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
 - **Iter 15 (Feb 2026)** : **59/59 backend pytest PASS** (-m "not slow"), 1 slow deselected (Demucs heavy). FAL_KEY actif via clé utilisateur, mode "full" sur tous les status endpoints.
 
+### v3.0 (iter 21 - Feb 2026) — ALBUM BUILDER 🎼 + BANTU DROP MAP + APSCHEDULER
+- **🎼 Backend `ai/album.py`** — moteur d'album teaser avec Bantu Drop Map :
+  - `POST /api/ai/album/teaser` (body : track_ids 1-16, mode drop_map|sequential, target_duration 15-120, transition_sec 0.5-3, bantu_style, title, style_label)
+  - **Drop Map mode** : lance `analyze_snippets` sur chaque track → sélectionne le meilleur segment via priorité `bantu_drop > peak_energy > main_hook` ; **Sequential** : utilise le début de chaque track.
+  - **Crossfade aligné Bantu Grid** : `_snap_transition_to_bantu_grid()` projette la durée de fondu sur la subdivision de grille la plus proche (1.0s → 1.013s pour bikutsi_44 par exemple) pour ne jamais casser le swing.
+  - Chaîne ffmpeg : N inputs avec `-ss start -t seg_sec` → `acrossfade=d=transition:c1=tri:c2=tri` enchaîné → mixdown WAV → `showcqt + drawtext` réutilisé du Bantu Reel → MP4 1080×1080 + MP3 192k.
+  - **Mosaic cover collage PNG** : `make_mosaic_cover()` génère une grille 1x3/2x2/3x3/4x4 de tuiles HSL déterministes (mirror de `ProceduralCover` frontend) + bande titre + sub-tagline magenta. Endpoint `GET /api/ai/album/cover/{id}.png`.
+  - `_resolve_track()` consulte workspace index + library manifest (LIB-*) → résout titres/tags correctement pour le mosaic.
+- **⚙️ Backend `ai/scheduler.py`** — worker APScheduler 3.11.2 (AsyncIOScheduler) :
+  - Job de balayage toutes les **30 s** sur `/static/workspace/scheduled_jobs.json` (persistance disque pour survivre aux redémarrages).
+  - Lit les jobs `pending` dont `schedule_at <= now` → exécute le publish via `_publish_tiktok`/`_publish_instagram`/`_publish_youtube` (lazy import pour éviter cycle).
+  - Branché dans le lifespan FastAPI (`start_scheduler()` au boot, `shutdown_scheduler()` au stop).
+  - `POST /api/ai/share/{platform}/publish` avec `schedule_at` sur TikTok/IG → `schedule_publish_job()` persiste + APScheduler exécute automatiquement à l'heure dite.
+  - Nouvel endpoint `GET /api/ai/share/scheduled` → liste les jobs persistés.
+- **🎼 Frontend `AlbumBuilderPanel.jsx`** : onglet `🎼 Album Builder` dans `MagicGeneratorModal` (tab switcher gradient en tête) :
+  - Panneau gauche : liste scrollable des items workspace avec `audio_url`, sélection par clic (+ numéro d'ordre), **drag-and-drop HTML5** pour réordonner les sélectionnés.
+  - Panneau droit : config (title, Bantu style, mode, target duration 15-120, crossfade 0.5-3) + bouton "📱 Export Full Album Teaser" + preview vidéo + boutons download MP4/MP3/Cover + liste des picks par segment (avec le `picked_name` Bantu Drop / Peak / Hook).
+- **6 nouveaux tests** (`test_album_and_scheduler.py`) : drop_map E2E avec 3 loops + cover + segments, sequential mode (start_sec=0 partout), validation (empty/unknown/bad mode/>16), path traversal cover, scheduler endpoint, schedule_at requires creds. **Tous PASS en 4.08s.**
+- **Suite complète : 95/95 PASS** (89 + 6 nouveaux). 0 régression.
+- Stack ajoutée : **APScheduler 3.11.2 + tzlocal 5.4.3**. Pillow 12.2.0 déjà présent.
+
 ### v2.9 (iter 20 - Feb 2026) — AUTO-SHARE SOCIAL API 📡
 - **Backend** `/app/backend/ai/share.py` — moteur de publication multi-plateformes :
   - `GET /api/ai/share/status` → readiness par plateforme (TikTok / Instagram Reels / YouTube Shorts) avec `missing` env vars, `schedule_native`, `needs_public_url`
@@ -290,10 +311,8 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
-- **P1**: 💡 **Album Builder** (validé par l'utilisateur 19 Feb 2026) — onglet dans Magic Generator avec drag-drop d'ordre des tracks, cover collage auto-généré depuis les ProceduralCovers, export "📱 Album Teaser 60s" via ffmpeg avec crossfade aligné sur la Bantu Grid.
 - **P1**: Studio Live Session (WebRTC + Y.js pour collaboration temps réel sur Bantu Grid).
 - **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
-- **P1**: External cron worker (APScheduler) pour exécuter les jobs `share_jobs` `scheduled` sur TikTok/IG (YouTube est natif).
 - **P2**: WebMIDI input pour claviers MIDI externes.
 - **P2**: Vue Bantu Heatmap.
 - **P2**: Refactor `engine.js` (audio engine large) en React hooks.
@@ -302,11 +321,11 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **P2**: Bantu Reel Series (3 MP4 parallèles depuis Peak/Drop/Hook).
 - **P2**: Drag-drop sur le Library panel du Magic Generator.
 - **P2**: Auto-refresh des tokens TikTok via le refresh endpoint pour éviter l'expiration silencieuse.
+- **P2**: Album Builder — ré-utiliser le Snippet Picker UI inline pour visualiser/corriger manuellement chaque pick avant l'export.
 
 ## Next Action Items
-- 🟢 **P1 Album Builder** (next sprint, déjà validé par l'utilisateur).
-- ⚠️ Pour activer l'Auto-share réel, ajouter dans `/app/backend/.env` les credentials des plateformes désirées :
-  - `TIKTOK_ACCESS_TOKEN=...` (TikTok Developer App approuvée pour `video.publish`)
-  - `IG_USER_ID=...` + `IG_ACCESS_TOKEN=...` + `PUBLIC_BASE_URL=https://...` (Instagram Business Account via Facebook Graph API + URL publique pour servir le MP4)
-  - `YOUTUBE_CLIENT_ID=...` + `YOUTUBE_CLIENT_SECRET=...` + `YOUTUBE_REFRESH_TOKEN=...` (Google Cloud Console + OAuth `youtube.upload`)
-  Puis `sudo supervisorctl restart backend`. L'UI affiche automatiquement `READY` au lieu de `CONFIG` dès qu'une plateforme est prête.
+- 🟢 Choix utilisateur prochain sprint P1 :
+  - **a) Studio Live Session** (WebRTC + Y.js collaboration temps réel Bantu Grid)
+  - **b) Tauri local build** (.exe/.dmg natifs)
+  - **c) WebMIDI input** (claviers MIDI externes)
+- ⚠️ Pour activer l'Auto-share réel + le scheduling APScheduler, ajouter dans `/app/backend/.env` les credentials des plateformes désirées (TIKTOK_ACCESS_TOKEN / IG_USER_ID+IG_ACCESS_TOKEN+PUBLIC_BASE_URL / YOUTUBE_CLIENT_ID+SECRET+REFRESH_TOKEN). Puis `sudo supervisorctl restart backend`.

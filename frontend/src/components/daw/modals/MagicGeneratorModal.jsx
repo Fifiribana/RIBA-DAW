@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from '../Modal';
 import { MagentaSpinner } from '../MagentaSpinner';
+import { AlbumBuilderPanel } from './AlbumBuilderPanel';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -86,6 +87,9 @@ export function MagicGeneratorModal({ onClose, onImportToTimeline, onReusePrompt
   // === Workspace card "..." menu ===
   const [openMenuId, setOpenMenuId] = useState(null);
   const [openRemixMenuId, setOpenRemixMenuId] = useState(null);
+
+  // === Top-level tab : Generator | Album Builder ===
+  const [activeTab, setActiveTab] = useState('generator');
 
   const fetchWorkspace = useCallback(async () => {
     try {
@@ -306,6 +310,40 @@ export function MagicGeneratorModal({ onClose, onImportToTimeline, onReusePrompt
 
   return (
     <Modal title="Magic Generator · Suno-style AI" onClose={onClose} width={1100}>
+      {/* Top-level tabs : Generator | Album Builder */}
+      <div data-testid="magic-gen-tabs" style={{
+        display: 'flex', gap: 4, marginBottom: 12,
+        background: '#0B0B0E', borderRadius: 8, padding: 3,
+        border: '1px solid rgba(255,255,255,0.05)',
+      }}>
+        {[
+          { id: 'generator', label: '🎵 Generator', desc: 'Suno-style AI music' },
+          { id: 'album',     label: '🎼 Album Builder', desc: 'Bantu Drop Map teaser' },
+        ].map((t) => (
+          <button
+            key={t.id}
+            data-testid={`tab-${t.id}`}
+            onClick={() => setActiveTab(t.id)}
+            className="riba-btn"
+            style={{
+              flex: 1, padding: '8px 0', fontSize: 12, border: 'none',
+              background: activeTab === t.id
+                ? 'linear-gradient(135deg, rgba(217,70,239,0.30), rgba(99,102,241,0.30))'
+                : 'transparent',
+              color: activeTab === t.id ? '#FAFAFA' : '#A1A1AA',
+              fontWeight: activeTab === t.id ? 700 : 500,
+              display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center',
+            }}
+          >
+            <span>{t.label}</span>
+            <span style={{ fontSize: 9, color: '#71717A', letterSpacing: '0.08em' }}>{t.desc}</span>
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'album' ? (
+        <AlbumBuilderPanel workspaceItems={items} />
+      ) : (
       <div style={{
         display: 'grid', gridTemplateColumns: '340px 1fr', gap: 16,
         height: 580,
@@ -827,6 +865,7 @@ export function MagicGeneratorModal({ onClose, onImportToTimeline, onReusePrompt
           )}
         </div>
       </div>
+      )}
     </Modal>
   );
 }
