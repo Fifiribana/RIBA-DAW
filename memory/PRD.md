@@ -335,25 +335,27 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 
 ## ⚠️ Known Limitations
 - **MOCKED**: VST plugin loading, MIDI→Audio / Audio→MIDI conversions (no real DSP).
-- **REAL AI ACTIVE** ✓: Demucs (stem separation), fal.ai stable-audio (music generation), Emergent LLM Key/Claude (assistant + lyrics).
+- **REAL AI ACTIVE** ✓: Demucs (stem separation), fal.ai stable-audio (music generation), Emergent LLM Key/Claude (assistant + lyrics + storytelling).
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 
-## Prioritized Backlog
-- **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
-- **P1**: Studio Live mixer fader sync (currently only tempo + Bantu params sync ; track volumes/pans pas encore mappés sur la Y.Map).
-- **P1**: Studio Live cursor overlay (afficher la position de la souris/timeline de chaque collaborateur en temps réel — l'awareness est en place, juste à rendre).
-- **P2**: WebMIDI input pour claviers MIDI externes.
-- **P2**: Vue Bantu Heatmap.
-- **P2**: Refactor `engine.js` (audio engine large) en React hooks.
-- **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py` (DRY parité math).
-- **P2**: Snippet preview audio inline (lecture du 30 s candidat avant export).
-- **P2**: Drag-drop sur le Library panel du Magic Generator.
-- **P2**: Auto-refresh des tokens TikTok via le refresh endpoint pour éviter l'expiration silencieuse.
-- **P2**: Album Builder — ré-utiliser le Snippet Picker UI inline pour visualiser/corriger manuellement chaque pick avant l'export.
-- **P2**: Promo Cascade — UI calendrier visuel des 4 publications planifiées + bouton "Cancel cascade" qui purge les jobs APScheduler.
-- **P2**: i18n — étendre la couverture des modales (BantuGrid, MagicGenerator, MagicRemix, AlbumBuilder, Setup) au-delà de Menu + Splash + Manual + AssistantModal.
+### v3.3 (this iteration - Feb 2026) — STUDIO LIVE COMPLET + BANTU STORYTELLING 🌐📖🔥
+- **🌐 Studio Live multi-onglets** (Y.js + WebSocket relay) :
+  - Sync mixeur étendu : `tempo`, `masterVol`, `bantuStyle`, `bantuDensity`, `bantuBars`, `bantuSwingEnabled`, `bantuSwingIntensity`, `showBantuMarkers`, `storyChapters`, et **per-track** via `trackMix.{id}.{volume,pan,isMute,isSolo}`.
+  - Anti-écho via `applyingRemoteRef` (flag) pendant la phase apply pour empêcher les boucles infinies remote↔local.
+  - `useStudioLive.setCursor()` throttle 50ms (avec coalesce du dernier état) + flush différé pour respecter la latence sans perdre la dernière position.
+  - `LiveCursorOverlay` : curseurs colorés (couleur attribuée par client + label nom) absolus dans la Timeline avec transition CSS 60ms.
+  - `StudioLiveBadge` enrichi : avatars circulaires monogrammes avec `tooltip` et animation `riba-avatar-pulse` (1.6s ease-in-out) quand le collaborateur édite (cursor actif).
+- **📖 Bantu Storytelling — Module Mvett complet** :
+  - Backend `POST /api/ai/storytelling` (Claude Sonnet 4.6 via Emergent LLM Key) : génère un récit en 4 chapitres canoniques (`intro`/`defi`/`combat`/`sagesse`) avec `marker_label`, `bar_start`/`bar_end` contigus, `tempo_target` [40-240], `swing_intensity` [0-1], `arrangement_hint` ∈ {solo_drum, swing_accel, swing_decel, vocal_chant, polyrhythm_drop, tempo_climb, tempo_release, silence_break}, `narration` 1-2 phrases, et `lyrics[]` 4-16 lignes. Validation stricte (`_coerce_and_validate`) + fallback déterministe par langue (fr/en/es/pt/sw) garantissant le même shape contract si LLM HS.
+  - Backend `GET /api/ai/storytelling-status` : health probe (no LLM cost) avec enums alignées sur le frontend.
+  - Frontend `BantuStorytellingModal.jsx` accessible depuis le menu Event ; UI 3-panneaux (form → résultat 4 cartes par chapitre → lyrics block) + bouton "Apply to Timeline" qui injecte chapters/style/swing dans le state ET broadcast Y.Map.
+  - **🔥 Impact audio réel** : `handlePlayheadChange` interpole tempo + swing **dynamiquement** au passage des chapitres (cross-fade sur les derniers 25% de chaque segment pour une transition musicale fluide) → l'audio raconte réellement l'histoire.
+  - Bandes colorées (cyan/ambre/magenta/vert) sur la Timeline pour visualiser les 4 chapitres avec marker labels.
+- **📊 Robustesse** : `test_storytelling.py` (11 tests) + `test_studio_live.py` (6 tests, dont broadcast binaire/text, no-echo sender, session purge on last-peer leave) → **123/123 PASS** (était 106, +17 nouveaux tests, 0 régression).
+- **🌍 i18n complet** : clés `storytelling.*` ajoutées dans `fr/en/es/pt/sw.json`.
+- **Validation par testing_agent_v3_fork (iteration_17)** : 100% PASS backend (122 + 1 slow deselected), 100% PASS frontend (menu, modal, génération LLM ~10s, 4 chapitres, apply, bandes Timeline, multi-onglets sync tempo/grid/swing/master, badge peers=2, avatars actifs, broadcast curseur).
 
-### v3.2 (this iteration - Feb 2026) — PHOENIX LOGO + i18N 5 LANGUES 🌍🔥
+### v3.2 (iter 23 - Feb 2026) — PHOENIX LOGO + i18N 5 LANGUES 🌍🔥
 - **🔥 Logo Phoenix procédural** : `/app/backend/setup_icons.py` génère un Phénix stylisé (bleu profond `#0F1138`, violet électrique `#6366F1`, magenta néon `#D946EF`, ambre `#F59E0B`) en `Pillow`. Outputs : `riba-logo.png` (1024², master), `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (180²), `favicon.png` (64²), `favicon.ico` (16/32/48/64). Logo intégré dans **TopBar MenuBar**, **SplashScreen**, et **ManualModal**.
 - **🌐 i18n complète 5 langues** (`fr` / `en` / `es` / `pt` / `sw`) :
   - `/app/frontend/src/i18n.js` (i18next + `i18next-browser-languagedetector` + `react-i18next`) avec persistance localStorage (`riba-lang`) et synchronisation `document.documentElement.lang`.
@@ -367,10 +369,26 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Tests pytest** : `test_translate.py` 5 nouveaux tests passants → **106/106 PASS** (était 100/100, 0 régression).
 - **Smoke test E2E Playwright** ✅ : switch FR→SW vérifié, menu basculé en `Fichier/Édition/...` et `Faili/Hariri/...` byte-exact ; logo Phoenix visible dans la TopBar (boxShadow magenta + cyan).
 
+## Prioritized Backlog
+- **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
+- **P2**: WebMIDI input pour claviers MIDI externes.
+- **P2**: Vue Bantu Heatmap.
+- **P2**: Refactor `engine.js` (audio engine large) en React hooks.
+- **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py`.
+- **P2**: Snippet preview audio inline.
+- **P2**: Drag-drop sur le Library panel du Magic Generator.
+- **P2**: Auto-refresh des tokens TikTok.
+- **P2**: i18n — étendre la couverture aux modales (BantuGrid, MagicGenerator, MagicRemix, AlbumBuilder, Setup, Assistant).
+- **P2**: Storytelling — preview audio des arrangement_hints (drum solo, vocal chant samples).
+- **P2**: Storytelling — sauvegarder l'historique des récits générés (MongoDB) avec tags theme + langue.
+- **P2**: Album Builder — ré-utiliser le Snippet Picker UI inline pour visualiser/corriger manuellement chaque pick.
+- **P2**: Promo Cascade — UI calendrier visuel des 4 publications planifiées + bouton "Cancel cascade".
+
 ## Next Action Items
-- 🟢 Choix utilisateur prochain sprint P1 :
+- 🟢 Sprint v3.4 — choix utilisateur :
   - **a) Tauri local build** (.exe/.dmg natifs — RIBA Desktop)
-  - **b) Studio Live mixer + cursor overlay** (compléter la couche collaboration sur les faders et les positions souris)
-  - **c) WebMIDI input**
-  - **d) Étendre l'i18n aux modales restantes** (BantuGrid, MagicGenerator, MagicRemix, AlbumBuilder, Setup, Assistant)
+  - **b) WebMIDI input** pour claviers MIDI externes
+  - **c) Étendre l'i18n** aux modales restantes (BantuGrid, MagicGenerator, MagicRemix, AlbumBuilder, Setup, Assistant)
+  - **d) Storytelling v2** : preview audio des hints + sauvegarde historique MongoDB
+  - **e) Vue Bantu Heatmap** : visualisation 2D des paterns asymétriques
 - ⚠️ Pour activer Auto-share + Promo Cascade publication réelle : ajouter les tokens (TIKTOK_ACCESS_TOKEN / IG_USER_ID+IG_ACCESS_TOKEN+PUBLIC_BASE_URL / YOUTUBE_CLIENT_ID+SECRET+REFRESH_TOKEN) dans `/app/backend/.env` + restart backend.
