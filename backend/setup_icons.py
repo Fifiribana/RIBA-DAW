@@ -159,6 +159,33 @@ def build_all() -> None:
     favs = [master.resize(s, Image.LANCZOS) for s in ico_sizes]
     favs[0].save(FRONT_PUBLIC / "favicon.ico", format="ICO", sizes=ico_sizes, append_images=favs[1:])
 
+    # === Tauri desktop icons (v3.4 — Desktop release) ==========================
+    # Layout required by Tauri 2.x bundler. Source : /app/src-tauri/icons/
+    TAURI_ICONS = Path(__file__).resolve().parent.parent / "src-tauri" / "icons"
+    TAURI_ICONS.mkdir(parents=True, exist_ok=True)
+    # PNG sizes used by Linux .deb / .AppImage + macOS .icns + Windows fallback
+    for sz, name in [
+        (32, "32x32.png"),
+        (128, "128x128.png"),
+        (256, "128x128@2x.png"),
+        (512, "icon.png"),
+    ]:
+        master.resize((sz, sz), Image.LANCZOS).save(TAURI_ICONS / name, "PNG", optimize=True)
+    # Windows .ico — multi-resolution (16, 24, 32, 48, 64, 128, 256)
+    win_sizes = [(s, s) for s in (16, 24, 32, 48, 64, 128, 256)]
+    win_icons = [master.resize(s, Image.LANCZOS) for s in win_sizes]
+    win_icons[0].save(TAURI_ICONS / "icon.ico", format="ICO",
+                      sizes=win_sizes, append_images=win_icons[1:])
+    # macOS .icns — build via Pillow's native ICNS writer (Pillow ≥ 8)
+    try:
+        icns_sizes = [(16, 16), (32, 32), (64, 64), (128, 128), (256, 256), (512, 512), (1024, 1024)]
+        master.save(TAURI_ICONS / "icon.icns", format="ICNS", sizes=icns_sizes)
+    except Exception as exc:  # pragma: no cover — fallback if Pillow lacks ICNS write
+        # Some Pillow builds can't write ICNS — emit a 512² PNG with the .icns
+        # extension as a last-resort placeholder so the bundler doesn't bail out.
+        master.resize((512, 512), Image.LANCZOS).save(TAURI_ICONS / "icon.icns", "PNG", optimize=True)
+        print(f"   ⚠ ICNS write failed ({exc}); wrote PNG fallback under .icns")
+
     print("✓ Phoenix assets written :")
     for p in (
         FRONT_PUBLIC / "riba-logo.png",
@@ -168,6 +195,12 @@ def build_all() -> None:
         FRONT_PUBLIC / "favicon.png",
         FRONT_PUBLIC / "favicon.ico",
         BACK_STATIC / "riba-logo.png",
+        TAURI_ICONS / "32x32.png",
+        TAURI_ICONS / "128x128.png",
+        TAURI_ICONS / "128x128@2x.png",
+        TAURI_ICONS / "icon.png",
+        TAURI_ICONS / "icon.ico",
+        TAURI_ICONS / "icon.icns",
     ):
         if p.exists():
             print(f"   {p.relative_to(Path('/app'))}  ({p.stat().st_size//1024} KB)")

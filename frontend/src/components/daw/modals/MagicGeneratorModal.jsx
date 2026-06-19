@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '../Modal';
 import { MagentaSpinner } from '../MagentaSpinner';
 import { AlbumBuilderPanel } from './AlbumBuilderPanel';
@@ -57,6 +58,7 @@ function ProceduralCover({ seed, tags, size = 96 }) {
 }
 
 export function MagicGeneratorModal({ onClose, onImportToTimeline, onReusePrompt }) {
+  const { t } = useTranslation();
   // === Left panel state ===
   const [mode, setMode] = useState('simple'); // simple | advanced
   const [songTitle, setSongTitle] = useState('');
@@ -309,7 +311,7 @@ export function MagicGeneratorModal({ onClose, onImportToTimeline, onReusePrompt
   );
 
   return (
-    <Modal title="Magic Generator · Suno-style AI" onClose={onClose} width={1100}>
+    <Modal title={t('magicGen.title')} onClose={onClose} width={1100}>
       {/* Top-level tabs : Generator | Album Builder */}
       <div data-testid="magic-gen-tabs" style={{
         display: 'flex', gap: 4, marginBottom: 12,

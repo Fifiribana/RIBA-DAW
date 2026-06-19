@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, SetupRow } from '../Modal';
 import { engine } from '@/audio/engine';
 
@@ -39,7 +40,13 @@ export function SetupModal({
   theme, setTheme, tempo, timeSig, looping, metronomeOn,
   undoCount, onClose
 }) {
-  const title = `Setup · ${setupTab === 'playback' ? 'Playback Engine' : setupTab === 'io' ? 'I/O Setup' : 'Preferences'}`;
+  const { t } = useTranslation();
+  const subtitleMap = {
+    playback: 'Playback Engine',
+    io: 'I/O Setup',
+    preferences: 'Preferences',
+  };
+  const title = `${t('setup.title')} · ${subtitleMap[setupTab] || ''}`;
   return (
     <Modal title={title} onClose={onClose}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>

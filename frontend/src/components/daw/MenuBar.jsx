@@ -99,6 +99,8 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
   const close = () => setOpenMenu(null);
   const { t } = useTranslation();
   const menuKeys = Object.keys(PRO_TOOLS_MENUS);
+  // Direct-access Manual button (Pro Tools-style "Help/Manual" mini button)
+  const openManual = actions.openManual;
   return (
     <div
       style={{
@@ -161,6 +163,37 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
           )}
         </div>
       ))}
+      {/* Quick-access Manual button (Phoenix-themed pill) */}
+      {openManual && (
+        <button
+          data-testid="manual-quick-btn"
+          onClick={openManual}
+          title={t('manual.menubarBtn', 'Manual')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '0 10px', marginLeft: 4,
+            background: 'transparent',
+            border: '1px solid rgba(217,70,239,0.32)',
+            borderRadius: 999, color: '#E4E4E7',
+            fontSize: 11, fontWeight: 600, fontFamily: 'Manrope, sans-serif',
+            cursor: 'pointer', letterSpacing: '0.04em',
+            alignSelf: 'center', height: 22,
+            transition: 'background 160ms ease, border-color 160ms ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(217,70,239,0.10)';
+            e.currentTarget.style.borderColor = 'rgba(217,70,239,0.6)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.borderColor = 'rgba(217,70,239,0.32)';
+          }}
+        >
+          <img src="/riba-logo.png" alt="" width={14} height={14}
+            style={{ borderRadius: '50%' }} />
+          <span>📖 {t('manual.menubarBtn', 'Manual')}</span>
+        </button>
+      )}
       {/* Globe language switcher — right edge of the bar */}
       <LanguageSwitcher />
     </div>

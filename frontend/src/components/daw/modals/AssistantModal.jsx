@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '../Modal';
 import { MagentaSpinner } from '../MagentaSpinner';
 import { TID } from '@/constants/testIds';
@@ -12,6 +13,7 @@ const API = `${BACKEND_URL}/api`;
  * callback is invoked to apply them on the DAW state.
  */
 export function AssistantModal({ context, onActions, onClose }) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState([
     { role: 'system', text: 'Hi! I\u2019m RIBA AI. Tell me what to build \u2014 "add an audio track and reverb on vocals" \u2014 and I\u2019ll do it.' },
   ]);
@@ -59,7 +61,7 @@ export function AssistantModal({ context, onActions, onClose }) {
   };
 
   return (
-    <Modal title="RIBA AI Assistant" onClose={onClose} width={620}>
+    <Modal title={t('assistant.title')} onClose={onClose} width={620}>
       <div
         ref={scrollRef}
         style={{

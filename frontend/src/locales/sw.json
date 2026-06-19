@@ -22,7 +22,11 @@
     "close": "Funga",
     "loading": "Inapakia…",
     "cancel": "Ghairi",
-    "ok": "Sawa"
+    "ok": "Sawa",
+    "apply": "Tumia",
+    "generate": "Tengeneza",
+    "delete": "Futa",
+    "tips": "Kidokezo"
   },
   "splash": {
     "tagline": "STUDIO YA SAUTI YA KIDIJITALI YA BANTU",
@@ -44,11 +48,12 @@
     "downloadMp4": "pakua .mp4"
   },
   "manual": {
-    "title": "RIBA 12 · Mwongozo wa mtumiaji",
+    "title": "RIBA · Mwongozo wa mtumiaji",
     "subtitle": "STUDIO YA SAUTI YA KIDIJITALI YA BANTU",
     "desc": "DAW ya kwanza duniani yenye uthibitishaji wa asili wa Bantu Oral Grid (Asiko · Makossa · Bikutsi).",
     "shortcuts": "Njia za mkato za kibodi",
     "features": "Vipengele",
+    "menubarBtn": "Mwongozo",
     "shortcutList": {
       "space": "Cheza / Simamisha nyimbo zote",
       "m": "Washa/Zima metronomu",
@@ -69,6 +74,63 @@
       "piano": "Mhariri wa Piano Roll (bofya kuongeza/kuondoa noti)",
       "spectrum": "Mchambuzi wa wigo na vipima VU",
       "session": "Hifadhi/pakia kipindi (MongoDB)"
+    },
+    "sections": {
+      "philosophy": {
+        "title": "Ndege Phoenix wa RIBA · Falsafa",
+        "intro": "RIBA si DAW tu: ni tendo la kuhifadhi utamaduni. Jina lake linamaanisha «mzizi» katika lugha kadhaa za Bantu.",
+        "b1": "Lengo kuu: kulea kizazi kijacho cha watayarishaji kwa midundo ya Kiafrika — hakuna mdundo wa mdomo unaopotea.",
+        "b2": "Nembo ya Phoenix inawakilisha kuzaliwa upya: kile kilichoonekana kupotea (midundo ya mdomo) kinazaliwa upya kama ishara ya kidijitali.",
+        "b3": "Imeundwa kwa studio za kitaalamu na vyumba vya jam vya kitongoji — ergonomia ya Pro Tools, urahisi wa Suno.",
+        "b4": "Inahaririwa kabisa: kila preset, kila wito wa AI, kila uhamishaji umeandikwa na unaweza kurudiwa.",
+        "b5": "Hakuna utegemezi wa kifaa cha umiliki — Web Audio, Demucs ya ndani, Y.js huru na Emergent LLM Key wazi.",
+        "b6": "Lugha tano za asili (FR · EN · ES · PT · SW) zinaunganisha Kinshasa, Lagos, São Paulo, Madrid na Yaoundé.",
+        "b7": "Wazi kwa muundo: nambari inabaki kusomeka, hati zimejumuishwa — kila mwanamuziki ni mchangiaji watarajiwa.",
+        "tip": "Kidokezo: kitufe 🌐 kwenye menyu kinakuruhusu kubadilisha kati ya lugha 5 moja kwa moja."
+      },
+      "grid": {
+        "title": "Bantu Oral Grid",
+        "intro": "Uthibitishaji wa kipekee wa RIBA wa midundo isiyolingana — DAW ya kwanza duniani inayoweka swing ya mdomo ya Afrika ya Kati kwa wazi.",
+        "b1": "Asiko (Hekima): gridi nyepesi ya 4/4, swing ya utatu kati ya 55 na 65 % kwa matembezi ya kutafakari.",
+        "b2": "Makossa (Mizizi): gridi yenye nguvu ya 4/4, syncopations kali kwenye mapigo 2 na 4.",
+        "b3": "Bikutsi 6/8: groove ya nembo ya Cameroon — mapigo sita yaliyounganishwa katika utatu mbili.",
+        "b4": "Bikutsi 12/24: utiririshaji wa midundo midogo kwa solos za balafon na ngoma.",
+        "b5": "Washa «Bantu Swing Live» kufanya uchezaji uwe wa kibinadamu bila kubadilisha noti (haiharibu).",
+        "b6": "Onyesha alama kwenye Timeline kuonyesha mabadiliko yasiyo sawa wakati halisi.",
+        "tip": "Kidokezo: changanya mitindo miwili kwa kupakia rejea ya sauti + Magic Re-mix — gridi inajiendelea kuendana."
+      },
+      "ai": {
+        "title": "AI ya Ubunifu · Magic Generator",
+        "intro": "RIBA inaunganisha dunia mbili: usahihi wa Pro Tools na uchawi wa Suno. AI tano zinashirikiana.",
+        "b1": "Magic Generator (fal.ai stable-audio): tengeneza wimbo kamili kutoka kichwa, prompt + hali.",
+        "b2": "Dream Track (Claude): tengeneza maandishi ya nyimbo / methali zinazoendana kabisa na tempo.",
+        "b3": "Magic Re-mix (Demucs ▸ Bantu ▸ fal.ai): leta sauti, tenganisha stems, panga upya kwenye gridi ya Bantu, tengeneza tena.",
+        "b4": "Genesis Workflow: prompt moja → stems 4 tayari kwa mix (vocals, drums, bass, others).",
+        "b5": "Rejea ya sauti: kurekodi kwa mic 🎙 au kuleta faili — wimbo uliotengenezwa unarithi sauti.",
+        "b6": "Bantu Storytelling (Mvett): mada + Claude inazalisha sura 4 zenye mpangilio wa kiotomatiki (tempo + swing zinazobadilika).",
+        "tip": "Kidokezo: weka methali kwenye Storytelling na sauti inasimulia hadithi kweli."
+      },
+      "collab": {
+        "title": "Uzalishaji wa hali ya juu & Studio Live",
+        "intro": "RIBA imejengwa kwa kazi ya peke yake na kwa vikao vya wanamuziki wengi.",
+        "b1": "Album Builder: vuta na uweke nyimbo kadhaa, jalada la mosaic la otomatiki, Bantu Drop Map (crossfade teasers).",
+        "b2": "Promo Cascade: uzalishaji wa otomatiki wa snippets 4 za sekunde 15 + ratiba ya machapisho kupitia APScheduler.",
+        "b3": "Studio Live Session: ongeza ?session=ID kwenye URL kufungua kipindi cha ushirikiano WebRTC + Y.js.",
+        "b4": "Maingiliano ya wakati halisi: tempo, mixer (faders, pan, mute, solo), Bantu Grid, swing na storytelling.",
+        "b5": "Vidole vya rangi kwenye Timeline + avatars kwenye TopBar (uhuishaji wa pulse wakati mshirika anahariri).",
+        "b6": "Kinga ya echo iliyojengwa ndani (applyingRemoteRef): hakuna kitanzi cha kudumu, latency < 50 ms.",
+        "tip": "Kidokezo: tuma URL ?session=groove_yangu kwa washirika wako — vikao ni bure na vimefichwa mwisho-mwisho kupitia Y.js."
+      },
+      "virality": {
+        "title": "Usambazaji wa virusi & kushiriki kijamii",
+        "intro": "Wimbo upo tu unapogawanywa. RIBA inajumuisha uhamishaji wa virusi kutoka mwanzo hadi mwisho.",
+        "b1": "Bantu Reel (ffmpeg): hamisha video wima 9:16 tayari kwa TikTok / Reels yenye waveform inayocheza.",
+        "b2": "Reel Snippet Picker: uchambuzi wa RMS offline kupendekeza mfuatano bora 3-5 wa sekunde 30.",
+        "b3": "Auto-share Social: muundo tayari kwa TikTok, Instagram, YouTube (ongeza tokens zako za OAuth kwenye .env).",
+        "b4": "APScheduler: panga machapisho yako katika madirisha 4 bora ya saa kwa kanda ya saa.",
+        "b5": "Boot Cinematic: utangulizi wa sekunde 8 unaohamishika kwa MP4 kuanza video zako na chapa ya RIBA.",
+        "tip": "Kidokezo: changanya Album Builder + Promo Cascade kutoa EP kwa siku 4 na teasers za otomatiki."
+      }
     }
   },
   "topbar": {
@@ -85,5 +147,63 @@
     "regenBtn": "Tengeneza tena",
     "applyBtn": "Tumia kwa Timeline",
     "lyricsLabel": "Maneno na methali"
+  },
+  "bantuGrid": {
+    "title": "Bantu Oral Grid · Uthibitishaji Usio Sawa",
+    "styleLabel": "Mtindo wa midundo",
+    "densityLabel": "Msongamano (sehemu/mstari)",
+    "barsLabel": "Mistari",
+    "swingEnable": "Washa Bantu Swing Live",
+    "swingIntensity": "Nguvu ya swing",
+    "showMarkers": "Onyesha alama",
+    "applyBtn": "Tumia gridi"
+  },
+  "magicGen": {
+    "title": "Magic Generator (mtindo wa Suno)",
+    "titleLabel": "Kichwa cha wimbo",
+    "promptLabel": "Maelezo / hali",
+    "durationLabel": "Muda (sekunde)",
+    "referenceLabel": "Rejea ya sauti (hiari)",
+    "uploadBtn": "Pakia faili",
+    "recordBtn": "🎙 Rekodi",
+    "stopRecordBtn": "⬛ Simamisha",
+    "generateBtn": "✨ Tengeneza",
+    "libraryLabel": "Maktaba"
+  },
+  "magicRemix": {
+    "title": "Magic Re-mix · Demucs ▸ Bantu ▸ fal.ai",
+    "uploadLabel": "Sauti chanzo",
+    "uploadBtn": "Pakia faili",
+    "styleLabel": "Mtindo wa Bantu re-mix",
+    "intensityLabel": "Nguvu (0-100)",
+    "runBtn": "🎚 Anzisha Re-mix",
+    "downloadBtn": "Pakua matokeo"
+  },
+  "albumBuilder": {
+    "title": "Album Builder · Mosaic + Drop Map",
+    "tracksLabel": "Nyimbo za albamu",
+    "addTrackBtn": "Ongeza wimbo",
+    "coverLabel": "Jalada (mosaic ya otomatiki)",
+    "dropMapLabel": "Bantu Drop Map (teasers)",
+    "exportBtn": "Hamisha albamu",
+    "scheduleBtn": "Panga uchapishaji"
+  },
+  "setup": {
+    "title": "Mipangilio ya RIBA",
+    "audioTab": "Sauti",
+    "midiTab": "MIDI",
+    "languageTab": "Lugha",
+    "appearanceTab": "Mwonekano",
+    "inputDevice": "Kifaa cha ingizo",
+    "outputDevice": "Kifaa cha utoaji",
+    "sampleRate": "Kiwango cha sampuli",
+    "bufferSize": "Ukubwa wa buffer"
+  },
+  "assistant": {
+    "title": "Msaidizi wa AI RIBA",
+    "placeholder": "Uliza msaidizi wa Bantu…",
+    "sendBtn": "Tuma",
+    "clearBtn": "Futa historia",
+    "thinking": "AI inafikiri…"
   }
 }

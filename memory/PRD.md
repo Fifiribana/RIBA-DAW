@@ -337,8 +337,29 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **MOCKED**: VST plugin loading, MIDI→Audio / Audio→MIDI conversions (no real DSP).
 - **REAL AI ACTIVE** ✓: Demucs (stem separation), fal.ai stable-audio (music generation), Emergent LLM Key/Claude (assistant + lyrics + storytelling).
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
+- **Desktop build** : cross-compile depuis le container Linux ARM64 vers Windows/macOS impossible — voir `/app/DESKTOP_RELEASE.md`. Le pipeline GitHub Actions `release.yml` produit les vrais installateurs signables sur push de tag `v*.*.*`.
 
-### v3.3 (this iteration - Feb 2026) — STUDIO LIVE COMPLET + BANTU STORYTELLING 🌐📖🔥
+### v3.4 (this iteration - Feb 2026) — TAURI DESKTOP + MULTILINGUAL MANUAL + i18n FULL 💻📚🌍
+- **💻 Tauri Desktop Release Pipeline** (CI-driven, Tauri 2.x) :
+  - `/app/.github/workflows/release.yml` : matrice 4 runners (macos aarch64 + x86_64, windows-latest, ubuntu-22.04) déclenchée par tag `v*.*.*` ou `workflow_dispatch`. Produit `.exe (NSIS)`, `.msi`, `.dmg (Apple Silicon + Intel)`, `.deb`, `.AppImage` en draft GitHub Release.
+  - `src-tauri/tauri.conf.json` + `Cargo.toml` bumpés à `3.4.0`, identifier `com.emergent.riba`.
+  - **🔥 Icônes Phoenix natives** générées par `backend/setup_icons.py` (extension v3.4) : `icon.ico` multi-résolution (16/24/32/48/64/128/256), `icon.icns` Apple natif (Pillow ICNS writer), `icon.png` 512², 128x128.png, 128x128@2x.png, 32x32.png. Toutes installées dans `src-tauri/icons/`.
+  - **Code signing hooks** prêts (Apple cert + Tauri updater) — commenter/décommenter les secrets dans le YAML.
+  - Guide complet utilisateur dans `/app/DESKTOP_RELEASE.md` (prérequis, secrets, push tag, output artifacts).
+- **📚 Manuel utilisateur riche multilingue** :
+  - `ManualModal.jsx` totalement refondu en layout 2 colonnes : **nav latéral 5 sections** (🔥 Philosophy · 🥁 Bantu Oral Grid · ✨ Magic Generator AI · 🌐 Studio Live · 📡 Virality) + **panneau contenu** (intro + bullets thématiques + Tip block Phoenix-magenta).
+  - **34 bullets de contenu** par langue × 5 langues = 170 traductions natives (FR/EN/ES/PT/SW) intégrées dans `/app/frontend/src/locales/*.json`.
+  - **Bouton 📖 Manual** ajouté dans la `MenuBar.jsx` (pill magenta avec mini-logo Phoenix circulaire) à côté du Globe Switcher.
+- **🌍 i18n extension aux modales restantes** :
+  - `BantuGridModal.jsx`, `MagicGeneratorModal.jsx`, `MagicRemixModal.jsx`, `AssistantModal.jsx`, `SetupModal.jsx` : titres + labels clés branchés sur `t('<scope>.title|...')`.
+  - Nouveaux scopes ajoutés aux 5 bundles : `bantuGrid`, `magicGen`, `magicRemix`, `albumBuilder`, `setup`, `assistant` (couvrent : titles, tabs, key inputs, action buttons).
+- **📊 Robustesse** :
+  - `test_tauri_release.py` (4 tests) : validation `tauri.conf.json` JSON valide + version bumpée, Phoenix icons présents + non-vides, workflow `release.yml` couvre les 3 OS + 4 cibles + Tauri action.
+  - `test_locale_coverage.py` (3 tests) : parité des **70+ clés requises** sur les 5 langues — bullets manual, modales, common — chaque clé manquante = test échoué.
+  - **130/130 PASS** (était 123, +7 nouveaux : 4 Tauri + 3 i18n parity, 0 régression).
+- **Validation smoke Playwright** ✅ : Manual button cliquable depuis la TopBar, 5 sections nav rendues, navigation entre sections, tips block visible, switch FR/SW change l'intégralité du contenu byte-exact.
+
+### v3.3 (iter 24 - Feb 2026) — STUDIO LIVE COMPLET + BANTU STORYTELLING 🌐📖🔥
 - **🌐 Studio Live multi-onglets** (Y.js + WebSocket relay) :
   - Sync mixeur étendu : `tempo`, `masterVol`, `bantuStyle`, `bantuDensity`, `bantuBars`, `bantuSwingEnabled`, `bantuSwingIntensity`, `showBantuMarkers`, `storyChapters`, et **per-track** via `trackMix.{id}.{volume,pan,isMute,isSolo}`.
   - Anti-écho via `applyingRemoteRef` (flag) pendant la phase apply pour empêcher les boucles infinies remote↔local.
@@ -370,25 +391,25 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Smoke test E2E Playwright** ✅ : switch FR→SW vérifié, menu basculé en `Fichier/Édition/...` et `Faili/Hariri/...` byte-exact ; logo Phoenix visible dans la TopBar (boxShadow magenta + cyan).
 
 ## Prioritized Backlog
-- **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
-- **P2**: WebMIDI input pour claviers MIDI externes.
-- **P2**: Vue Bantu Heatmap.
+- **P0 (v3.5)**: Bantu Storytelling Library — bibliothèque communautaire MongoDB où les utilisateurs publient leurs récits Mvett + arrangements. Endpoint `GET /api/storytelling/library?lang=sw&style=bikutsi_68`. Faire dialoguer Kinshasa, Lagos, São Paulo, Madrid et Yaoundé via la sagesse partagée.
+- **P1**: WebMIDI input pour claviers MIDI externes.
+- **P1**: Code-signing macOS + EV cert Windows (ajouter les secrets GitHub Actions ; déjà câblé dans release.yml).
+- **P2**: Vue Bantu Heatmap (visualisation 2D des patterns asymétriques).
 - **P2**: Refactor `engine.js` (audio engine large) en React hooks.
 - **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py`.
 - **P2**: Snippet preview audio inline.
 - **P2**: Drag-drop sur le Library panel du Magic Generator.
 - **P2**: Auto-refresh des tokens TikTok.
-- **P2**: i18n — étendre la couverture aux modales (BantuGrid, MagicGenerator, MagicRemix, AlbumBuilder, Setup, Assistant).
 - **P2**: Storytelling — preview audio des arrangement_hints (drum solo, vocal chant samples).
-- **P2**: Storytelling — sauvegarder l'historique des récits générés (MongoDB) avec tags theme + langue.
-- **P2**: Album Builder — ré-utiliser le Snippet Picker UI inline pour visualiser/corriger manuellement chaque pick.
+- **P2**: Album Builder — Snippet Picker UI inline.
 - **P2**: Promo Cascade — UI calendrier visuel des 4 publications planifiées + bouton "Cancel cascade".
+- **P2**: Tauri updater integration (Tauri signing secrets déjà cablés).
 
 ## Next Action Items
-- 🟢 Sprint v3.4 — choix utilisateur :
-  - **a) Tauri local build** (.exe/.dmg natifs — RIBA Desktop)
-  - **b) WebMIDI input** pour claviers MIDI externes
-  - **c) Étendre l'i18n** aux modales restantes (BantuGrid, MagicGenerator, MagicRemix, AlbumBuilder, Setup, Assistant)
-  - **d) Storytelling v2** : preview audio des hints + sauvegarde historique MongoDB
-  - **e) Vue Bantu Heatmap** : visualisation 2D des paterns asymétriques
+- 🟢 Sprint v3.5 (validé) — **Bantu Storytelling Library** : bibliothèque communautaire publique, premier réseau social de griots numériques.
+- 🟢 En parallèle (utilisateur peut piocher) :
+  - **a) Push GitHub** via "Save to GitHub" → tag `v3.4.0` → premier build .exe + .dmg + .AppImage officiel
+  - **b) WebMIDI input** pour claviers externes
+  - **c) Code-signing macOS** (acheter cert Apple Developer 99€/an)
+  - **d) Bantu Heatmap** visualisation 2D
 - ⚠️ Pour activer Auto-share + Promo Cascade publication réelle : ajouter les tokens (TIKTOK_ACCESS_TOKEN / IG_USER_ID+IG_ACCESS_TOKEN+PUBLIC_BASE_URL / YOUTUBE_CLIENT_ID+SECRET+REFRESH_TOKEN) dans `/app/backend/.env` + restart backend.

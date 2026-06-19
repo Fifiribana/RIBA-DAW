@@ -1,6 +1,6 @@
 [package]
 name = "riba"
-version = "1.6.0"
+version = "3.4.0"
 description = "RIBA · Bantu Digital Audio Workstation"
 authors = ["Emergent Labs"]
 edition = "2021"

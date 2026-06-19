@@ -22,7 +22,11 @@
     "close": "Close",
     "loading": "Loading…",
     "cancel": "Cancel",
-    "ok": "OK"
+    "ok": "OK",
+    "apply": "Apply",
+    "generate": "Generate",
+    "delete": "Delete",
+    "tips": "Tip"
   },
   "splash": {
     "tagline": "BANTU · DIGITAL AUDIO WORKSTATION",
@@ -44,11 +48,12 @@
     "downloadMp4": "download .mp4"
   },
   "manual": {
-    "title": "RIBA 12 · User Manual",
+    "title": "RIBA · User Manual",
     "subtitle": "BANTU DIGITAL AUDIO WORKSTATION",
     "desc": "The world's first DAW with native asymmetric Bantu Oral Grid quantization (Asiko · Makossa · Bikutsi).",
     "shortcuts": "Keyboard Shortcuts",
     "features": "Features",
+    "menubarBtn": "Manual",
     "shortcutList": {
       "space": "Play / Stop all tracks",
       "m": "Toggle Metronome",
@@ -69,6 +74,63 @@
       "piano": "Piano roll editor (click to add/remove notes)",
       "spectrum": "Spectrum analyzer & VU meters",
       "session": "Session save/load (MongoDB-backed)"
+    },
+    "sections": {
+      "philosophy": {
+        "title": "The RIBA Phoenix · Philosophy",
+        "intro": "RIBA is more than a DAW: it is a cultural-preservation act. Its name means \"root\" in several Bantu languages.",
+        "b1": "Core mission: nurture the next generation of producers with African rhythms — no oral groove ever lost.",
+        "b2": "The Phoenix logo embodies rebirth: what seemed gone (oral grooves) is reborn as digital signal.",
+        "b3": "Built for pro studios and neighborhood jam rooms alike — Pro Tools-style ergonomics, Suno-style accessibility.",
+        "b4": "Editable throughout: every preset, every AI call, every export is documented and reproducible.",
+        "b5": "Zero blocking proprietary dependency — Web Audio, local Demucs, free Y.js, transparent Emergent LLM Key.",
+        "b6": "Five native languages (FR · EN · ES · PT · SW) bringing Kinshasa, Lagos, São Paulo, Madrid and Yaoundé into one studio.",
+        "b7": "Open by design: code stays readable, docs are embedded — every musician is a potential contributor.",
+        "tip": "Tip: the 🌐 button in the menu switches the entire UI between the 5 languages on the fly."
+      },
+      "grid": {
+        "title": "The Bantu Oral Grid",
+        "intro": "RIBA's exclusive asymmetric quantization — the first DAW in the world to encode Central-African oral swing explicitly.",
+        "b1": "Asiko (Wisdom): light 4/4 grid, ternary swing 55-65 % for meditative marches.",
+        "b2": "Makossa (Roots): energetic 4/4 grid, strong syncopations on beats 2 and 4.",
+        "b3": "Bikutsi 6/8: Cameroon's emblematic groove — six pulses grouped into two ternaries.",
+        "b4": "Bikutsi 12/24: micro-rhythmic densification for balafon and drum solos.",
+        "b5": "Enable \"Bantu Swing Live\" to humanize playback non-destructively — notes are untouched.",
+        "b6": "Show the markers on the Timeline to visualise the asymmetric offsets in real time.",
+        "tip": "Tip: combine two styles by loading an audio reference + Magic Re-mix — the grid adapts automatically."
+      },
+      "ai": {
+        "title": "Creative AI · Magic Generator",
+        "intro": "RIBA merges two worlds: Pro Tools precision and Suno-grade magic. Five AIs collaborate.",
+        "b1": "Magic Generator (fal.ai stable-audio): build a full track from a title, prompt + vibe.",
+        "b2": "Dream Track (Claude): produce lyrics / proverbs that lock onto the project tempo.",
+        "b3": "Magic Re-mix (Demucs ▸ Bantu ▸ fal.ai): import audio, isolate stems, requantize on a Bantu grid, regenerate.",
+        "b4": "Genesis Workflow: one prompt → 4 mix-ready stems (vocals, drums, bass, others).",
+        "b5": "Audio reference: 🎙 mic recording or file import — the generated track inherits the timbre.",
+        "b6": "Bantu Storytelling (Mvett): a theme + Claude yield 4 chapters with automatic arrangement (dynamic tempo + swing).",
+        "tip": "Tip: drop a proverb into Storytelling and the audio actually tells your story."
+      },
+      "collab": {
+        "title": "Advanced production & Studio Live",
+        "intro": "RIBA is built both for solo work and for multi-musician sessions.",
+        "b1": "Album Builder: drag-and-drop multiple tracks, auto-mosaic cover, Bantu Drop Map (crossfade teasers).",
+        "b2": "Promo Cascade: auto-generate 4 × 15 s snippets + schedule publication via APScheduler.",
+        "b3": "Studio Live Session: add ?session=ID to the URL to open a collaborative WebRTC + Y.js session.",
+        "b4": "Real-time sync: tempo, mixer (faders, pan, mute, solo), Bantu Grid, swing and storytelling.",
+        "b5": "Colored cursors on the Timeline + avatars in the TopBar (pulse animation when a peer edits).",
+        "b6": "Built-in anti-echo (applyingRemoteRef): no infinite loop, sub-50 ms latency.",
+        "tip": "Tip: send the ?session=my_groove URL to your collaborators — sessions are free and end-to-end encrypted via Y.js."
+      },
+      "virality": {
+        "title": "Virality & social sharing",
+        "intro": "A song only exists once it's shared. RIBA bakes viral export end-to-end.",
+        "b1": "Bantu Reel (ffmpeg): export a 9:16 vertical video ready for TikTok / Reels with animated waveform.",
+        "b2": "Reel Snippet Picker: offline RMS analysis surfaces the 3-5 best 30-second sequences.",
+        "b3": "Auto-share Social: ready structure for TikTok, Instagram, YouTube (drop your OAuth tokens in .env).",
+        "b4": "APScheduler: schedule your publications across 4 optimal slots per timezone.",
+        "b5": "Boot Cinematic: 8 s intro exportable as MP4 to brand the head of your videos with RIBA.",
+        "tip": "Tip: combine Album Builder + Promo Cascade to release an EP over 4 days with auto-teasers."
+      }
     }
   },
   "topbar": {
@@ -85,5 +147,63 @@
     "regenBtn": "Re-generate",
     "applyBtn": "Apply to Timeline",
     "lyricsLabel": "Lyrics & proverbs"
+  },
+  "bantuGrid": {
+    "title": "Bantu Oral Grid · Asymmetric Quantization",
+    "styleLabel": "Rhythmic style",
+    "densityLabel": "Density (subdivisions/bar)",
+    "barsLabel": "Bars",
+    "swingEnable": "Enable Bantu Swing Live",
+    "swingIntensity": "Swing intensity",
+    "showMarkers": "Show markers",
+    "applyBtn": "Apply grid"
+  },
+  "magicGen": {
+    "title": "Magic Generator (Suno-style)",
+    "titleLabel": "Track title",
+    "promptLabel": "Description / vibe",
+    "durationLabel": "Duration (seconds)",
+    "referenceLabel": "Audio reference (optional)",
+    "uploadBtn": "Upload file",
+    "recordBtn": "🎙 Record",
+    "stopRecordBtn": "⬛ Stop",
+    "generateBtn": "✨ Generate",
+    "libraryLabel": "Library"
+  },
+  "magicRemix": {
+    "title": "Magic Re-mix · Demucs ▸ Bantu ▸ fal.ai",
+    "uploadLabel": "Source audio",
+    "uploadBtn": "Upload file",
+    "styleLabel": "Bantu re-mix style",
+    "intensityLabel": "Intensity (0-100)",
+    "runBtn": "🎚 Run Re-mix",
+    "downloadBtn": "Download result"
+  },
+  "albumBuilder": {
+    "title": "Album Builder · Mosaic + Drop Map",
+    "tracksLabel": "Album tracks",
+    "addTrackBtn": "Add track",
+    "coverLabel": "Cover (auto-mosaic)",
+    "dropMapLabel": "Bantu Drop Map (teasers)",
+    "exportBtn": "Export album",
+    "scheduleBtn": "Schedule release"
+  },
+  "setup": {
+    "title": "RIBA Configuration",
+    "audioTab": "Audio",
+    "midiTab": "MIDI",
+    "languageTab": "Language",
+    "appearanceTab": "Appearance",
+    "inputDevice": "Input device",
+    "outputDevice": "Output device",
+    "sampleRate": "Sample rate",
+    "bufferSize": "Buffer size"
+  },
+  "assistant": {
+    "title": "RIBA AI Assistant",
+    "placeholder": "Ask the Bantu assistant…",
+    "sendBtn": "Send",
+    "clearBtn": "Clear history",
+    "thinking": "AI is thinking…"
   }
 }

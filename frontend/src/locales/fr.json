@@ -22,7 +22,11 @@
     "close": "Fermer",
     "loading": "Chargement…",
     "cancel": "Annuler",
-    "ok": "OK"
+    "ok": "OK",
+    "apply": "Appliquer",
+    "generate": "Générer",
+    "delete": "Supprimer",
+    "tips": "Astuce"
   },
   "splash": {
     "tagline": "STATION AUDIO NUMÉRIQUE BANTU",
@@ -44,11 +48,12 @@
     "downloadMp4": "télécharger le .mp4"
   },
   "manual": {
-    "title": "RIBA 12 · Manuel utilisateur",
+    "title": "RIBA · Manuel utilisateur",
     "subtitle": "STATION AUDIO NUMÉRIQUE BANTU",
     "desc": "La première station audio au monde avec quantification asymétrique native via le Bantu Oral Grid (Asiko · Makossa · Bikutsi).",
     "shortcuts": "Raccourcis clavier",
     "features": "Fonctionnalités",
+    "menubarBtn": "Manuel",
     "shortcutList": {
       "space": "Lecture / Stop toutes les pistes",
       "m": "Activer/Désactiver le métronome",
@@ -69,6 +74,63 @@
       "piano": "Éditeur Piano Roll (clic pour ajouter/retirer des notes)",
       "spectrum": "Analyseur de spectre et VU-mètres",
       "session": "Sauvegarde/chargement de session (sur MongoDB)"
+    },
+    "sections": {
+      "philosophy": {
+        "title": "Le Phénix RIBA · Philosophie",
+        "intro": "RIBA n'est pas seulement un DAW : c'est un acte de préservation culturelle. Son nom signifie « racine » en plusieurs langues bantoues.",
+        "b1": "Concept central : nourrir la prochaine génération de producteurs avec les rythmes africains, sans qu'aucun pattern soit jamais perdu.",
+        "b2": "Le logo Phénix incarne la renaissance : ce qui semblait disparu (les grooves oraux) renaît en signal numérique.",
+        "b3": "Conçu pour les studios professionnels comme pour les jam-rooms de quartier — interface inspirée de Pro Tools, accessibilité Suno-style.",
+        "b4": "L'écosystème entier reste éditable : chaque preset, chaque IA, chaque export est documenté et reproductible.",
+        "b5": "Zéro dépendance propriétaire bloquante — Web Audio, Demucs local, Y.js libre et Emergent LLM Key transparente.",
+        "b6": "Cinq langues natives (FR · EN · ES · PT · SW) pour faire dialoguer Kinshasa, Lagos, São Paulo, Madrid et Yaoundé.",
+        "b7": "Open by design : le code reste lisible, la doc est intégrée — chaque musicien devient potentiellement contributeur.",
+        "tip": "Astuce : le bouton 🌐 dans le menu permet de basculer en direct entre les 5 langues."
+      },
+      "grid": {
+        "title": "La Bantu Oral Grid",
+        "intro": "Quantification asymétrique exclusive à RIBA — la première au monde à coder explicitement le swing oral d'Afrique centrale.",
+        "b1": "Asiko (Sagesse) : grille 4/4 légère, swing ternaire entre 55 et 65 % pour les marches méditatives.",
+        "b2": "Makossa (Roots) : grille 4/4 énergique, fortes syncopes sur les contre-temps 2 et 4.",
+        "b3": "Bikutsi 6/8 : la grille emblématique du Cameroun — six pulsations regroupées en deux ternaires.",
+        "b4": "Bikutsi 12/24 : densification micro-rythmique pour les solos de balafon et de tambour.",
+        "b5": "Activez le « Bantu Swing Live » pour humaniser la lecture sans modifier les notes (non destructif).",
+        "b6": "Affichez les marqueurs sur la Timeline pour visualiser les déplacements asymétriques en temps réel.",
+        "tip": "Astuce : combinez deux styles en chargeant une référence audio + bouton Magic Re-mix → la grille s'adapte."
+      },
+      "ai": {
+        "title": "L'IA créative · Magic Generator",
+        "intro": "RIBA fusionne deux mondes : la précision Pro Tools et la magie Suno. Cinq IA cohabitent.",
+        "b1": "Magic Generator (fal.ai stable-audio) : génère une piste complète à partir d'un titre, prompt + ambiance.",
+        "b2": "Dream Track (Claude) : produit un texte de chanson / proverbe parfaitement aligné sur le tempo.",
+        "b3": "Magic Re-mix (Demucs ▸ Bantu ▸ fal.ai) : importe un audio, sépare les stems, re-quantifie sur grille Bantu, regénère.",
+        "b4": "Genesis Workflow : un prompt → 4 stems prêts pour le mix (vocals, drums, bass, others).",
+        "b5": "Référence audio : enregistrement micro 🎙 ou import fichier — la piste générée hérite du timbre.",
+        "b6": "Bantu Storytelling (Mvett) : un thème + Claude génèrent 4 chapitres avec arrangement automatique (tempo + swing dynamiques).",
+        "tip": "Astuce : entrez un proverbe dans Storytelling, l'audio raconte réellement l'histoire."
+      },
+      "collab": {
+        "title": "Production avancée & Studio Live",
+        "intro": "RIBA est conçu pour le travail solo comme pour les sessions à plusieurs musiciens.",
+        "b1": "Album Builder : drag-and-drop de plusieurs morceaux, mosaïque de couverture auto, Bantu Drop Map (teasers crossfade).",
+        "b2": "Promo Cascade : génération automatique de 4 snippets 15s + planification de publication via APScheduler.",
+        "b3": "Studio Live Session : ajoutez ?session=ID à l'URL pour ouvrir une session collaborative WebRTC + Y.js.",
+        "b4": "Sync temps réel : tempo, mixeur (faders, pan, mute, solo), Bantu Grid, swing et storytelling.",
+        "b5": "Curseurs colorés sur la Timeline + avatars dans la TopBar (animation pulse quand un peer édite).",
+        "b6": "Anti-écho intégré (applyingRemoteRef) : aucune boucle infinie, latence < 50 ms.",
+        "tip": "Astuce : envoyez l'URL ?session=mon_groove à vos collaborateurs — la session est gratuite et chiffrée bout-à-bout via Y.js."
+      },
+      "virality": {
+        "title": "Diffusion virale & partage social",
+        "intro": "Une chanson n'existe que partagée. RIBA intègre l'export viral de bout en bout.",
+        "b1": "Bantu Reel (ffmpeg) : exporte une vidéo verticale 9:16 prête pour TikTok / Reels avec waveform animée.",
+        "b2": "Reel Snippet Picker : analyse RMS hors-ligne pour proposer les 3-5 meilleures séquences de 30 secondes.",
+        "b3": "Auto-share Social : structure prête pour TikTok, Instagram, YouTube (ajoutez vos tokens OAuth dans .env).",
+        "b4": "APScheduler : programmez vos publications sur 4 fenêtres horaires optimales par fuseau.",
+        "b5": "Boot Cinematic : intro 8 s exportable en MP4 pour démarrer vos vidéos avec branding RIBA.",
+        "tip": "Astuce : combinez Album Builder + Promo Cascade pour publier un EP sur 4 jours avec teasers automatiques."
+      }
     }
   },
   "topbar": {
@@ -85,5 +147,63 @@
     "regenBtn": "Re-générer",
     "applyBtn": "Appliquer à la Timeline",
     "lyricsLabel": "Paroles & proverbes"
+  },
+  "bantuGrid": {
+    "title": "Bantu Oral Grid · Quantification Asymétrique",
+    "styleLabel": "Style rythmique",
+    "densityLabel": "Densité (subdivisions/mesure)",
+    "barsLabel": "Mesures",
+    "swingEnable": "Activer le Bantu Swing Live",
+    "swingIntensity": "Intensité du swing",
+    "showMarkers": "Afficher les marqueurs",
+    "applyBtn": "Appliquer la grille"
+  },
+  "magicGen": {
+    "title": "Magic Generator (Suno-style)",
+    "titleLabel": "Titre du morceau",
+    "promptLabel": "Description / ambiance",
+    "durationLabel": "Durée (secondes)",
+    "referenceLabel": "Référence audio (optionnel)",
+    "uploadBtn": "Importer un fichier",
+    "recordBtn": "🎙 Enregistrer",
+    "stopRecordBtn": "⬛ Arrêter",
+    "generateBtn": "✨ Générer",
+    "libraryLabel": "Bibliothèque"
+  },
+  "magicRemix": {
+    "title": "Magic Re-mix · Demucs ▸ Bantu ▸ fal.ai",
+    "uploadLabel": "Audio source",
+    "uploadBtn": "Importer un fichier",
+    "styleLabel": "Style de re-mix Bantu",
+    "intensityLabel": "Intensité (0-100)",
+    "runBtn": "🎚 Lancer le Re-mix",
+    "downloadBtn": "Télécharger le résultat"
+  },
+  "albumBuilder": {
+    "title": "Album Builder · Mosaïque + Drop Map",
+    "tracksLabel": "Pistes de l'album",
+    "addTrackBtn": "Ajouter une piste",
+    "coverLabel": "Couverture (auto-mosaïque)",
+    "dropMapLabel": "Bantu Drop Map (teasers)",
+    "exportBtn": "Exporter l'album",
+    "scheduleBtn": "Programmer la sortie"
+  },
+  "setup": {
+    "title": "Configuration RIBA",
+    "audioTab": "Audio",
+    "midiTab": "MIDI",
+    "languageTab": "Langue",
+    "appearanceTab": "Apparence",
+    "inputDevice": "Périphérique d'entrée",
+    "outputDevice": "Périphérique de sortie",
+    "sampleRate": "Fréquence d'échantillonnage",
+    "bufferSize": "Taille du buffer"
+  },
+  "assistant": {
+    "title": "Assistant IA RIBA",
+    "placeholder": "Demande à l'assistant Bantu…",
+    "sendBtn": "Envoyer",
+    "clearBtn": "Effacer l'historique",
+    "thinking": "L'IA réfléchit…"
   }
 }

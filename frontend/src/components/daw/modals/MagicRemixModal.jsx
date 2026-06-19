@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '../Modal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +26,7 @@ const input = {
  *   bantu groove layer  →  multi-tracks imported into the timeline.
  */
 export function MagicRemixModal({ onClose, onImportStems }) {
+  const { t } = useTranslation();
   const fileRef = useRef(null);
   const [file, setFile] = useState(null);
   const [bantuStyle, setBantuStyle] = useState('bikutsi_44');
@@ -343,7 +345,7 @@ export function MagicRemixModal({ onClose, onImportStems }) {
   );
 
   return (
-    <Modal title="Magic Re-mix · Demucs ▸ Bantu Grid ▸ fal.ai" onClose={onClose} width={720}>
+    <Modal title={t('magicRemix.title')} onClose={onClose} width={720}>
       <div data-testid="magic-remix-modal" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* Chain status */}

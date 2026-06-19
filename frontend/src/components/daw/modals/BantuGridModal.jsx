@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '../Modal';
 import { TID } from '@/constants/testIds';
 
@@ -14,9 +15,10 @@ export function BantuGridModal({
   styles, style, setStyle, density, setDensity, bars, setBars,
   selectedTrack, onApply, onClose
 }) {
+  const { t } = useTranslation();
   const styleList = styles && styles.length ? styles : DEFAULT_STYLES;
   return (
-    <Modal title="Bantu Oral Grid · Quantification Africaine 🌍" onClose={onClose}>
+    <Modal title={t('bantuGrid.title')} onClose={onClose}>
       <div style={{ color: '#A1A1AA', fontSize: 12, marginBottom: 12 }}>
         Quantification asymétrique inspirée des structures rythmiques d&apos;Afrique Centrale.
         Sélectionnez la piste MIDI cible (en cliquant dessus), puis le style :
