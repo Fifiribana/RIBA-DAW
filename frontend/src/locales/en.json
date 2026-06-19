@@ -74,5 +74,16 @@
   "topbar": {
     "languageSwitcher": "Change language",
     "brand": "Bantu Digital Audio Workstation"
+  },
+  "storytelling": {
+    "title": "Bantu Storytelling · Mvett Epic",
+    "themeLabel": "Theme or proverb",
+    "themePlaceholder": "The wisdom of the millennial baobab…",
+    "structureLabel": "Narrative structure",
+    "barsLabel": "Bars",
+    "generateBtn": "Generate epic",
+    "regenBtn": "Re-generate",
+    "applyBtn": "Apply to Timeline",
+    "lyricsLabel": "Lyrics & proverbs"
   }
 }

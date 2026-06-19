@@ -74,5 +74,16 @@
   "topbar": {
     "languageSwitcher": "Changer de langue",
     "brand": "Station Audio Numérique Bantu"
+  },
+  "storytelling": {
+    "title": "Bantu Storytelling · Épopée Mvett",
+    "themeLabel": "Thème ou proverbe",
+    "themePlaceholder": "La sagesse du baobab millénaire…",
+    "structureLabel": "Structure narrative",
+    "barsLabel": "Mesures",
+    "generateBtn": "Générer l'épopée",
+    "regenBtn": "Re-générer",
+    "applyBtn": "Appliquer à la Timeline",
+    "lyricsLabel": "Paroles & proverbes"
   }
 }

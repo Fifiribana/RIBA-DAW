@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { TID } from '@/constants/testIds';
 import { computeBantuGrid, BANTU_STYLES } from '@/lib/bantuGrid';
+import { LiveCursorOverlay } from './useStudioLive';
 
 export function Timeline({
   isPlaying, looping, maxBeats, timeSig, tempo,
@@ -10,6 +11,11 @@ export function Timeline({
   bantuStyle = 'bikutsi_44',
   bantuDensity = 16,
   bantuBars = 4,
+  // Studio Live cursors
+  collaborators = [],
+  onLocalCursor = null,
+  // Storytelling chapter markers (4 segments with bar_start/bar_end + label + color)
+  storyChapters = null,
 }) {
   const containerRef = useRef(null);
   const headRef = useRef(null);
@@ -61,6 +67,20 @@ export function Timeline({
     const x = e.clientX - r.left;
     beatRef.current = Math.max(0, Math.min(maxBeats, (x / r.width) * maxBeats));
   };
+  const handleMouseMove = (e) => {
+    if (!onLocalCursor) return;
+    const r = containerRef.current.getBoundingClientRect();
+    const px = e.clientX - r.left;
+    const py = e.clientY - r.top;
+    const percent_x = Math.max(0, Math.min(1, px / r.width));
+    const percent_y = Math.max(0, Math.min(1, py / r.height));
+    onLocalCursor({
+      target: 'timeline',
+      percent_x, percent_y,
+      beat: percent_x * maxBeats,
+    });
+  };
+  const handleMouseLeave = () => { if (onLocalCursor) onLocalCursor(null); };
   const measures = Math.ceil(maxBeats / timeSig);
 
   // === Bantu Oral Grid markers (RIBA innovation) ===
@@ -76,11 +96,52 @@ export function Timeline({
       ref={containerRef}
       data-testid={TID.timeline}
       onClick={handleClick}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       style={{
         height: 28, background: '#0B0B0E', borderBottom: '1px solid rgba(255,255,255,0.05)',
         position: 'relative', overflow: 'hidden', flexShrink: 0, cursor: 'pointer'
       }}
     >
+      {/* Storytelling chapter bands — render BEHIND everything else */}
+      {Array.isArray(storyChapters) && storyChapters.map((ch, i) => {
+        const startBeat = (ch.bar_start - 1) * timeSig;
+        const endBeat = ch.bar_end * timeSig;
+        const left = Math.max(0, (startBeat / maxBeats) * 100);
+        const right = Math.min(100, (endBeat / maxBeats) * 100);
+        const width = Math.max(0, right - left);
+        // Colour by slug — keep palette aligned with the modal
+        const slugColors = {
+          intro:   '#22D3EE',
+          defi:    '#F59E0B',
+          combat:  '#D946EF',
+          sagesse: '#22C55E',
+        };
+        const col = slugColors[ch.slug] || '#71717A';
+        return (
+          <React.Fragment key={`story-${i}`}>
+            <div
+              data-testid={`story-chapter-${ch.slug}`}
+              style={{
+                position: 'absolute', left: `${left}%`, top: 0, bottom: 0,
+                width: `${width}%`,
+                background: `${col}1F`,
+                borderLeft: `1px solid ${col}88`,
+                borderRight: `1px solid ${col}33`,
+                pointerEvents: 'none',
+              }}
+            />
+            <div style={{
+              position: 'absolute', left: `${left + 0.4}%`, top: 1,
+              fontSize: 8.5, color: col, fontWeight: 700,
+              letterSpacing: '0.04em', textTransform: 'uppercase',
+              fontFamily: 'JetBrains Mono, monospace',
+              textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+              pointerEvents: 'none',
+            }}>{ch.marker_label}</div>
+          </React.Fragment>
+        );
+      })}
       {/* Bantu Grid asymmetric markers — render BEHIND measure lines */}
       {showBantuMarkers && bantuPositions.map((b, i) => {
         const x = (b / maxBeats) * 100;
@@ -133,6 +194,8 @@ export function Timeline({
           padding: '1px 6px', borderRadius: 3
         }}
       >1.1 · 0.00 beats · 0.00s</div>
+      {/* Live collaborator cursors (Studio Live) */}
+      <LiveCursorOverlay collaborators={collaborators} />
     </div>
   );
 }

@@ -44,6 +44,7 @@ export const PRO_TOOLS_MENUS = {
     { id: 'event_assistant', label: 'AI Assistant (Chat)', shortcut: 'Ctrl+I', key: 'openAssistant' },
     { id: 'event_magic_gen', label: 'Magic Generator (Suno-style) \u2728', key: 'openMagicGen' },
     { id: 'event_magic_remix', label: 'Magic Re-mix (Demucs \u25b8 Bantu \u25b8 fal.ai) \ud83c\udf9b', key: 'openMagicRemix' },
+    { id: 'event_storytelling', label: 'Bantu Storytelling (Mvett \u25b8 Claude) \ud83d\udcd6', key: 'openStorytelling' },
     { sep: true },
     { id: 'event_piano', label: 'Open Piano Roll', key: 'openPiano' },
     { id: 'event_auto_tempo', label: 'Automatic Tempo Detection', key: 'autoTempo' },

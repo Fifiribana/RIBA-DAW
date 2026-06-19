@@ -29,6 +29,7 @@ import { DiskUsageModal } from './daw/modals/DiskUsageModal';
 import { AssistantModal } from './daw/modals/AssistantModal';
 import { MagicGeneratorModal } from './daw/modals/MagicGeneratorModal';
 import { MagicRemixModal } from './daw/modals/MagicRemixModal';
+import { BantuStorytellingModal } from './daw/modals/BantuStorytellingModal';
 import { GlobalTransportPlayer } from './daw/GlobalTransportPlayer';
 import { useStudioLive, StudioLiveBadge } from './daw/useStudioLive';
 import { MagentaOverlay } from './daw/MagentaSpinner';
@@ -127,51 +128,120 @@ export default function Daw() {
   const [bantuDensity, setBantuDensity] = useState(16);
   const [bantuBars, setBantuBars] = useState(4);
   const [bantuStyles, setBantuStyles] = useState([]);
-
-  // ===== Studio Live Session (Y.js + WebSocket relay) =====
-  // Inert when no ?session=ID URL param (solo mode).
-  const live = useStudioLive();
-  // Sync tempo + Bantu config to/from the shared Y.Map
-  useEffect(() => {
-    if (!live?.ymap) return undefined;
-    const ymap = live.ymap;
-    // Initial pull : remote state overrides local on first connection
-    const remoteTempo = ymap.get('tempo');
-    if (typeof remoteTempo === 'number') setTempo(remoteTempo);
-    const remoteStyle = ymap.get('bantuStyle');
-    if (typeof remoteStyle === 'string') setBantuStyle(remoteStyle);
-    const remoteDensity = ymap.get('bantuDensity');
-    if (typeof remoteDensity === 'number') setBantuDensity(remoteDensity);
-    const remoteBars = ymap.get('bantuBars');
-    if (typeof remoteBars === 'number') setBantuBars(remoteBars);
-
-    const obs = () => {
-      const t = ymap.get('tempo'); if (typeof t === 'number') setTempo(t);
-      const s = ymap.get('bantuStyle'); if (typeof s === 'string') setBantuStyle(s);
-      const d = ymap.get('bantuDensity'); if (typeof d === 'number') setBantuDensity(d);
-      const b = ymap.get('bantuBars'); if (typeof b === 'number') setBantuBars(b);
-    };
-    ymap.observe(obs);
-    return () => { try { ymap.unobserve(obs); } catch { /* */ } };
-  }, [live?.ymap]);
-  // Push local state changes back to the Y.Map
-  useEffect(() => {
-    if (live?.ymap && live.ymap.get('tempo') !== tempo) live.ymap.set('tempo', tempo);
-  }, [tempo, live?.ymap]);
-  useEffect(() => {
-    if (live?.ymap && live.ymap.get('bantuStyle') !== bantuStyle) live.ymap.set('bantuStyle', bantuStyle);
-  }, [bantuStyle, live?.ymap]);
-  useEffect(() => {
-    if (live?.ymap && live.ymap.get('bantuDensity') !== bantuDensity) live.ymap.set('bantuDensity', bantuDensity);
-  }, [bantuDensity, live?.ymap]);
-  useEffect(() => {
-    if (live?.ymap && live.ymap.get('bantuBars') !== bantuBars) live.ymap.set('bantuBars', bantuBars);
-  }, [bantuBars, live?.ymap]);
   // Show asymmetric grid markers on the timeline (RIBA innovation visual)
   const [showBantuMarkers, setShowBantuMarkers] = useState(false);
   // Bantu Swing Live — non-destructive humanization during playback
   const [bantuSwingEnabled, setBantuSwingEnabled] = useState(false);
   const [bantuSwingIntensity, setBantuSwingIntensity] = useState(0.7);
+  // Bantu Storytelling — Mvett chapters + dynamic tempo/swing curve while playing
+  const [storyChapters, setStoryChapters] = useState(null);
+  const [storyOpen, setStoryOpen] = useState(false);
+  const [storyTitle, setStoryTitle] = useState(null);
+  const [storyLyrics, setStoryLyrics] = useState(null);
+
+  // ===== Studio Live Session (Y.js + WebSocket relay) =====
+  // Inert when no ?session=ID URL param (solo mode).
+  const live = useStudioLive();
+  // Guard flag — true while we're applying an inbound Y.Map change to local
+  // state, so the downstream "push local → Y.Map" effects don't re-broadcast
+  // and create a feedback loop.
+  const applyingRemoteRef = useRef(false);
+
+  // Sync tempo + Bantu config + mixer + per-track to/from the shared Y.Map
+  useEffect(() => {
+    if (!live?.ymap) return undefined;
+    const ymap = live.ymap;
+    const applyAll = () => {
+      applyingRemoteRef.current = true;
+      try {
+        const t = ymap.get('tempo'); if (typeof t === 'number') setTempo(t);
+        const s = ymap.get('bantuStyle'); if (typeof s === 'string') setBantuStyle(s);
+        const d = ymap.get('bantuDensity'); if (typeof d === 'number') setBantuDensity(d);
+        const b = ymap.get('bantuBars'); if (typeof b === 'number') setBantuBars(b);
+        const mv = ymap.get('masterVol'); if (typeof mv === 'number') setMasterVol(mv);
+        const sw = ymap.get('bantuSwingEnabled'); if (typeof sw === 'boolean') setBantuSwingEnabled(sw);
+        const si = ymap.get('bantuSwingIntensity'); if (typeof si === 'number') setBantuSwingIntensity(si);
+        const sm = ymap.get('showBantuMarkers'); if (typeof sm === 'boolean') setShowBantuMarkers(sm);
+        // Per-track mixer state lives under "trackMix": { [id]: { vol, pan, mute, solo } }
+        const tm = ymap.get('trackMix');
+        if (tm && typeof tm === 'object') {
+          setTracks(prev => prev.map(tr => {
+            const m = tm[tr.id];
+            if (!m) return tr;
+            const next = { ...tr };
+            if (typeof m.volume === 'number') next.volume = m.volume;
+            if (typeof m.pan === 'number') next.pan = m.pan;
+            if (typeof m.isMute === 'boolean') next.isMute = m.isMute;
+            if (typeof m.isSolo === 'boolean') next.isSolo = m.isSolo;
+            return next;
+          }));
+        }
+        // Storytelling chapters can also be pushed by collaborators
+        const sc = ymap.get('storyChapters');
+        if (Array.isArray(sc)) setStoryChapters(sc);
+      } finally {
+        // Defer-unset so the React state-setters above have already scheduled
+        // their re-render before we drop the guard.
+        Promise.resolve().then(() => { applyingRemoteRef.current = false; });
+      }
+    };
+    applyAll();
+    ymap.observe(applyAll);
+    return () => { try { ymap.unobserve(applyAll); } catch { /* */ } };
+  }, [live?.ymap]);
+  // Push local state changes back to the Y.Map (skip while applying a remote)
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (live?.ymap && live.ymap.get('tempo') !== tempo) live.ymap.set('tempo', tempo);
+  }, [tempo, live?.ymap]);
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (live?.ymap && live.ymap.get('bantuStyle') !== bantuStyle) live.ymap.set('bantuStyle', bantuStyle);
+  }, [bantuStyle, live?.ymap]);
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (live?.ymap && live.ymap.get('bantuDensity') !== bantuDensity) live.ymap.set('bantuDensity', bantuDensity);
+  }, [bantuDensity, live?.ymap]);
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (live?.ymap && live.ymap.get('bantuBars') !== bantuBars) live.ymap.set('bantuBars', bantuBars);
+  }, [bantuBars, live?.ymap]);
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (live?.ymap && live.ymap.get('masterVol') !== masterVol) live.ymap.set('masterVol', masterVol);
+  }, [masterVol, live?.ymap]);
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (live?.ymap && live.ymap.get('bantuSwingEnabled') !== bantuSwingEnabled)
+      live.ymap.set('bantuSwingEnabled', bantuSwingEnabled);
+  }, [bantuSwingEnabled, live?.ymap]);
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (live?.ymap && live.ymap.get('bantuSwingIntensity') !== bantuSwingIntensity)
+      live.ymap.set('bantuSwingIntensity', bantuSwingIntensity);
+  }, [bantuSwingIntensity, live?.ymap]);
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (live?.ymap && live.ymap.get('showBantuMarkers') !== showBantuMarkers)
+      live.ymap.set('showBantuMarkers', showBantuMarkers);
+  }, [showBantuMarkers, live?.ymap]);
+  // Per-track mixer push — only the per-track volume/pan/mute/solo we care about
+  useEffect(() => {
+    if (applyingRemoteRef.current) return;
+    if (!live?.ymap) return;
+    const summary = {};
+    for (const t of tracks) {
+      summary[t.id] = {
+        volume: t.volume, pan: t.pan,
+        isMute: !!t.isMute, isSolo: !!t.isSolo,
+      };
+    }
+    // Cheap deep-equal to avoid spamming the Y.Map every render
+    const prev = live.ymap.get('trackMix');
+    if (JSON.stringify(prev) !== JSON.stringify(summary)) {
+      live.ymap.set('trackMix', summary);
+    }
+  }, [tracks, live?.ymap]);
   // Pro Tools-style Window/View extras
   const [systemUsageOpen, setSystemUsageOpen] = useState(false);
   const [diskUsageOpen, setDiskUsageOpen] = useState(false);
@@ -516,7 +586,47 @@ export default function Daw() {
 
   // === Playhead state owned by Timeline; Daw only provides loop wrap action ===
   const playheadBeatRef = useRef(0);
-  const handlePlayheadChange = useCallback((beat) => { playheadBeatRef.current = beat; }, []);
+  const handlePlayheadChange = useCallback((beat) => {
+    playheadBeatRef.current = beat;
+    // === Bantu Storytelling — dynamic audio impact ===
+    // While story chapters are active, drive tempo + swing intensity directly
+    // off the playhead so the audio actually narrates the epic structure.
+    if (storyChapters && storyChapters.length > 0 && isPlayingAll) {
+      const beatsPerBar = timeSig || 4;
+      const currentBar = Math.floor(beat / beatsPerBar) + 1;
+      // Find active chapter and the next one (for smooth interpolation)
+      let active = null;
+      let activeIdx = -1;
+      for (let i = 0; i < storyChapters.length; i++) {
+        const c = storyChapters[i];
+        if (currentBar >= c.bar_start && currentBar <= c.bar_end) {
+          active = c; activeIdx = i; break;
+        }
+      }
+      if (active) {
+        // Local position inside chapter (0..1)
+        const chapStartBeat = (active.bar_start - 1) * beatsPerBar;
+        const chapEndBeat = active.bar_end * beatsPerBar;
+        const localT = Math.max(0, Math.min(1, (beat - chapStartBeat) / Math.max(1, chapEndBeat - chapStartBeat)));
+        const next = storyChapters[activeIdx + 1];
+        // Cross-fade tempo + swing between current and next chapter on the
+        // last 25 % of the segment for a seamless musical transition.
+        const blend = localT > 0.75 && next ? (localT - 0.75) / 0.25 : 0;
+        const tgtTempo = next
+          ? active.tempo_target * (1 - blend) + next.tempo_target * blend
+          : active.tempo_target;
+        const tgtSwing = next
+          ? active.swing_intensity * (1 - blend) + next.swing_intensity * blend
+          : active.swing_intensity;
+        // Only push if we changed by at least 1 BPM / 1 % to avoid render thrash
+        const roundedTempo = Math.round(tgtTempo);
+        const roundedSwing = Math.round(tgtSwing * 100) / 100;
+        if (Math.abs(roundedTempo - tempo) >= 1) setTempo(roundedTempo);
+        if (!bantuSwingEnabled) setBantuSwingEnabled(true);
+        if (Math.abs(roundedSwing - bantuSwingIntensity) >= 0.01) setBantuSwingIntensity(roundedSwing);
+      }
+    }
+  }, [storyChapters, isPlayingAll, timeSig, tempo, bantuSwingEnabled, bantuSwingIntensity]);
   const handleLoopWrap = useCallback(() => {
     engine.ensureCtx();
     const soloSet = new Set(tracks.filter(t => t.isSolo).map(t => t.id));
@@ -1708,6 +1818,7 @@ export default function Daw() {
             if (!t) { setStatusMsg('Select an audio track first'); return; }
             detectTrackBpm(t.id);
           },
+          openStorytelling: () => setStoryOpen(true),
           // Help
           openManual: () => setManualOpen(true),
         }}
@@ -1969,6 +2080,9 @@ export default function Daw() {
         bantuStyle={bantuStyle}
         bantuDensity={bantuDensity}
         bantuBars={bantuBars}
+        collaborators={live?.collaborators || []}
+        onLocalCursor={live?.setCursor}
+        storyChapters={storyChapters}
       />
 
       {/* MAIN AREA */}
@@ -2420,6 +2534,38 @@ export default function Daw() {
             } catch (e) {
               setStatusMsg(`Magic Re-mix import failed: ${e.message}`);
             }
+          }}
+        />
+      )}
+      {storyOpen && (
+        <BantuStorytellingModal
+          onClose={() => setStoryOpen(false)}
+          language={(typeof navigator !== 'undefined' && (localStorage.getItem('riba-lang') || (navigator.language || 'en').slice(0, 2))) || 'fr'}
+          baseTempo={tempo}
+          timeSig={timeSig}
+          onApply={({ chapters, title, lyrics, bantu_style, base_tempo, total_bars }) => {
+            // 1) Inject chapters → drives Timeline bands + dynamic tempo/swing curve
+            setStoryChapters(chapters);
+            setStoryTitle(title || null);
+            setStoryLyrics(lyrics || null);
+            // 2) Inject Bantu style + reveal markers for the storytelling vibe
+            if (bantu_style) {
+              setBantuStyle(bantu_style);
+              setShowBantuMarkers(true);
+              setBantuSwingEnabled(true);
+            }
+            // 3) Set tempo to intro chapter target as starting point
+            const intro = chapters?.[0];
+            if (intro?.tempo_target) setTempo(intro.tempo_target);
+            if (intro?.swing_intensity != null) setBantuSwingIntensity(intro.swing_intensity);
+            // 4) Broadcast to live session (Y.Map) so collaborators see it
+            if (live?.ymap) {
+              try {
+                live.ymap.set('storyChapters', chapters);
+                live.ymap.set('storyTitle', title || '');
+              } catch { /* ignore */ }
+            }
+            setStatusMsg(`📖 Bantu Storytelling · "${title}" applied · ${chapters.length} chapters · ${total_bars} bars`);
           }}
         />
       )}

@@ -74,5 +74,16 @@
   "topbar": {
     "languageSwitcher": "Mudar idioma",
     "brand": "Estação de Áudio Digital Bantu"
+  },
+  "storytelling": {
+    "title": "Narrativa Bantu · Épica Mvett",
+    "themeLabel": "Tema ou provérbio",
+    "themePlaceholder": "A sabedoria do baobá milenar…",
+    "structureLabel": "Estrutura narrativa",
+    "barsLabel": "Compassos",
+    "generateBtn": "Gerar épica",
+    "regenBtn": "Re-gerar",
+    "applyBtn": "Aplicar à Timeline",
+    "lyricsLabel": "Letras e provérbios"
   }
 }

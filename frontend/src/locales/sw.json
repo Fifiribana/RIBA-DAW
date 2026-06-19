@@ -74,5 +74,16 @@
   "topbar": {
     "languageSwitcher": "Badilisha lugha",
     "brand": "Studio ya Sauti ya Kidijitali ya Bantu"
+  },
+  "storytelling": {
+    "title": "Hadithi ya Bantu · Mvett",
+    "themeLabel": "Mada au methali",
+    "themePlaceholder": "Hekima ya mbuyu wa miaka elfu…",
+    "structureLabel": "Muundo wa hadithi",
+    "barsLabel": "Mistari",
+    "generateBtn": "Tengeneza hadithi",
+    "regenBtn": "Tengeneza tena",
+    "applyBtn": "Tumia kwa Timeline",
+    "lyricsLabel": "Maneno na methali"
   }
 }

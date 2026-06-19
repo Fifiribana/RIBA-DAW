@@ -1,0 +1,43 @@
+{
+  "summary": "Sprint v3.3 RIBA (Plan complet + Impact audio reel) verified end-to-end. Backend 122 passed + 1 slow deselected = 123 active tests (+17 vs iter_16). New /api/ai/storytelling endpoint returns exactly 4 ordered chapters intro->defi->combat->sagesse, bars contiguous covering 1..total_bars, all per-chapter contracts honored (tempo 40-240, swing 0-1, arrangement_hint in allowed set, bantu_style in allowed set, lyrics 4-16 lines, 5 languages fr/en/es/pt/sw plus unknown->fr fallback). /api/ai/storytelling-status exposes all expected enums. Studio Live WS relay: 6/6 PASS — peers counted exactly (2), binary frames relayed unchanged, text frames relayed unchanged, sender never echoed, session purged on last-peer disconnect. Frontend: menu entry 'Bantu Storytelling' [data-testid=menuitem-event_storytelling] opens [data-testid=storytelling-modal]; generate->LLM (~10s)->result with 4 cards + lyrics; apply closes modal and renders 4 timeline bands [data-testid=story-chapter-{intro,defi,combat,sagesse}]; status bar shows 'Bantu Storytelling \"<title>\" applied · 4 chapters · 32 bars'; Swing button visually activates (orange Swing · 30%). Multi-tab Studio Live (2 contexts, same ?session=): badge [data-testid=studio-live-badge] shows '<session> · 2', [data-testid=live-avatar-0] present in both tabs. Tempo slider 120->142 sync OK <2s. Grid toggle sync OK. Swing toggle sync OK (tab2 shows '🥁 Swing · 70%'). Master volume sync OK. Cursor broadcast OK: moving mouse on [data-testid=timeline] in tab1 makes tab2 render [data-testid=live-cursor-<clientId>] inside [data-testid=live-cursor-overlay] (and reciprocally). No regression on the 105 prior tests (translate, magic remix, album scheduler, bantu hardware/parity, boot snippets, generator endpoints/extensions, genesis, promo, reel, remix, riba_api, share, ai_endpoints).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_passing": {
+    "pytest backend": "122 passed, 1 deselected (slow), 1 warning, in 212.32s — see /app/test_reports/pytest/iter17_full.xml",
+    "test_storytelling.py": "11/11 PASS (status shape, theme min_length 422, 4-chapter contract with contiguous bars, lyrics 4-16, 5 languages parametrized, unknown lang fallback to fr, total_bars=8 honored)",
+    "test_studio_live.py": "6/6 PASS (sessions REST shape, 2 peers listed=2, binary frames unchanged, no self-echo, text frames unchanged, last-peer disconnect purges session)",
+    "Bantu Storytelling UI flow": "Menu Event → Bantu Storytelling → modal → fill 'La sagesse du baobab millénaire' → generate (~10s) → 4 chapter cards (intro/defi/combat/sagesse) + lyrics block → apply → modal closed → 4 timeline bands rendered with colored slugs; status bar 'Bantu Storytelling · \"Echo of the Baobab\" applied · 4 chapters · 32 bars'; Swing button orange '🥁 Swing · 30%' confirms intensity actually applied to audio engine",
+    "Multi-tab WebRTC/Y.js sync": "Badge 'pytest-sync2 · 2' on both tabs (peer count exact). Tempo 120→142 propagates tab1→tab2 in <2s. Grid toggle propagates. Swing toggle propagates (tab2 shows '🥁 Swing · 70%'). Master volume propagates.",
+    "Live cursor broadcast (50ms throttled)": "Tab2 overlay receives 'live-cursor-46719029' after tab1 mouse-moves over [data-testid=timeline]; tab1 overlay receives 'live-cursor-928858533' after tab2 mouse-moves. Overlay [data-testid=live-cursor-overlay] only renders when at least 1 remote cursor exists — by design.",
+    "Avatars TopBar with pulse animation": "[data-testid=live-avatar-0] present in both tabs once 2 peers connected; CSS @keyframes riba-avatar-pulse injected in DOM."
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_storytelling.py",
+    "/app/backend/tests/test_studio_live.py",
+    "/app/test_reports/pytest/iter17_full.xml",
+    "/app/test_reports/pytest/iter17_storytelling_live.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ai/storytelling.py — la validation/coerce pipeline est robuste : (1) JSON parse strict, (2) ordering forcé sur les 4 slugs canoniques, (3) bars contigus reconstruits si LLM les casse, (4) clamp tempo [40,240] et swing [0,1], (5) coerce arrangement_hint et bantu_style aux ensembles autorisés, (6) lyrics tronquées à 16 lignes max ≤ 140 chars. Fallback déterministe préserve la shape contractuelle — excellent garde-fou pour le quota LLM.",
+    "studio_live.py (WS relay) — confirmation par tests: relais binaire+text sans modification, pas d'écho à l'émetteur, GC propre quand le dernier peer quitte. Implémentation conforme au pattern Y.js + awareness presence.",
+    "useStudioLive.js LiveCursorOverlay — render conditionnel `if (!collaborators?.length) return null` puis filter sur cursor != null : aucun re-render parasite quand pas de remote. Bonne ergo. Le throttle 50ms côté setCursor() évite le flood Y.awareness sur mousemove (vérifié : pas de saturation observée sur 25 moves consécutifs).",
+    "Daw.jsx applyingRemoteRef — pattern anti-écho correct : `applyingRemoteRef.current = true` avant l'apply Y.js → mutate local state → setTimeout(reset, 0). Empêche la boucle locale->Y->local. À vérifier : si une 3e source mute le même state pendant la fenêtre, on perdra l'update — acceptable pour MVP collaboratif.",
+    "handlePlayheadChange (Timeline) drive le tempo et le swing depuis storyChapters au runtime audio. Validé visuellement : Swing button passe à 30% immédiatement après apply (donc tempoCallback wiring est OK), et le drag dans test multi-tab a propagé tempo 142 BPM correctement.",
+    "i18n du modal storytelling — pas testé dans cette itération (titre affiché en EN par défaut). À retester si nécessaire en switchant la langue vers FR via le LanguageSwitcher et en vérifiant que le titre devient 'Bantu Storytelling · Épopée Mvett'. Les clés sont présentes dans le bundle (référencées dans BantuStorytellingModal.jsx).",
+    "Master volume slider — range 0..100 (pas 0..1) — bonne UX (la session info affiche 80%). Ma sonde JS a involontairement saturé à 100% mais les 2 tabs sont restés alignés à 100% → sync OK.",
+    "Aucune fuite ObjectId Mongo détectée. Aucune URL hardcodée. Aucune dépréciation nouvelle hormis le PendingDeprecationWarning starlette/python_multipart déjà tracé en iter_15 (upstream, non actionnable)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (122/122 non-slow + 11/11 storytelling + 6/6 studio_live)", "frontend": "100% sur tous les critères du sprint v3.3 (menu, modal, 4 chapitres, apply, timeline bands, swing real apply, multi-tab tempo/grid/swing/master sync, badge peers=2, avatars, cursor broadcast)"},
+  "test_credentials": "aucune nécessaire (EMERGENT_LLM_KEY déjà configurée — fallback=false confirmé pendant la génération)",
+  "seed_data_creation": "aucune",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Sprint v3.3 vert de bout en bout : 123 tests backend (122 passés + 1 slow deselected), 0 régression vs iter_16 (105 + 17 nouveaux = 122 attendus, 1 nouveau slow probablement Demucs réutilisé). Frontend : tous les data-testid du sprint v3.3 (menuitem-event_storytelling, storytelling-modal/theme-input/structure-select/bars-input/generate-btn/result/chapter-{slug}/lyrics/apply-btn, story-chapter-{slug}, studio-live-badge, live-avatar-N, live-cursor-overlay, live-cursor-<clientId>) sont rendus correctement. Pour la prochaine itération : (1) couvrir le test i18n du titre modal Storytelling FR/EN qui n'a pas été retesté ici (couverture déjà existante dans iter_16 pour les autres modales), (2) si quota LLM épuisé sur prod, vérifier que /api/ai/storytelling renvoie bien fallback=true avec la shape contractuelle (test test_chapter_contract_holds couvre déjà ce cas car le fallback déterministe respecte le même schéma).",
+  "rca of the issue": "Aucune anomalie détectée. Sprint v3.3 livré conforme à la spec : plan complet (Mvett 4 chapitres + Studio Live multi-onglets + cursors collaboratifs + avatars TopBar) ET impact audio réel (tempo dynamique driven par playhead + Bantu Swing actually applied — confirmé visuellement par le bouton Swing passant à 30% après apply)."
+}
