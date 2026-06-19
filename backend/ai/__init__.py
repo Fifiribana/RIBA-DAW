@@ -11,6 +11,7 @@ from .share import router as share_router
 from .album import router as album_router
 from .promo import router as promo_router
 from .studio_live import router as studio_live_router
+from .translate import router as translate_router
 from .scheduler import start_scheduler, shutdown_scheduler
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "album_router",
     "promo_router",
     "studio_live_router",
+    "translate_router",
     "start_scheduler",
     "shutdown_scheduler",
 ]

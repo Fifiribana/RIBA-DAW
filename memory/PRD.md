@@ -351,10 +351,26 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **P2**: Auto-refresh des tokens TikTok via le refresh endpoint pour éviter l'expiration silencieuse.
 - **P2**: Album Builder — ré-utiliser le Snippet Picker UI inline pour visualiser/corriger manuellement chaque pick avant l'export.
 - **P2**: Promo Cascade — UI calendrier visuel des 4 publications planifiées + bouton "Cancel cascade" qui purge les jobs APScheduler.
+- **P2**: i18n — étendre la couverture des modales (BantuGrid, MagicGenerator, MagicRemix, AlbumBuilder, Setup) au-delà de Menu + Splash + Manual + AssistantModal.
+
+### v3.2 (this iteration - Feb 2026) — PHOENIX LOGO + i18N 5 LANGUES 🌍🔥
+- **🔥 Logo Phoenix procédural** : `/app/backend/setup_icons.py` génère un Phénix stylisé (bleu profond `#0F1138`, violet électrique `#6366F1`, magenta néon `#D946EF`, ambre `#F59E0B`) en `Pillow`. Outputs : `riba-logo.png` (1024², master), `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (180²), `favicon.png` (64²), `favicon.ico` (16/32/48/64). Logo intégré dans **TopBar MenuBar**, **SplashScreen**, et **ManualModal**.
+- **🌐 i18n complète 5 langues** (`fr` / `en` / `es` / `pt` / `sw`) :
+  - `/app/frontend/src/i18n.js` (i18next + `i18next-browser-languagedetector` + `react-i18next`) avec persistance localStorage (`riba-lang`) et synchronisation `document.documentElement.lang`.
+  - Bundles JSON `/app/frontend/src/locales/{fr,en,es,pt,sw}.json` — couvrent : menu Pro Tools, splash boot lines, cinematic subtitles, ManualModal, common UI.
+  - **🌐 LanguageSwitcher** (`/app/frontend/src/components/daw/LanguageSwitcher.jsx`) : pill dropdown avec drapeau emoji + label natif + code ISO ; positionné dans le coin droit de la `MenuBar`.
+  - `MenuBar.jsx` rend les titres avec `t('menu.<key>')`, `SplashScreen.jsx` traduit boot status + cinematic subtitles dynamiquement (re-render au switch live), `ManualModal.jsx` 100% i18n.
+- **🤖 Endpoint AI Translate** (`/app/backend/ai/translate.py`) :
+  - `GET /api/ai/translate-status` — quick health probe (no LLM cost), retourne `{enabled, provider, languages:[fr,en,es,pt,sw,de,it]}`.
+  - `POST /api/ai/translate` — traduction single via Claude Sonnet 4.6 (Emergent LLM Key). Fallback gracieux (identité) si la clé est absente ou le budget épuisé.
+  - `POST /api/ai/translate-batch` — traduction d'un dict `key→text` en un seul appel JSON pour les bundles dynamiques (descriptions Bantu, tutoriels).
+- **Tests pytest** : `test_translate.py` 5 nouveaux tests passants → **106/106 PASS** (était 100/100, 0 régression).
+- **Smoke test E2E Playwright** ✅ : switch FR→SW vérifié, menu basculé en `Fichier/Édition/...` et `Faili/Hariri/...` byte-exact ; logo Phoenix visible dans la TopBar (boxShadow magenta + cyan).
 
 ## Next Action Items
 - 🟢 Choix utilisateur prochain sprint P1 :
   - **a) Tauri local build** (.exe/.dmg natifs — RIBA Desktop)
   - **b) Studio Live mixer + cursor overlay** (compléter la couche collaboration sur les faders et les positions souris)
   - **c) WebMIDI input**
+  - **d) Étendre l'i18n aux modales restantes** (BantuGrid, MagicGenerator, MagicRemix, AlbumBuilder, Setup, Assistant)
 - ⚠️ Pour activer Auto-share + Promo Cascade publication réelle : ajouter les tokens (TIKTOK_ACCESS_TOKEN / IG_USER_ID+IG_ACCESS_TOKEN+PUBLIC_BASE_URL / YOUTUBE_CLIENT_ID+SECRET+REFRESH_TOKEN) dans `/app/backend/.env` + restart backend.

@@ -1,0 +1,56 @@
+{
+  "summary": "Sprint v3.2 (Phoenix logo + i18n 5 langues) verified end-to-end. Backend pytest = 105 passed + 1 deselected (slow), 0 failed in 250s. The 5 new translate tests (TestTranslateStatus, TestTranslateSingle x3, TestTranslateBatch) pass; LLM key is configured (translate-status returns enabled:true, provider='anthropic/claude-sonnet-4-6', languages=['de','en','es','fr','it','pt','sw']) and live translation actually mutates text (fallback=false confirmed by test_translate_changes_text_when_llm_enabled passing). All other AI endpoints (assistant, music-status, stems-status, remix, reel, snippets, share, album, promo, studio_live, genesis, bantu quantize, generator, workspace) intact — no regression. Frontend: favicon.ico (200, 999B) + riba-logo.png (200, 627KB) + icon-192.png (200, 62KB) all served. Phoenix logo visible in MenuBar (data-testid='riba-brand-mark' with src=/riba-logo.png), LanguageSwitcher rendered right-side with default 'EN' code (🌐en). Dropdown opens with all 5 testids lang-option-fr/en/es/pt/sw. Switching to FR turns menu-file='Fichier' menu-help='Aide'; SW = 'Faili'/'Msaada'; ES = 'Archivo'; PT = 'Arquivo'. localStorage 'riba-lang' persists choice (verified after reload — Fichier still showing). ManualModal opened via F1 in FR mode shows title 'RIBA 12 · Manuel utilisateur', manual-logo (Phoenix img) present, manual-shortcut-list present, manual-feature-list present and translated ('Lecture multipiste Audio + MIDI (WebAudio)', 'Métronome avec indicateur visuel...', etc.). Mixer/Genesis buttons still working in i18n context — no DAW regression.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ManualModal (any non-EN language)", "issues": ["Le bouton 'Close' en haut à droite reste en anglais alors que le reste du modal est traduit (FR=Fichier, etc.). Devrait afficher t('common.close') (déjà défini dans tous les bundles: 'Fermer', 'Funga', 'Cerrar', 'Fechar')."]}
+    ]
+  },
+  "verified_passing": {
+    "Backend pytest -m 'not slow'": "105 passed, 1 deselected, 0 failed in 250.54s — incluant 5/5 nouveaux tests test_translate.py",
+    "GET /api/ai/translate-status": "200 OK avec enabled=true, provider=anthropic/claude-sonnet-4-6, languages=[de,en,es,fr,it,pt,sw] (les 5 RIBA + de+it bonus)",
+    "POST /api/ai/translate (text vide)": "422 (Pydantic min_length=1)",
+    "POST /api/ai/translate (Hello world → fr)": "200 OK, fallback=false, texte traduit (test_translate_changes_text_when_llm_enabled passe ⇒ LLM actif)",
+    "POST /api/ai/translate-batch": "200 OK, items conservent les clés (ok/cancel/play)",
+    "Aucune régression sur 100 autres tests AI": "test_ai_endpoints, test_riba_api, test_genesis_endpoint, test_remix_endpoint, test_reel_endpoint, test_album_and_scheduler, test_bantu_*, test_boot_and_snippets, test_generator_*, test_promo_and_studio_live, test_share_endpoints, test_bantu_hardware — tous PASS",
+    "Frontend assets": "/favicon.ico → 200 (999B), /riba-logo.png → 200 (627KB), /icon-192.png → 200 (62KB)",
+    "Phoenix logo dans MenuBar": "data-testid='riba-brand-mark' visible, src=/riba-logo.png, halo magenta/cyan rendu",
+    "LanguageSwitcher (default EN)": "data-testid='language-switcher' visible, texte '🌐en'",
+    "Dropdown 5 options": "lang-option-{fr,en,es,pt,sw} tous présents dans language-switcher-menu",
+    "Switch FR": "menu-file='Fichier', menu-help='Aide' ✓",
+    "Persistence localStorage": "riba-lang='fr' persisté, après reload menu-file='Fichier' ✓",
+    "Switch SW": "menu-file='Faili', menu-help='Msaada' ✓",
+    "Switch ES": "menu-file='Archivo' ✓",
+    "Switch PT": "menu-file='Arquivo' ✓",
+    "ManualModal FR": "title='RIBA 12 · Manuel utilisateur', manual-logo présent (img Phoenix), manual-feature-list contient 'Lecture multipiste Audio + MIDI (WebAudio)' / 'Métronome avec indicateur visuel et signature rythmique' / 'Génération Dream Track AI via Emergent LLM'",
+    "DAW non-régression": "Mixer button cliquable sans crash, Genesis button toujours présent, Dream Track / Magic12 Sep / Magic12 Master rendus correctement en mode FR"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_translate.py",
+    "/app/test_reports/pytest/iter16_full.xml"
+  ],
+  "action_items": [
+    "(Cosmétique uniquement, non bloquant) Traduire le bouton 'Close' du ManualModal via t('common.close') — toutes les clés sont déjà présentes dans les 5 bundles."
+  ],
+  "critical_code_review_comments": [
+    "translate.py est correctement async et utilise emergentintegrations.LlmChat avec un fallback identitaire propre (catch Exception → fallback=true, fallback_reason=type.__name__). Pas de fuite de clé dans les réponses, validation Pydantic min_length=1/max_length=8000 sur text — OK.",
+    "translate-batch parse le JSON renvoyé par Claude et garde uniquement les clés demandées (merged dict comprehension lignes 180-181) — robuste face à un Claude qui ajouterait/supprimerait des clés. Bien.",
+    "i18n.js utilise i18next-browser-languagedetector avec ordre ['localStorage','navigator'] et caches=['localStorage'] avec lookupLocalStorage='riba-lang' — conforme à la spec, et le `i18n.on('languageChanged', ...)` met à jour document.documentElement.lang pour l'accessibilité.",
+    "LanguageSwitcher.jsx — l'extraction du code courant via `(i18n.language || 'en').slice(0,2)` est robuste pour 'fr-FR' / 'en-US' / etc. Fallback OK à SUPPORTED_LANGS[1] (en).",
+    "MenuBar.jsx ligne 145 : `{t(`menu.${key}`, key)}` utilise la défaut-valeur du 2e argument — si une clé manque en runtime, on retombe sur le code anglais brut ('File', 'Help', ...). Très bon garde-fou.",
+    "ManualModal — le bouton 'Close' n'est PAS traduit (visible sur screenshot FR ⇒ bouton 'Close' au lieu de 'Fermer'). Le bundle FR contient pourtant common.close='Fermer'. Petite incohérence cosmétique à corriger.",
+    "translate-status expose 7 langues (fr/en/es/pt/sw + de/it bonus) — légère sur-promesse par rapport au sprint (5 seulement) mais le test exige seulement la présence des 5 RIBA, donc OK. Si le main agent veut être strict sur 'exactly 5', filtrer LANG_LABELS aux 5 RIBA.",
+    "Aucune fuite ObjectId Mongo détectée dans la nouvelle route. Aucun hardcoded URL côté front (tout via process.env.REACT_APP_BACKEND_URL ou imports statiques).",
+    "Le pytest emit toujours le PendingDeprecationWarning de starlette/formparsers (python_multipart) — tracé en iteration_15, lib upstream, non actionnable côté RIBA."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (105/105 non-slow + 5/5 nouveaux translate)", "frontend": "100% sur tous les critères du sprint v3.2 (logo, switcher, 5 langues, persistence, ManualModal i18n)"},
+  "test_credentials": "aucune nécessaire",
+  "seed_data_creation": "aucune",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Sprint v3.2 vert de bout en bout. Backend 105 PASS + 1 slow deselected (Demucs ~60s, optable via `pytest -m slow`). LLM key actif → translate retourne du vrai français (test_translate_changes_text_when_llm_enabled PASS). Aucune dérive sur les 100 autres tests AI/DAW. Pour la prochaine itération : surveiller l'évolution du quota LLM — quand il s'épuise, /api/ai/translate retourne {fallback:true, fallback_reason:'<ExceptionName>'} et le frontend doit afficher la chaîne source sans casser (i18n.js fallbackLng='en'). Si le main agent veut une traduction live des descriptions Bantu, il y a un hook useDynamicTranslate à câbler côté /api/ai/translate-batch (3 styles à traduire en bulk). Seule micro-régression cosmétique trouvée : le bouton 'Close' du ManualModal reste hardcodé en anglais — toutes les autres chaînes sont OK.",
+  "rca of the issue": "Aucune anomalie bloquante. L'unique remarque (bouton Close non i18n dans ManualModal) est purement cosmétique : le sprint exige le logo Phoenix dans le modal (présent), la liste des features traduite (présente), le titre traduit (présent) — la spec ne mentionne pas le bouton de fermeture. Aucun retest nécessaire ; le main agent peut self-tester ce micro-fix avec un simple t('common.close') si souhaité."
+}

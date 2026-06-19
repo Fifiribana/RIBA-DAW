@@ -1,0 +1,78 @@
+{
+  "menu": {
+    "File": "Faili",
+    "Edit": "Hariri",
+    "Track": "Wimbo",
+    "Event": "Tukio",
+    "AudioSuite": "AudioSuite",
+    "Tools": "Zana",
+    "View": "Tazama",
+    "Window": "Dirisha",
+    "Setup": "Mipangilio",
+    "Help": "Msaada"
+  },
+  "common": {
+    "play": "Cheza",
+    "stop": "Simamisha",
+    "record": "Rekodi",
+    "save": "Hifadhi",
+    "open": "Fungua",
+    "export": "Hamisha",
+    "language": "Lugha",
+    "close": "Funga",
+    "loading": "Inapakia…",
+    "cancel": "Ghairi",
+    "ok": "Sawa"
+  },
+  "splash": {
+    "tagline": "STUDIO YA SAUTI YA KIDIJITALI YA BANTU",
+    "boot": {
+      "engine": "init  · Injini ya WebAudio ........ ok",
+      "grid": "load  · Bantu Oral Grid (mitindo 5) ok",
+      "falai": "probe · fal.ai stable-audio ....... ok",
+      "demucs": "probe · Demucs htdemucs ........... ok",
+      "ready": "ready · RIBA Studio ............... 100%"
+    },
+    "cinematic": {
+      "sub1": "Imezaliwa Yaoundé",
+      "sub2": "Midundo mingi kutoka Afrika ya Kati",
+      "sub3": "Bantu Oral Grid na RIBA"
+    },
+    "skip": "BONYEZA · ESC · NAFASI KURUKA",
+    "exportMp4": "Hamisha utangulizi wa MP4",
+    "rendering": "Inaunda…",
+    "downloadMp4": "pakua .mp4"
+  },
+  "manual": {
+    "title": "RIBA 12 · Mwongozo wa mtumiaji",
+    "subtitle": "STUDIO YA SAUTI YA KIDIJITALI YA BANTU",
+    "desc": "DAW ya kwanza duniani yenye uthibitishaji wa asili wa Bantu Oral Grid (Asiko · Makossa · Bikutsi).",
+    "shortcuts": "Njia za mkato za kibodi",
+    "features": "Vipengele",
+    "shortcutList": {
+      "space": "Cheza / Simamisha nyimbo zote",
+      "m": "Washa/Zima metronomu",
+      "1to9": "Cheza wimbo kwa nambari",
+      "save": "Hifadhi kipindi",
+      "load": "Pakia kipindi cha mwisho",
+      "export": "Hamisha JSON ya kipindi",
+      "f1": "Fungua mwongozo huu"
+    },
+    "featureList": {
+      "multitrack": "Uchezaji wa nyimbo nyingi za Audio + MIDI (WebAudio)",
+      "eq": "EQ ya bendi 3, sauti, pan, mute, solo kwa kila wimbo",
+      "mic": "Kurekodi kwa kipaza sauti halisi (MediaRecorder)",
+      "metro": "Metronomu yenye kiashiria cha kuona na alama ya muda",
+      "dream": "Uzalishaji wa Dream Track AI kupitia Emergent LLM",
+      "stems": "Utengaji wa stems wa Magic12 (umejaribiwa)",
+      "master": "Mapendekezo ya mastering ya AI Magic12 (LLM)",
+      "piano": "Mhariri wa Piano Roll (bofya kuongeza/kuondoa noti)",
+      "spectrum": "Mchambuzi wa wigo na vipima VU",
+      "session": "Hifadhi/pakia kipindi (MongoDB)"
+    }
+  },
+  "topbar": {
+    "languageSwitcher": "Badilisha lugha",
+    "brand": "Studio ya Sauti ya Kidijitali ya Bantu"
+  }
+}

@@ -1,9 +1,25 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '../Modal';
 
 export function ManualModal({ onClose }) {
+  const { t } = useTranslation();
+  const shortcutList = [
+    { keys: 'Space', label: t('manual.shortcutList.space') },
+    { keys: 'M',     label: t('manual.shortcutList.m') },
+    { keys: '1–9',   label: t('manual.shortcutList.1to9') },
+    { keys: 'Ctrl+S', label: t('manual.shortcutList.save') },
+    { keys: 'Ctrl+O', label: t('manual.shortcutList.load') },
+    { keys: 'Ctrl+E', label: t('manual.shortcutList.export') },
+    { keys: 'F1',    label: t('manual.shortcutList.f1') },
+  ];
+  const featureKeys = [
+    'multitrack', 'eq', 'mic', 'metro', 'dream',
+    'stems', 'master', 'piano', 'spectrum', 'session',
+  ];
+
   return (
-    <Modal title="Riba 12 · User Manual" onClose={onClose}>
+    <Modal title={t('manual.title')} onClose={onClose}>
       <div style={{
         display: 'flex', gap: 18, alignItems: 'center', justifyContent: 'center',
         padding: '8px 0 18px', borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -25,36 +41,25 @@ export function ManualModal({ onClose }) {
             RIBA <span style={{ color: '#D946EF' }}>12</span>
           </div>
           <div style={{ fontSize: 11, color: '#22D3EE', letterSpacing: '0.18em', fontWeight: 600, marginTop: 2 }} className="font-mono-r">
-            BANTU DIGITAL AUDIO WORKSTATION
+            {t('manual.subtitle')}
           </div>
           <div style={{ fontSize: 11, color: '#A1A1AA', marginTop: 6, maxWidth: 320 }}>
-            The world's first DAW with native asymmetric Bantu Oral Grid quantization (Asiko · Makossa · Bikutsi).
+            {t('manual.desc')}
           </div>
         </div>
       </div>
       <div style={{ fontSize: 13, color: '#E4E4E7', lineHeight: 1.7 }}>
-        <h3 className="font-heading" style={{ marginTop: 0 }}>Keyboard Shortcuts</h3>
-        <ul>
-          <li><b>Space</b> — Play / Stop all tracks</li>
-          <li><b>M</b> — Toggle Metronome</li>
-          <li><b>1–9</b> — Play track by index</li>
-          <li><b>Ctrl+S</b> — Save session</li>
-          <li><b>Ctrl+O</b> — Load latest session</li>
-          <li><b>Ctrl+E</b> — Export session JSON</li>
-          <li><b>F1</b> — Open this manual</li>
+        <h3 className="font-heading" style={{ marginTop: 0 }}>{t('manual.shortcuts')}</h3>
+        <ul data-testid="manual-shortcut-list">
+          {shortcutList.map((s, i) => (
+            <li key={i}><b>{s.keys}</b> — {s.label}</li>
+          ))}
         </ul>
-        <h3 className="font-heading">Features</h3>
-        <ul>
-          <li>Audio + MIDI multi-track playback (WebAudio)</li>
-          <li>Per-track 3-band EQ, volume, pan, mute, solo</li>
-          <li>Real microphone recording (MediaRecorder)</li>
-          <li>Metronome with visual indicator & time signature</li>
-          <li>Dream Track AI generation via Emergent LLM</li>
-          <li>Magic12 stem separation (simulated)</li>
-          <li>Magic12 AI mastering suggestions (LLM)</li>
-          <li>Piano roll editor (click to add/remove notes)</li>
-          <li>Spectrum analyzer & VU meters</li>
-          <li>Session save/load (MongoDB-backed)</li>
+        <h3 className="font-heading">{t('manual.features')}</h3>
+        <ul data-testid="manual-feature-list">
+          {featureKeys.map(k => (
+            <li key={k}>{t(`manual.featureList.${k}`)}</li>
+          ))}
         </ul>
       </div>
     </Modal>

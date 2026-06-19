@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * RIBA SplashScreen — cinematic boot sequence.
@@ -16,23 +17,20 @@ import React, { useEffect, useRef, useState } from 'react';
  *
  * Calls onDone() exactly once, after fade-out.
  */
-const CINEMATIC_SUBTITLES = [
-  'Pioneered in Yaoundé',
-  'Polyrhythmics from Central Africa',
-  'Bantu Oral Grid by RIBA',
-];
+const CINEMATIC_SUBTITLE_KEYS = ['splash.cinematic.sub1', 'splash.cinematic.sub2', 'splash.cinematic.sub3'];
 
-const BOOT_LINES = [
-  'init  · WebAudio engine ........... ok',
-  'load  · Bantu Oral Grid (5 styles) . ok',
-  'probe · fal.ai stable-audio ....... ok',
-  'probe · Demucs htdemucs ........... ok',
-  'ready · RIBA Studio ............... 100%',
+const BOOT_LINE_KEYS = [
+  'splash.boot.engine',
+  'splash.boot.grid',
+  'splash.boot.falai',
+  'splash.boot.demucs',
+  'splash.boot.ready',
 ];
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 export function SplashScreen({ onDone, mode = 'short', durationMs }) {
+  const { t } = useTranslation();
   const isCinema = mode === 'cinematic';
   const dur = durationMs ?? (isCinema ? 8000 : 2600);
   const [phase, setPhase] = useState('boot'); // 'boot' | 'fadeout' | 'hidden'
@@ -43,23 +41,32 @@ export function SplashScreen({ onDone, mode = 'short', durationMs }) {
   const doneRef = useRef(false);
   const startRef = useRef(Date.now());
 
+  const cinematicSubtitles = useMemo(
+    () => CINEMATIC_SUBTITLE_KEYS.map(k => t(k)),
+    [t]
+  );
+  const bootLines = useMemo(
+    () => BOOT_LINE_KEYS.map(k => t(k)),
+    [t]
+  );
+
   // sequential reveal — boot lines (short) OR cinematic subtitles (long)
   useEffect(() => {
     if (isCinema) {
       // 3 subtitles spread evenly between 1.2s and (dur - 0.8)s
       const usable = dur - 2000;
-      const per = usable / CINEMATIC_SUBTITLES.length;
-      const ids = CINEMATIC_SUBTITLES.map((_, i) =>
+      const per = usable / cinematicSubtitles.length;
+      const ids = cinematicSubtitles.map((_, i) =>
         setTimeout(() => setSubIdx(i + 1), 1200 + per * i)
       );
       return () => ids.forEach(clearTimeout);
     }
-    const step = Math.max(120, dur / (BOOT_LINES.length + 4));
-    const ids = BOOT_LINES.map((_, i) =>
+    const step = Math.max(120, dur / (bootLines.length + 4));
+    const ids = bootLines.map((_, i) =>
       setTimeout(() => setStatusIdx(i + 1), step * (i + 1))
     );
     return () => ids.forEach(clearTimeout);
-  }, [dur, isCinema]);
+  }, [dur, isCinema, bootLines, cinematicSubtitles]);
 
   // global timeline: boot → fadeout → onDone
   useEffect(() => {
@@ -95,7 +102,7 @@ export function SplashScreen({ onDone, mode = 'short', durationMs }) {
       const fd = new FormData();
       fd.append('duration', '8');
       fd.append('format', 'landscape_1080');
-      fd.append('subtitles_csv', CINEMATIC_SUBTITLES.join('|'));
+      fd.append('subtitles_csv', cinematicSubtitles.join('|'));
       fd.append('with_drone', 'true');
       const r = await fetch(`${BACKEND_URL}/api/ai/boot-cinematic`, { method: 'POST', body: fd });
       const d = await r.json();
@@ -179,11 +186,11 @@ export function SplashScreen({ onDone, mode = 'short', durationMs }) {
           <div className="font-mono-r" style={{
             fontSize: 10, letterSpacing: '0.46em', color: '#71717A',
             marginTop: 10, paddingLeft: '0.46em', fontWeight: 500,
+            textTransform: 'uppercase',
           }}>
-            BANTU&nbsp;·&nbsp;DIGITAL&nbsp;AUDIO&nbsp;WORKSTATION
+            {t('splash.tagline')}
           </div>
         </div>
-
         {/* Bantu Oral Grid asymmetric pulses (Bikutsi 4/4) */}
         <div
           data-testid="splash-bantu-grid"
@@ -231,7 +238,7 @@ export function SplashScreen({ onDone, mode = 'short', durationMs }) {
               color: '#A1A1AA', lineHeight: 1.7,
             }}
           >
-            {BOOT_LINES.map((line, i) => (
+            {bootLines.map((line, i) => (
               <div key={i} style={{
                 opacity: i < statusIdx ? 1 : 0.0,
                 transform: `translateX(${i < statusIdx ? 0 : -8}px)`,
@@ -253,7 +260,7 @@ export function SplashScreen({ onDone, mode = 'short', durationMs }) {
               gap: 6,
             }}
           >
-            {CINEMATIC_SUBTITLES.map((line, i) => (
+            {cinematicSubtitles.map((line, i) => (
               <div
                 key={i}
                 data-testid={`splash-subtitle-${i}`}
@@ -301,7 +308,7 @@ export function SplashScreen({ onDone, mode = 'short', durationMs }) {
                 boxShadow: '0 0 14px rgba(217,70,239,0.35)',
               }}
             >
-              {exporting ? '⚙ Rendering…' : '📥 Export Intro MP4'}
+              {exporting ? `⚙ ${t('splash.rendering')}` : `📥 ${t('splash.exportMp4')}`}
             </button>
             {exportUrl && (
               <a
@@ -315,14 +322,14 @@ export function SplashScreen({ onDone, mode = 'short', durationMs }) {
                   padding: '6px 10px', background: 'rgba(34,211,238,0.08)',
                   fontFamily: 'JetBrains Mono, monospace',
                 }}
-              >⬇ download .mp4</a>
+              >⬇ {t('splash.downloadMp4')}</a>
             )}
           </div>
         )}
 
         <div className="font-mono-r" style={{
           fontSize: 9, color: '#3F3F46', letterSpacing: '0.32em', marginTop: 2,
-        }}>CLICK · ESC · SPACE TO SKIP</div>
+        }}>{t('splash.skip')}</div>
       </div>
 
       {/* keyframes injected once */}

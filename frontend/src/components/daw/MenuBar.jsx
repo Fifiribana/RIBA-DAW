@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PRO_TOOLS_MENUS } from './proToolsMenuConfig';
 import { BantuTeaser } from './BantuTeaser';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 // Single menu row — supports leaf items and one level of right-flyout submenu.
 function MenuRow({ item, actions, onAfterClick }) {
@@ -95,6 +97,8 @@ function MenuRow({ item, actions, onAfterClick }) {
 
 export function MenuBar({ openMenu, setOpenMenu, actions }) {
   const close = () => setOpenMenu(null);
+  const { t } = useTranslation();
+  const menuKeys = Object.keys(PRO_TOOLS_MENUS);
   return (
     <div
       style={{
@@ -111,7 +115,7 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
           padding: '0 10px 0 4px', marginRight: 4, cursor: 'default',
           borderRight: '1px solid rgba(255,255,255,0.05)',
         }}
-        title="RIBA · Bantu Digital Audio Workstation"
+        title={`RIBA · ${t('topbar.brand')}`}
       >
         <img
           src="/riba-logo.png"
@@ -124,7 +128,7 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
           }}
         />
       </div>
-      {Object.keys(PRO_TOOLS_MENUS).map((key, idx) => (
+      {menuKeys.map((key, idx) => (
         <div
           key={key}
           data-testid={`menu-${key.toLowerCase()}`}
@@ -134,12 +138,11 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
             padding: '0 12px', display: 'flex', alignItems: 'center',
             fontSize: 12, color: openMenu === key ? '#FAFAFA' : '#A1A1AA',
             cursor: 'pointer', background: openMenu === key ? '#1F1F23' : 'transparent',
-            borderRadius: 3, marginLeft: idx === Object.keys(PRO_TOOLS_MENUS).length - 1 ? 'auto' : 0,
+            borderRadius: 3, marginLeft: idx === menuKeys.length - 1 ? 'auto' : 0,
             position: 'relative', userSelect: 'none'
           }}
         >
-          {key}
-          {openMenu === key && (
+          {t(`menu.${key}`, key)}          {openMenu === key && (
             <div style={{
               position: 'absolute', top: '100%', left: 0,
               background: '#1F1F23', border: '1px solid rgba(255,255,255,0.08)',
@@ -158,6 +161,8 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
           )}
         </div>
       ))}
+      {/* Globe language switcher — right edge of the bar */}
+      <LanguageSwitcher />
     </div>
   );
 }

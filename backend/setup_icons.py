@@ -1,180 +1,181 @@
 """
-RIBA Icon Setup — generates square icons for PWA + Tauri from the official logo.
+RIBA Phoenix Logo Generator — v3.2 (procedural, no external image source).
 
-If the source PNG (Gemini_Generated_Image_upm9x0upm9x0upm9_3.png) is not present
-on disk, falls back to a procedurally-drawn 1024×1024 phoenix-style placeholder
-in RIBA's neon palette (deep purple background, magenta/cyan glow, monogram).
+Generates a stylized phoenix rising from ashes in the RIBA brand palette:
+  • deep indigo  (#0F1138)
+  • electric violet (#6366F1)
+  • neon magenta (#D946EF)
+  • spark amber  (#F59E0B)
 
-Run from /app: `python backend/setup_icons.py`
+Outputs (square, transparent background):
+  /app/frontend/public/riba-logo.png            (1024×1024 master)
+  /app/frontend/public/favicon.ico              (multi-size .ico)
+  /app/frontend/public/icon-192.png             (PWA icon)
+  /app/frontend/public/icon-512.png             (PWA icon)
+  /app/frontend/public/apple-touch-icon.png     (180×180 iOS)
+  /app/backend/static/riba-logo.png             (backend mirror)
 """
 from __future__ import annotations
 
 import math
-import os
 import sys
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-ROOT = Path(__file__).resolve().parents[1]   # /app
-TARGET_FILENAMES = [
-    "Gemini_Generated_Image_upm9x0upm9x0upm9_3.png",
-    "Gemini_Generated_Image_upm9x0upm9x0upm9_2.png",
-    "Gemini_Generated_Image_upm9x0upm9x0upm9.png",
-]
+from PIL import Image, ImageDraw, ImageFilter
 
+FRONT_PUBLIC = Path(__file__).resolve().parent.parent / "frontend" / "public"
+BACK_STATIC = Path(__file__).resolve().parent / "static"
+BACK_STATIC.mkdir(parents=True, exist_ok=True)
 
-def _find_source() -> Path | None:
-    candidates = [ROOT, ROOT / "assets", ROOT / "backend", ROOT / "frontend" / "public"]
-    for d in candidates:
-        for name in TARGET_FILENAMES:
-            p = d / name
-            if p.exists():
-                return p
-    return None
+INDIGO = (15, 17, 56, 255)         # deep base
+VIOLET = (99, 102, 241, 255)
+MAGENTA = (217, 70, 239, 255)
+AMBER = (245, 158, 11, 255)
+EMBER = (239, 68, 68, 255)
+WHITE = (250, 250, 250, 255)
 
 
-def _draw_placeholder() -> Image.Image:
-    """Procedural fallback logo — deep purple disc + phoenix-style spark + RIBA monogram."""
-    size = 1024
-    img = Image.new("RGBA", (size, size), "#18022b")
-    d = ImageDraw.Draw(img)
+def _radial_dot(canvas: Image.Image, cx: float, cy: float, r: float, color, alpha_falloff: float = 1.5):
+    """Draws a soft radial gradient dot via concentric rings."""
+    draw = ImageDraw.Draw(canvas, "RGBA")
+    steps = max(8, int(r))
+    for i in range(steps, 0, -1):
+        a = int(color[3] * ((i / steps) ** alpha_falloff))
+        draw.ellipse([cx - i, cy - i, cx + i, cy + i], fill=(*color[:3], a))
 
-    cx, cy = size // 2, size // 2
 
-    # Outer glow ring (magenta)
-    for i in range(40, 0, -2):
-        alpha = int(180 * (1 - i / 40))
-        d.ellipse(
-            [cx - 460 - i, cy - 460 - i, cx + 460 + i, cy + 460 + i],
-            outline=(217, 70, 239, alpha),
-            width=2,
-        )
+def make_phoenix(size: int = 1024) -> Image.Image:
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    cx, cy = size / 2, size * 0.52
 
-    # Solid magenta disc
-    d.ellipse([cx - 420, cy - 420, cx + 420, cy + 420], fill=(168, 32, 255, 255))
+    # 1) Background nebula (subtle radial glow)
+    bg = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    _radial_dot(bg, cx, cy, size * 0.46, (*MAGENTA[:3], 95), alpha_falloff=2.2)
+    _radial_dot(bg, cx, cy * 0.95, size * 0.30, (*VIOLET[:3], 110), alpha_falloff=2.0)
+    img.alpha_composite(bg.filter(ImageFilter.GaussianBlur(size / 60)))
 
-    # Inner darker disc (visual depth)
-    d.ellipse([cx - 360, cy - 360, cx + 360, cy + 360], fill=(24, 2, 43, 255))
+    # 2) Body — a vertical petal shape (head up, tail down)
+    body = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(body, "RGBA")
+    body_pts = []
+    for i in range(60):
+        u = i / 60
+        # Lemniscate-ish vertical petal
+        x = cx + math.sin(u * math.pi * 2) * size * 0.06
+        y = cy - math.cos(u * math.pi) * size * 0.32
+        body_pts.append((x, y))
+    bd.polygon(body_pts, fill=INDIGO)
+    body = body.filter(ImageFilter.GaussianBlur(size / 220))
+    img.alpha_composite(body)
 
-    # Cyan inner ring
-    d.ellipse([cx - 360, cy - 360, cx + 360, cy + 360], outline=(34, 211, 238, 220), width=6)
-
-    # Phoenix-style ascending wings (two triangular sweeps + central spark)
-    wing_color = (245, 158, 11, 255)  # ember orange
+    # 3) Wings — two arcs of feathers emanating from chest height
+    cy_wing = cy - size * 0.04
+    n_feathers = 9
     for side in (-1, 1):
-        pts = [
-            (cx, cy - 160),
-            (cx + side * 230, cy - 60),
-            (cx + side * 180, cy + 30),
-            (cx + side * 90, cy - 10),
-            (cx, cy + 80),
-        ]
-        d.polygon(pts, fill=wing_color)
+        for i in range(n_feathers):
+            t = i / (n_feathers - 1)
+            angle = math.radians(20 + t * 65) * side
+            length = size * (0.32 - 0.04 * t)
+            ex = cx + math.cos(angle - math.pi / 2) * length
+            ey = cy_wing + math.sin(angle - math.pi / 2) * length
+            tip = (ex, ey)
+            mid = (
+                cx + math.cos(angle - math.pi / 2) * length * 0.55 + side * size * 0.04,
+                cy_wing + math.sin(angle - math.pi / 2) * length * 0.55,
+            )
+            root = (cx + side * size * 0.02, cy_wing)
+            # Outer feather (violet)
+            feather = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+            ImageDraw.Draw(feather, "RGBA").polygon(
+                [root, mid, tip],
+                fill=VIOLET if t < 0.55 else MAGENTA,
+            )
+            img.alpha_composite(feather)
+            # Bright tip highlight
+            tip_layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+            ImageDraw.Draw(tip_layer, "RGBA").ellipse(
+                [tip[0] - size * 0.022, tip[1] - size * 0.022,
+                 tip[0] + size * 0.022, tip[1] + size * 0.022],
+                fill=(*MAGENTA[:3], 200),
+            )
+            img.alpha_composite(tip_layer.filter(ImageFilter.GaussianBlur(size / 160)))
 
-    # Central upward spark (cyan-to-magenta gradient simulated as concentric triangles)
-    for i, color in enumerate([(34, 211, 238, 255), (168, 32, 255, 255), (255, 255, 255, 255)]):
-        scale = 1 - i * 0.25
-        pts = [
-            (cx, cy - int(230 * scale)),
-            (cx - int(70 * scale), cy + int(40 * scale)),
-            (cx + int(70 * scale), cy + int(40 * scale)),
-        ]
-        d.polygon(pts, fill=color)
-
-    # RIBA monogram
-    try:
-        font_big = ImageFont.truetype(
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 130)
-        font_small = ImageFont.truetype(
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 44)
-    except OSError:
-        font_big = ImageFont.load_default()
-        font_small = ImageFont.load_default()
-
-    text = "RIBA"
-    bbox = d.textbbox((0, 0), text, font=font_big)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    d.text((cx - tw // 2 - bbox[0], cy + 130 - bbox[1]), text, fill=(255, 255, 255, 255), font=font_big)
-
-    sub = "BANTU · DAW"
-    sb = d.textbbox((0, 0), sub, font=font_small)
-    sw, sh = sb[2] - sb[0], sb[3] - sb[1]
-    d.text((cx - sw // 2 - sb[0], cy + 270 - sb[1]), sub, fill=(34, 211, 238, 255), font=font_small)
-
-    # Subtle blur on the glow ring (composite layer trick)
-    img = img.filter(ImageFilter.SMOOTH)
-    return img
-
-
-def crop_square(img: Image.Image) -> Image.Image:
-    w, h = img.size
-    side = min(w, h)
-    left = (w - side) // 2
-    top = (h - side) // 2
-    return img.crop((left, top, left + side, top + side))
-
-
-def main() -> int:
-    src = _find_source()
-    if src is None:
-        print("⚠️  Source logo not found — generating procedural RIBA placeholder.", flush=True)
-        img = _draw_placeholder()
-    else:
-        print(f"✅ Using source logo: {src}", flush=True)
-        img = Image.open(src).convert("RGBA")
-
-    img = crop_square(img)
-    print(f"📐 Cropped to {img.size[0]}×{img.size[1]} square.", flush=True)
-
-    pwa_dir = ROOT / "frontend" / "public"
-    tauri_dir = ROOT / "src-tauri" / "icons"
-    pwa_dir.mkdir(parents=True, exist_ok=True)
-    tauri_dir.mkdir(parents=True, exist_ok=True)
-
-    pwa_sizes = {
-        "icon-192.png": 192,
-        "icon-512.png": 512,
-        "apple-touch-icon.png": 180,
-        "favicon.png": 64,
-    }
-    tauri_sizes = {
-        "32x32.png": 32,
-        "128x128.png": 128,
-        "128x128@2x.png": 256,
-        "icon.png": 512,
-    }
-
-    for fname, size in pwa_sizes.items():
-        out = pwa_dir / fname
-        img.resize((size, size), Image.LANCZOS).save(out, format="PNG")
-        print(f"  → {out.relative_to(ROOT)}  ({size}×{size})")
-
-    for fname, size in tauri_sizes.items():
-        out = tauri_dir / fname
-        img.resize((size, size), Image.LANCZOS).save(out, format="PNG")
-        print(f"  → {out.relative_to(ROOT)}  ({size}×{size})")
-
-    # Multi-resolution Windows .ico
-    ico_path = tauri_dir / "icon.ico"
-    img.resize((256, 256), Image.LANCZOS).save(
-        ico_path, format="ICO",
-        sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+    # 4) Head + beak
+    head_r = size * 0.055
+    head_y = cy - size * 0.27
+    _radial_dot(img, cx, head_y, head_r * 1.4, (*VIOLET[:3], 230), alpha_falloff=1.4)
+    ImageDraw.Draw(img, "RGBA").polygon(
+        [(cx, head_y - head_r * 0.5),
+         (cx + head_r * 0.55, head_y + head_r * 0.6),
+         (cx - head_r * 0.55, head_y + head_r * 0.6)],
+        fill=AMBER,
     )
-    print(f"  → {ico_path.relative_to(ROOT)}  (16,32,48,64,128,256)")
+    # Eye spark
+    _radial_dot(img, cx, head_y - head_r * 0.1, size * 0.011, (*WHITE[:3], 240), alpha_falloff=1.1)
 
-    # macOS .icns placeholder (real .icns built with iconutil on a Mac)
-    icns_path = tauri_dir / "icon.icns"
-    img.resize((512, 512), Image.LANCZOS).save(icns_path, format="PNG")
-    print(f"  → {icns_path.relative_to(ROOT)}  (PNG placeholder — regen on macOS via `tauri icon`)")
+    # 5) Ashes / flames at the bottom (rebirth)
+    for i in range(38):
+        t = i / 37
+        rx = cx + (i - 19) * size * 0.020 + math.sin(i * 1.3) * size * 0.02
+        ry = cy + size * 0.30 + math.cos(i * 0.7) * size * 0.025
+        rr = size * (0.018 - 0.012 * t)
+        color = MAGENTA if i % 3 == 0 else (AMBER if i % 3 == 1 else VIOLET)
+        _radial_dot(img, rx, ry, rr * 4, (*color[:3], 170), alpha_falloff=2.0)
+    # Bright ember dots in the center
+    for i in range(14):
+        t = i / 13
+        rx = cx + (i - 6.5) * size * 0.025
+        ry = cy + size * 0.34 + math.sin(i * 2.1) * size * 0.012
+        _radial_dot(img, rx, ry, size * 0.010, (*AMBER[:3], 240), alpha_falloff=1.0)
 
-    # Master copy for in-app UI (TopBar miniature + ManualModal hero)
-    ui_logo = ROOT / "frontend" / "public" / "riba-logo.png"
-    img.resize((400, 400), Image.LANCZOS).save(ui_logo, format="PNG")
-    print(f"  → {ui_logo.relative_to(ROOT)}  (UI hero, 400×400)")
+    # 6) Final neon glow pass — duplicate the bright pixels + heavy blur
+    glow = img.copy()
+    glow = glow.filter(ImageFilter.GaussianBlur(size / 70))
+    # Compose : glow underneath + sharp on top
+    final = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    final.alpha_composite(glow)
+    final.alpha_composite(img)
+    return final
 
-    print("\n🎉 RIBA icon set deployed.")
-    return 0
+
+def build_all() -> None:
+    master = make_phoenix(1024)
+
+    # Frontend public/
+    FRONT_PUBLIC.mkdir(parents=True, exist_ok=True)
+    master.save(FRONT_PUBLIC / "riba-logo.png", "PNG", optimize=True)
+    BACK_STATIC.mkdir(parents=True, exist_ok=True)
+    master.save(BACK_STATIC / "riba-logo.png", "PNG", optimize=True)
+
+    # PWA + iOS variants
+    master.resize((192, 192), Image.LANCZOS).save(FRONT_PUBLIC / "icon-192.png", "PNG", optimize=True)
+    master.resize((512, 512), Image.LANCZOS).save(FRONT_PUBLIC / "icon-512.png", "PNG", optimize=True)
+    master.resize((180, 180), Image.LANCZOS).save(FRONT_PUBLIC / "apple-touch-icon.png", "PNG", optimize=True)
+    # Legacy favicon.png (64×64) — still referenced in some PWA contexts
+    master.resize((64, 64), Image.LANCZOS).save(FRONT_PUBLIC / "favicon.png", "PNG", optimize=True)
+
+    # favicon.ico bundle (16, 32, 48, 64)
+    ico_sizes = [(16, 16), (32, 32), (48, 48), (64, 64)]
+    favs = [master.resize(s, Image.LANCZOS) for s in ico_sizes]
+    favs[0].save(FRONT_PUBLIC / "favicon.ico", format="ICO", sizes=ico_sizes, append_images=favs[1:])
+
+    print("✓ Phoenix assets written :")
+    for p in (
+        FRONT_PUBLIC / "riba-logo.png",
+        FRONT_PUBLIC / "icon-192.png",
+        FRONT_PUBLIC / "icon-512.png",
+        FRONT_PUBLIC / "apple-touch-icon.png",
+        FRONT_PUBLIC / "favicon.png",
+        FRONT_PUBLIC / "favicon.ico",
+        BACK_STATIC / "riba-logo.png",
+    ):
+        if p.exists():
+            print(f"   {p.relative_to(Path('/app'))}  ({p.stat().st_size//1024} KB)")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        build_all()
+    except Exception as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        raise
