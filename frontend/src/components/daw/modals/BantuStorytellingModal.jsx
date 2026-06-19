@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { Modal } from '../Modal';
+import { BantuStorytellingLibrary } from './BantuStorytellingLibrary';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -36,12 +37,16 @@ export function BantuStorytellingModal({
   onClose, language = 'fr', baseTempo = 120, timeSig = 4, onApply,
 }) {
   const { t } = useTranslation();
+  const [tab, setTab] = useState('generate'); // 'generate' | 'library'
   const [theme, setTheme] = useState('');
   const [structure, setStructure] = useState('mvett');
   const [totalBars, setTotalBars] = useState(32);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedToken, setPublishedToken] = useState(null);
+  const [authorName, setAuthorName] = useState('Anonymous Griot');
 
   const generate = async (e) => {
     e?.preventDefault?.();
@@ -75,9 +80,81 @@ export function BantuStorytellingModal({
     onClose?.();
   };
 
+  const publish = async () => {
+    if (!result?.chapters) return;
+    setPublishing(true); setError(null); setPublishedToken(null);
+    try {
+      const r = await axios.post(`${API}/storytelling/library`, {
+        title: result.title || 'Untitled Mvett',
+        theme: theme.trim() || result.title || 'Untitled',
+        language: language || 'fr',
+        bantu_style: result.bantu_style,
+        total_bars: totalBars,
+        chapters: result.chapters,
+        lyrics: result.lyrics || ['—'],
+        author_name: authorName.trim() || 'Anonymous Griot',
+      });
+      setPublishedToken(r.data?.author_token || null);
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message || 'Publish failed.');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const loadFromLibrary = (record) => {
+    if (!record) return;
+    setResult({
+      title: record.title,
+      bantu_style: record.bantu_style,
+      chapters: record.chapters,
+      lyrics: record.lyrics,
+      fallback: false,
+    });
+    setTheme(record.theme || '');
+    setTotalBars(record.total_bars || 32);
+    setTab('generate'); // jump back to the preview pane
+  };
+
   return (
-    <Modal title={t('storytelling.title', 'Bantu Storytelling · Mvett')} onClose={onClose} width={720}>
+    <Modal title={t('storytelling.title', 'Bantu Storytelling · Mvett')} onClose={onClose} width={780}>
       <div data-testid="storytelling-modal" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Tab strip */}
+        <div data-testid="storytelling-tabs" style={{
+          display: 'flex', gap: 4, padding: 3,
+          background: '#0B0B0E', border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: 10,
+        }}>
+          {[
+            { id: 'generate', label: '✨ ' + t('storytelling.tabGenerate', 'Generate'), testid: 'storytelling-tab-generate' },
+            { id: 'library',  label: '🌍 ' + t('storytelling.tabLibrary',  'Library'),  testid: 'storytelling-tab-library' },
+          ].map((it) => {
+            const on = tab === it.id;
+            return (
+              <button
+                key={it.id}
+                data-testid={it.testid}
+                onClick={() => setTab(it.id)}
+                style={{
+                  flex: 1, padding: '8px 12px', fontSize: 12,
+                  fontWeight: on ? 800 : 500,
+                  background: on ? 'linear-gradient(135deg,#D946EF22,#22D3EE22)' : 'transparent',
+                  border: '1px solid', borderColor: on ? '#D946EF55' : 'transparent',
+                  color: on ? '#FAFAFA' : '#A1A1AA',
+                  borderRadius: 8, cursor: 'pointer',
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                }}
+              >{it.label}</button>
+            );
+          })}
+        </div>
+
+        {tab === 'library' && (
+          <BantuStorytellingLibrary onLoad={loadFromLibrary} />
+        )}
+
+        {tab === 'generate' && (
+        <>
         <form onSubmit={generate} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <label style={{ fontSize: 11, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '0.10em' }}>
             {t('storytelling.themeLabel', 'Theme / proverb')}
@@ -227,30 +304,84 @@ export function BantuStorytellingModal({
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button
-                className="riba-btn"
-                onClick={generate}
-                disabled={loading}
-                data-testid="storytelling-regen-btn"
-              >
-                ↻ {t('storytelling.regenBtn', 'Re-generate')}
-              </button>
-              <button
-                data-testid="storytelling-apply-btn"
-                onClick={apply}
-                style={{
-                  background: 'linear-gradient(135deg, #22C55E, #22D3EE)',
-                  color: '#0B0B0E', border: 'none', borderRadius: 8,
-                  padding: '8px 16px', fontSize: 12, fontWeight: 800,
-                  letterSpacing: '0.06em', cursor: 'pointer', textTransform: 'uppercase',
-                  boxShadow: '0 0 14px rgba(34,197,94,0.35)',
-                }}
-              >
-                ▸ {t('storytelling.applyBtn', 'Apply to Timeline')}
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input
+                  data-testid="storytelling-author-input"
+                  placeholder={t('library.authorPlaceholder', 'Your griot name…')}
+                  value={authorName}
+                  onChange={(e) => setAuthorName(e.target.value)}
+                  style={{
+                    background: '#0B0B0E', border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#E4E4E7',
+                    width: 160,
+                  }}
+                />
+                <button
+                  data-testid="storytelling-publish-btn"
+                  onClick={publish}
+                  disabled={publishing}
+                  style={{
+                    background: publishing
+                      ? 'rgba(99,102,241,0.4)'
+                      : 'linear-gradient(135deg,#6366F1,#D946EF)',
+                    color: '#fff', border: 'none', borderRadius: 8,
+                    padding: '7px 14px', fontSize: 11, fontWeight: 800,
+                    letterSpacing: '0.06em', cursor: publishing ? 'wait' : 'pointer',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {publishing
+                    ? `⚙ ${t('common.loading','Loading…')}`
+                    : `🌍 ${t('library.publishBtn','Publish to library')}`}
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="riba-btn"
+                  onClick={generate}
+                  disabled={loading}
+                  data-testid="storytelling-regen-btn"
+                >
+                  ↻ {t('storytelling.regenBtn', 'Re-generate')}
+                </button>
+                <button
+                  data-testid="storytelling-apply-btn"
+                  onClick={apply}
+                  style={{
+                    background: 'linear-gradient(135deg, #22C55E, #22D3EE)',
+                    color: '#0B0B0E', border: 'none', borderRadius: 8,
+                    padding: '8px 16px', fontSize: 12, fontWeight: 800,
+                    letterSpacing: '0.06em', cursor: 'pointer', textTransform: 'uppercase',
+                    boxShadow: '0 0 14px rgba(34,197,94,0.35)',
+                  }}
+                >
+                  ▸ {t('storytelling.applyBtn', 'Apply to Timeline')}
+                </button>
+              </div>
             </div>
+            {publishedToken && (
+              <div data-testid="storytelling-published-token" style={{
+                background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.32)',
+                borderRadius: 8, padding: 10, marginTop: 4, color: '#86EFAC', fontSize: 11,
+                display: 'flex', flexDirection: 'column', gap: 4,
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 12 }}>
+                  ✅ {t('library.publishedTitle','Published to the library!')}
+                </div>
+                <div style={{ color: '#A1A1AA', fontSize: 10 }}>
+                  {t('library.publishedHint','Keep this author-token to delete your story later (shown only once) :')}
+                </div>
+                <code style={{
+                  fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+                  color: '#FAFAFA', background: '#0B0B0E', padding: '4px 8px',
+                  borderRadius: 4, userSelect: 'all', wordBreak: 'break-all',
+                }}>{publishedToken}</code>
+              </div>
+            )}
           </div>
+        )}
+        </>
         )}
       </div>
     </Modal>

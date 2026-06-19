@@ -139,6 +139,8 @@
   },
   "storytelling": {
     "title": "Bantu Storytelling · Épopée Mvett",
+    "tabGenerate": "Générer",
+    "tabLibrary": "Bibliothèque",
     "themeLabel": "Thème ou proverbe",
     "themePlaceholder": "La sagesse du baobab millénaire…",
     "structureLabel": "Structure narrative",
@@ -147,6 +149,16 @@
     "regenBtn": "Re-générer",
     "applyBtn": "Appliquer à la Timeline",
     "lyricsLabel": "Paroles & proverbes"
+  },
+  "library": {
+    "searchPlaceholder": "Rechercher…",
+    "results": "récits",
+    "empty": "Aucun récit pour ces filtres — sois le premier à publier !",
+    "loadBtn": "Charger",
+    "publishBtn": "Publier dans la bibliothèque",
+    "publishedTitle": "Publié dans la bibliothèque !",
+    "publishedHint": "Garde ce author-token pour pouvoir supprimer ton récit plus tard (affiché une seule fois) :",
+    "authorPlaceholder": "Ton nom de griot…"
   },
   "bantuGrid": {
     "title": "Bantu Oral Grid · Quantification Asymétrique",

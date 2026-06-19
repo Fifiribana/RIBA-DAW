@@ -139,6 +139,8 @@
   },
   "storytelling": {
     "title": "Bantu Storytelling · Mvett Epic",
+    "tabGenerate": "Generate",
+    "tabLibrary": "Library",
     "themeLabel": "Theme or proverb",
     "themePlaceholder": "The wisdom of the millennial baobab…",
     "structureLabel": "Narrative structure",
@@ -147,6 +149,16 @@
     "regenBtn": "Re-generate",
     "applyBtn": "Apply to Timeline",
     "lyricsLabel": "Lyrics & proverbs"
+  },
+  "library": {
+    "searchPlaceholder": "Search…",
+    "results": "records",
+    "empty": "No story yet for these filters — be the first to publish!",
+    "loadBtn": "Load",
+    "publishBtn": "Publish to library",
+    "publishedTitle": "Published to the library!",
+    "publishedHint": "Keep this author-token to delete your story later (shown only once):",
+    "authorPlaceholder": "Your griot name…"
   },
   "bantuGrid": {
     "title": "Bantu Oral Grid · Asymmetric Quantization",

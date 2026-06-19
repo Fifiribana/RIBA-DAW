@@ -339,7 +339,27 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 - **Desktop build** : cross-compile depuis le container Linux ARM64 vers Windows/macOS impossible — voir `/app/DESKTOP_RELEASE.md`. Le pipeline GitHub Actions `release.yml` produit les vrais installateurs signables sur push de tag `v*.*.*`.
 
-### v3.4 (this iteration - Feb 2026) — TAURI DESKTOP + MULTILINGUAL MANUAL + i18n FULL 💻📚🌍
+### v3.5 (this iteration - Feb 2026) — BANTU STORYTELLING LIBRARY + LAUNCH KIT 🌍📖🚀
+- **🌍 Bantu Storytelling Library** — premier réseau social de griots numériques :
+  - Backend `/app/backend/ai/library.py` : collection MongoDB `storytelling_library`. Endpoints :
+    - `POST /api/storytelling/library` — publication validée (langue ∈ {fr,en,es,pt,sw}, style ∈ {asiko_wisdom, makossa_roots, bikutsi_44/68/1224}, 4 chapitres contigus 1..total_bars, arrangement_hint ∈ allowed set, lyrics 2-64). Retourne `id` public + `author_token` (montré une seule fois).
+    - `GET /api/storytelling/library?lang=&style=&q=&sort=recent|popular|random&limit=&offset=` — browse paginé avec filtres et recherche full-text (titre/thème/auteur).
+    - `GET /api/storytelling/library/{id}` — fetch complet + incrément atomique `plays`.
+    - `DELETE /api/storytelling/library/{id}` — protégé par header `X-Author-Token`.
+    - `GET /api/storytelling/library/stats` — total + breakdown par langue + par style.
+  - `_serialize_public()` strip systématiquement `author_token` + `_id` Mongo de toutes les réponses publiques (zéro fuite).
+  - Frontend `BantuStorytellingLibrary.jsx` : panel filtré (6 pills langue + 6 pills style + tri recent/popular/random + recherche live + bouton refresh), grille de cartes avec mini-timeline 4-couleurs (cyan/ambre/magenta/vert), nom auteur, play-count, bouton **LOAD** qui injecte l'arrangement dans le preview pane de la modale.
+  - `BantuStorytellingModal.jsx` refondu avec 2 onglets (**✨ Generate** + **🌍 Library**) + nouveau bouton **🌍 Publish to Library** (saisie du nom de griot) qui post le récit + affiche le `author_token` à conserver.
+  - i18n complet en 5 langues : `library.{searchPlaceholder, results, empty, loadBtn, publishBtn, publishedTitle, publishedHint, authorPlaceholder}` + `storytelling.{tabGenerate, tabLibrary}`.
+- **🚀 Launch Day Kit** (`/app/docs/LAUNCH_DAY_KIT.md`) :
+  - **One-pager presse** complet (headline · lede 60 mots · 3 différenciateurs · pull-quote · boilerplate 50 mots).
+  - **Script YouTube Live** 45 min (3 villes Yaoundé ↔ Paris ↔ Brooklyn, cold open, 3 actes, outro, checklist OBS).
+  - **4 visuels promotionnels** spécifiés (hero 2048×1152 · square 1080² · vertical 1080×1920 · dev 2400×1260) avec palette Phoenix et copy par visuel.
+  - **Checklist semaine de lancement** J-3 → J+1 (tag GitHub, QA, presse, social).
+- **📊 Tests** : `test_storytelling_library.py` (16 tests : stats shape, publication validée, rejets 400/422 sur langue/style/contiguity/title/hint, browse default+lang+style+search+pagination, fetch increments plays, delete auth-token-protected) → **146/146 PASS** (était 130, +16 nouveaux, 0 régression).
+- **Smoke E2E Playwright** ✅ : 3 récits seedés affichés dans la grille, LOAD → preview rempli avec 4 chapitres + lyrics + bouton Apply visible.
+
+### v3.4 (iter 25 - Feb 2026) — TAURI DESKTOP + MULTILINGUAL MANUAL + i18n FULL 💻📚🌍
 - **💻 Tauri Desktop Release Pipeline** (CI-driven, Tauri 2.x) :
   - `/app/.github/workflows/release.yml` : matrice 4 runners (macos aarch64 + x86_64, windows-latest, ubuntu-22.04) déclenchée par tag `v*.*.*` ou `workflow_dispatch`. Produit `.exe (NSIS)`, `.msi`, `.dmg (Apple Silicon + Intel)`, `.deb`, `.AppImage` en draft GitHub Release.
   - `src-tauri/tauri.conf.json` + `Cargo.toml` bumpés à `3.4.0`, identifier `com.emergent.riba`.
@@ -391,11 +411,13 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Smoke test E2E Playwright** ✅ : switch FR→SW vérifié, menu basculé en `Fichier/Édition/...` et `Faili/Hariri/...` byte-exact ; logo Phoenix visible dans la TopBar (boxShadow magenta + cyan).
 
 ## Prioritized Backlog
-- **P0 (v3.5)**: Bantu Storytelling Library — bibliothèque communautaire MongoDB où les utilisateurs publient leurs récits Mvett + arrangements. Endpoint `GET /api/storytelling/library?lang=sw&style=bikutsi_68`. Faire dialoguer Kinshasa, Lagos, São Paulo, Madrid et Yaoundé via la sagesse partagée.
+- **P0 (v3.6)**: Procedural Launch visuals — étendre `setup_icons.py` avec `make_launch_pack()` qui compose les 4 visuels promotionnels (hero / square / vertical / dev) directement à partir du master Phoenix + Bantu Grid overlays. Asset spec déjà dans `/app/docs/LAUNCH_DAY_KIT.md`.
 - **P1**: WebMIDI input pour claviers MIDI externes.
-- **P1**: Code-signing macOS + EV cert Windows (ajouter les secrets GitHub Actions ; déjà câblé dans release.yml).
+- **P1**: Code-signing macOS + EV cert Windows (secrets cablés dans release.yml ; à remplir dans GitHub Settings).
+- **P1**: Library — like/star system + commentaires modérés (extension MongoDB).
+- **P1**: Library — page utilisateur profil griot (`/griot/:author_name`) regroupant ses récits.
 - **P2**: Vue Bantu Heatmap (visualisation 2D des patterns asymétriques).
-- **P2**: Refactor `engine.js` (audio engine large) en React hooks.
+- **P2**: Refactor `engine.js` en React hooks.
 - **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py`.
 - **P2**: Snippet preview audio inline.
 - **P2**: Drag-drop sur le Library panel du Magic Generator.
@@ -403,13 +425,13 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **P2**: Storytelling — preview audio des arrangement_hints (drum solo, vocal chant samples).
 - **P2**: Album Builder — Snippet Picker UI inline.
 - **P2**: Promo Cascade — UI calendrier visuel des 4 publications planifiées + bouton "Cancel cascade".
-- **P2**: Tauri updater integration (Tauri signing secrets déjà cablés).
+- **P2**: Tauri updater integration.
 
 ## Next Action Items
-- 🟢 Sprint v3.5 (validé) — **Bantu Storytelling Library** : bibliothèque communautaire publique, premier réseau social de griots numériques.
-- 🟢 En parallèle (utilisateur peut piocher) :
-  - **a) Push GitHub** via "Save to GitHub" → tag `v3.4.0` → premier build .exe + .dmg + .AppImage officiel
-  - **b) WebMIDI input** pour claviers externes
-  - **c) Code-signing macOS** (acheter cert Apple Developer 99€/an)
-  - **d) Bantu Heatmap** visualisation 2D
+- 🟢 Sprint v3.6 — choix utilisateur :
+  - **a) Push GitHub + tag v3.5.0** → premier build officiel `.exe/.dmg/.AppImage` + lancer la session live `?session=launch-day` 🚀
+  - **b) Procedural Launch visuals** : étendre `setup_icons.py` pour générer automatiquement les 4 visuels du Launch Kit
+  - **c) Library — like/star + commentaires** (interaction communautaire)
+  - **d) WebMIDI input** pour claviers externes
+  - **e) Vue Bantu Heatmap**
 - ⚠️ Pour activer Auto-share + Promo Cascade publication réelle : ajouter les tokens (TIKTOK_ACCESS_TOKEN / IG_USER_ID+IG_ACCESS_TOKEN+PUBLIC_BASE_URL / YOUTUBE_CLIENT_ID+SECRET+REFRESH_TOKEN) dans `/app/backend/.env` + restart backend.

@@ -139,6 +139,8 @@
   },
   "storytelling": {
     "title": "Narración Bantú · Épica Mvett",
+    "tabGenerate": "Generar",
+    "tabLibrary": "Biblioteca",
     "themeLabel": "Tema o proverbio",
     "themePlaceholder": "La sabiduría del baobab milenario…",
     "structureLabel": "Estructura narrativa",
@@ -147,6 +149,16 @@
     "regenBtn": "Re-generar",
     "applyBtn": "Aplicar a la Timeline",
     "lyricsLabel": "Letras y proverbios"
+  },
+  "library": {
+    "searchPlaceholder": "Buscar…",
+    "results": "relatos",
+    "empty": "Ningún relato para estos filtros — ¡sé el primero en publicar!",
+    "loadBtn": "Cargar",
+    "publishBtn": "Publicar en la biblioteca",
+    "publishedTitle": "¡Publicado en la biblioteca!",
+    "publishedHint": "Guarda este author-token para poder eliminar tu relato más tarde (mostrado una sola vez):",
+    "authorPlaceholder": "Tu nombre de griot…"
   },
   "bantuGrid": {
     "title": "Bantu Oral Grid · Cuantización Asimétrica",

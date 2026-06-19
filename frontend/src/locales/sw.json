@@ -139,6 +139,8 @@
   },
   "storytelling": {
     "title": "Hadithi ya Bantu · Mvett",
+    "tabGenerate": "Tengeneza",
+    "tabLibrary": "Maktaba",
     "themeLabel": "Mada au methali",
     "themePlaceholder": "Hekima ya mbuyu wa miaka elfu…",
     "structureLabel": "Muundo wa hadithi",
@@ -147,6 +149,16 @@
     "regenBtn": "Tengeneza tena",
     "applyBtn": "Tumia kwa Timeline",
     "lyricsLabel": "Maneno na methali"
+  },
+  "library": {
+    "searchPlaceholder": "Tafuta…",
+    "results": "hadithi",
+    "empty": "Hakuna hadithi kwa vichungi hivi — kuwa wa kwanza kuchapisha!",
+    "loadBtn": "Pakia",
+    "publishBtn": "Chapisha kwenye maktaba",
+    "publishedTitle": "Imechapishwa kwenye maktaba!",
+    "publishedHint": "Hifadhi author-token hii kufuta hadithi yako baadaye (inaonyeshwa mara moja tu):",
+    "authorPlaceholder": "Jina lako la griot…"
   },
   "bantuGrid": {
     "title": "Bantu Oral Grid · Uthibitishaji Usio Sawa",

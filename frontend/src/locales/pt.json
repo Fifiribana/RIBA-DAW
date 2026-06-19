@@ -139,6 +139,8 @@
   },
   "storytelling": {
     "title": "Narrativa Bantu · Épica Mvett",
+    "tabGenerate": "Gerar",
+    "tabLibrary": "Biblioteca",
     "themeLabel": "Tema ou provérbio",
     "themePlaceholder": "A sabedoria do baobá milenar…",
     "structureLabel": "Estrutura narrativa",
@@ -147,6 +149,16 @@
     "regenBtn": "Re-gerar",
     "applyBtn": "Aplicar à Timeline",
     "lyricsLabel": "Letras e provérbios"
+  },
+  "library": {
+    "searchPlaceholder": "Buscar…",
+    "results": "histórias",
+    "empty": "Nenhuma história para estes filtros — seja o primeiro a publicar!",
+    "loadBtn": "Carregar",
+    "publishBtn": "Publicar na biblioteca",
+    "publishedTitle": "Publicado na biblioteca!",
+    "publishedHint": "Guarde este author-token para excluir sua história depois (exibido apenas uma vez):",
+    "authorPlaceholder": "Seu nome de griô…"
   },
   "bantuGrid": {
     "title": "Bantu Oral Grid · Quantização Assimétrica",
