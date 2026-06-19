@@ -174,6 +174,30 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
 - **Iter 15 (Feb 2026)** : **59/59 backend pytest PASS** (-m "not slow"), 1 slow deselected (Demucs heavy). FAL_KEY actif via clé utilisateur, mode "full" sur tous les status endpoints.
 
+### v2.8 (iter 19 - Feb 2026) — MAGIC GENERATOR ENRICHI + GLOBAL TRANSPORT BAR
+- **🎵 MagicGeneratorModal — panneau gauche enrichi** :
+  - **Song Title (Optional)** input au-dessus du PROMPT (envoyé au backend via le champ `title` de `MusicGenRequest` → override de `_local_title`)
+  - **+ Audio** : ouvre un file picker `<input type="file" accept="audio/*">` masqué → upload vers `/api/ai/upload-reference`
+  - **🎙 Record** : capture micro via `navigator.mediaDevices.getUserMedia` + `MediaRecorder` (mime audio/webm;codecs=opus) → upload comme `kind=voice` ; affiche timer rouge `🔴 Ns · stop` pendant l'enregistrement
+  - **📚 Browse** : toggle Library panel inline (`/api/ai/library` → 4 loops curés : Bikutsi 4/4, Makossa Roots, Asiko Wisdom, Afrobeat Groove à 120/105/135/110 BPM, générés procéduralement à la 1ère requête)
+- **🎵 Workspace cards — menu contextuel `⋯`** sur chaque carte avec :
+  - **Remix ▸ Cover / Mashup / Sample this song** → précharge prompt+suffixe+style dans le panneau gauche
+  - **Reuse Prompt** → recharge title + prompt + style depuis la carte cliquée
+  - **Add to Timeline** → import direct (existant)
+- **🎛 GlobalTransportPlayer** (`/app/frontend/src/components/daw/GlobalTransportPlayer.jsx`, monté dans Daw.jsx) :
+  - Apparaît en bas fixe (bottom 14, gradient magenta border) dès qu'une carte Workspace est lue
+  - Listener `window.addEventListener('riba:play-workspace-item')` → reçoit { id, title, audio_url, tags, playlist }
+  - Contrôles complets : ⇆ shuffle, ⏮ prev, ⏯ play/pause (bouton circulaire gradient), ⏭ next, ↻ repeat (off/all/one), volume slider (accent magenta), scrubber cliquable (gradient indigo→magenta), times mm:ss
+  - Auto-advance à la fin du morceau selon le mode repeat ; playlist construite depuis les items du Workspace ayant un `audio_url`
+- **Backend `generator.py`** : 
+  - Nouveau modèle field `title: str | None` sur `MusicGenRequest` + flag `user_title` dans l'entrée Workspace
+  - Nouvel endpoint `POST /api/ai/upload-reference` (multipart : file, title, kind ∈ {upload,voice}, tags_csv) → indexe + persiste dans `/static/workspace/uploads/{id}{ext}` (ext autorisés : wav/mp3/ogg/m4a/webm/flac, max 30 MB)
+  - Nouvel endpoint `GET /api/ai/library` → liste curée de 4 loops procéduraux (génération paresseuse au 1er call, manifeste persisté)
+  - `GET /workspace/file/{id}` désormais résout aussi les uploads + library
+  - `DELETE /workspace/{id}` nettoie aussi les fichiers uploads associés
+- **8 nouveaux tests** (`test_generator_extensions.py`) : library shape + 4 loops downloadables, upload wav+title+tags, voice default title, rejection extension/empty/kind, generate-track title override + default. **Tous PASS.**
+- **Suite complète : 80/80 PASS** (72 + 8 nouveaux), 0 régression.
+
 ### v2.7 (iter 18 - Feb 2026) — BOOT CINEMATIC + REEL SNIPPET PICKER
 - **🎬 Boot Cinematic** (extension du SplashScreen) :
   - `SplashScreen.jsx` prend désormais un prop `mode='short'|'cinematic'` (8 s)

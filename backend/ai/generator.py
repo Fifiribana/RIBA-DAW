@@ -3,7 +3,10 @@ RIBA Magic Generator — Suno-style lyrics + workspace orchestration.
 
 Endpoints (all under /api/ai):
     POST /generate-lyrics      → Claude-powered lyrics structured by [Verse]/[Chorus]
-    GET  /workspace            → list saved generations (lyrics + music)
+    POST /generate-track       → fal.ai music generation (title, prompt, style, duration)
+    POST /upload-reference     → user-uploaded reference WAV/MP3 (multipart)
+    GET  /library              → pre-installed RIBA sample library
+    GET  /workspace            → list saved generations (lyrics + music + uploads)
     DELETE /workspace/{id}     → remove one
     GET  /workspace/file/{id}  → serve the WAV directly
 """
@@ -18,7 +21,7 @@ import uuid
 from pathlib import Path
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -26,7 +29,14 @@ router = APIRouter(prefix="/ai", tags=["ai-generator"])
 
 WORKSPACE = Path(__file__).resolve().parents[1] / "static" / "workspace"
 WORKSPACE.mkdir(parents=True, exist_ok=True)
+UPLOADS = WORKSPACE / "uploads"
+UPLOADS.mkdir(parents=True, exist_ok=True)
+LIBRARY = WORKSPACE / "library"
+LIBRARY.mkdir(parents=True, exist_ok=True)
 INDEX_FILE = WORKSPACE / "index.json"
+
+ACCEPTED_AUDIO_EXTS = {".wav", ".mp3", ".ogg", ".m4a", ".webm", ".flac"}
+MAX_UPLOAD_BYTES = 30 * 1024 * 1024  # 30 MB
 
 
 # ---------- helpers ----------
@@ -157,6 +167,7 @@ class MusicGenRequest(BaseModel):
     duration_seconds: int = 30
     style: str | None = None
     instrumental: bool = True
+    title: str | None = None        # user-chosen "Song Title" — overrides _local_title
     # fal.ai endpoint — "stable-audio" verified working 2026-06 (musicgen-* deprecated)
     model: str = "stable-audio"
 
@@ -172,11 +183,13 @@ async def generate_track(req: MusicGenRequest):
     if req.instrumental:
         full_prompt = f"instrumental, {full_prompt}"
 
+    final_title = (req.title or "").strip() or _local_title(req.prompt)
     entry = {
         "kind": "music",
         "prompt": req.prompt,
         "style": style_str,
-        "title": _local_title(req.prompt),
+        "title": final_title,
+        "user_title": bool((req.title or "").strip()),
         "tags": _local_tags(req.style, req.prompt),
         "duration": req.duration_seconds,
         "instrumental": req.instrumental,
@@ -246,12 +259,152 @@ def delete_item(item_id: str):
     wav = WORKSPACE / f"{item_id}.wav"
     if wav.exists():
         wav.unlink(missing_ok=True)
+    # also delete uploaded variants
+    for ext in ACCEPTED_AUDIO_EXTS:
+        up = UPLOADS / f"{item_id}{ext}"
+        if up.exists():
+            up.unlink(missing_ok=True)
     return {"deleted": item_id, "remaining": len(keep)}
 
 
 @router.get("/workspace/file/{item_id}")
 def get_workspace_file(item_id: str):
+    # Try the standard generated WAV first
     p = WORKSPACE / f"{item_id}.wav"
-    if not p.exists():
-        raise HTTPException(404, "audio not found")
-    return FileResponse(p, media_type="audio/wav", filename=f"{item_id}.wav")
+    if p.exists():
+        return FileResponse(p, media_type="audio/wav", filename=f"{item_id}.wav")
+    # Then the user uploads folder — try common audio extensions
+    for ext in (".wav", ".mp3", ".ogg", ".m4a", ".webm", ".flac"):
+        up = UPLOADS / f"{item_id}{ext}"
+        if up.exists():
+            media = {
+                ".wav": "audio/wav", ".mp3": "audio/mpeg", ".ogg": "audio/ogg",
+                ".m4a": "audio/mp4", ".webm": "audio/webm", ".flac": "audio/flac",
+            }[ext]
+            return FileResponse(up, media_type=media, filename=f"{item_id}{ext}")
+    # Then the curated library
+    for ext in (".wav", ".mp3", ".ogg"):
+        lib = LIBRARY / f"{item_id}{ext}"
+        if lib.exists():
+            media = {".wav": "audio/wav", ".mp3": "audio/mpeg", ".ogg": "audio/ogg"}[ext]
+            return FileResponse(lib, media_type=media, filename=f"{item_id}{ext}")
+    raise HTTPException(404, "audio not found")
+
+
+# ---------- upload reference (mic recording or local file) ----------
+@router.post("/upload-reference")
+async def upload_reference(
+    file: UploadFile = File(...),
+    title: str = Form(""),
+    kind: str = Form("upload"),  # "upload" or "voice"
+    tags_csv: str = Form(""),
+):
+    """Receive a user-recorded or user-uploaded audio reference, persist it in
+    /static/workspace/uploads, and index a workspace card so the UI can preview
+    + reuse it like any other entry."""
+    if not file.filename:
+        raise HTTPException(400, "Filename missing.")
+    ext = Path(file.filename).suffix.lower() or ".wav"
+    if ext not in ACCEPTED_AUDIO_EXTS:
+        raise HTTPException(400, f"Unsupported extension {ext}. Allowed: {sorted(ACCEPTED_AUDIO_EXTS)}")
+    if kind not in ("upload", "voice"):
+        raise HTTPException(400, "kind must be 'upload' or 'voice'.")
+
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Uploaded file is empty.")
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f"File too big ({len(data)} bytes > {MAX_UPLOAD_BYTES}).")
+
+    item_id = str(uuid.uuid4())
+    dest = UPLOADS / f"{item_id}{ext}"
+    dest.write_bytes(data)
+
+    final_title = (title or "").strip() or (
+        "Voice Memo" if kind == "voice" else Path(file.filename).stem[:40] or "Imported Sample"
+    )
+    tag_list = [t.strip().upper() for t in tags_csv.split(",") if t.strip()][:4]
+    if not tag_list:
+        tag_list = (["VOICE", "REC"] if kind == "voice" else ["UPLOAD", "REF"])
+
+    entry = {
+        "id":            item_id,
+        "kind":          kind,
+        "title":         final_title,
+        "user_title":    bool((title or "").strip()),
+        "tags":          tag_list,
+        "audio_url":     f"/api/ai/workspace/file/{item_id}",
+        "bytes":         len(data),
+        "source_name":   file.filename,
+        "ext":           ext,
+        "fallback":      False,
+    }
+    return _push_entry(entry)
+
+
+# ---------- library : curated RIBA loops ----------
+_LIBRARY_BUILT = False
+
+
+def _ensure_library() -> list[dict]:
+    """Generate a tiny set of branded Bantu loops on first call (no network).
+
+    These are 2-second mono WAVs with distinct harmonic content per style so
+    the user has something to preview & pull immediately without uploads.
+    """
+    global _LIBRARY_BUILT
+    manifest = LIBRARY / "library.json"
+    if _LIBRARY_BUILT and manifest.exists():
+        try:
+            return json.loads(manifest.read_text())
+        except Exception:
+            pass
+
+    import math
+    import struct
+    import wave
+
+    def _wav(path: Path, freqs: list[float], bpm: int, seconds: float = 2.0) -> int:
+        sr = 44100
+        n = int(seconds * sr)
+        with wave.open(str(path), "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
+            beat_sec = 60.0 / bpm
+            for i in range(n):
+                t = i / sr
+                env = max(0.0, 1.0 - ((t % beat_sec) / beat_sec))
+                s = sum(0.3 * math.sin(2 * math.pi * f * t) for f in freqs) / max(1, len(freqs))
+                s *= 0.6 + 0.4 * env
+                w.writeframesraw(struct.pack("<h", int(max(-0.95, min(0.95, s)) * 30000)))
+        return path.stat().st_size
+
+    library_seeds = [
+        ("LIB-BIKUTSI-001", "Bikutsi 4/4 Loop",   ["BIKUTSI", "LOOP", "4-4"],  120, [70.0, 220.0, 880.0]),
+        ("LIB-MAKOSSA-001", "Makossa Roots Loop", ["MAKOSSA", "LOOP", "BASS"], 105, [55.0, 110.0, 660.0]),
+        ("LIB-ASIKO-001",   "Asiko Wisdom Loop",  ["ASIKO", "LOOP", "PERC"],   135, [90.0, 180.0, 750.0]),
+        ("LIB-AFRO-001",    "Afrobeat Groove Hit", ["AFROBEAT", "LOOP", "GROOVE"], 110, [60.0, 240.0, 920.0]),
+    ]
+    items: list[dict] = []
+    for slug, title, tags, bpm, freqs in library_seeds:
+        path = LIBRARY / f"{slug}.wav"
+        if not path.exists():
+            _wav(path, freqs, bpm)
+        items.append({
+            "id":        slug,
+            "kind":      "library",
+            "title":     title,
+            "tags":      tags,
+            "bpm":       bpm,
+            "audio_url": f"/api/ai/workspace/file/{slug}",
+            "bytes":     path.stat().st_size,
+            "ext":       ".wav",
+            "fallback":  False,
+        })
+    manifest.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+    _LIBRARY_BUILT = True
+    return items
+
+
+@router.get("/library")
+def list_library():
+    return {"items": _ensure_library()}

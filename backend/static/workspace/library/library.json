@@ -1,0 +1,62 @@
+[
+  {
+    "id": "LIB-BIKUTSI-001",
+    "kind": "library",
+    "title": "Bikutsi 4/4 Loop",
+    "tags": [
+      "BIKUTSI",
+      "LOOP",
+      "4-4"
+    ],
+    "bpm": 120,
+    "audio_url": "/api/ai/workspace/file/LIB-BIKUTSI-001",
+    "bytes": 176444,
+    "ext": ".wav",
+    "fallback": false
+  },
+  {
+    "id": "LIB-MAKOSSA-001",
+    "kind": "library",
+    "title": "Makossa Roots Loop",
+    "tags": [
+      "MAKOSSA",
+      "LOOP",
+      "BASS"
+    ],
+    "bpm": 105,
+    "audio_url": "/api/ai/workspace/file/LIB-MAKOSSA-001",
+    "bytes": 176444,
+    "ext": ".wav",
+    "fallback": false
+  },
+  {
+    "id": "LIB-ASIKO-001",
+    "kind": "library",
+    "title": "Asiko Wisdom Loop",
+    "tags": [
+      "ASIKO",
+      "LOOP",
+      "PERC"
+    ],
+    "bpm": 135,
+    "audio_url": "/api/ai/workspace/file/LIB-ASIKO-001",
+    "bytes": 176444,
+    "ext": ".wav",
+    "fallback": false
+  },
+  {
+    "id": "LIB-AFRO-001",
+    "kind": "library",
+    "title": "Afrobeat Groove Hit",
+    "tags": [
+      "AFROBEAT",
+      "LOOP",
+      "GROOVE"
+    ],
+    "bpm": 110,
+    "audio_url": "/api/ai/workspace/file/LIB-AFRO-001",
+    "bytes": 176444,
+    "ext": ".wav",
+    "fallback": false
+  }
+]

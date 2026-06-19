@@ -29,6 +29,7 @@ import { DiskUsageModal } from './daw/modals/DiskUsageModal';
 import { AssistantModal } from './daw/modals/AssistantModal';
 import { MagicGeneratorModal } from './daw/modals/MagicGeneratorModal';
 import { MagicRemixModal } from './daw/modals/MagicRemixModal';
+import { GlobalTransportPlayer } from './daw/GlobalTransportPlayer';
 import { MagentaOverlay } from './daw/MagentaSpinner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -2381,6 +2382,7 @@ export default function Daw() {
           }}
         />
       )}
+      <GlobalTransportPlayer />
     </div>
   );
 }
