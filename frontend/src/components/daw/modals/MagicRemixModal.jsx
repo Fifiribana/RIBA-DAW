@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../Modal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -54,9 +54,19 @@ export function MagicRemixModal({ onClose, onImportStems }) {
   const [pickedOffset, setPickedOffset] = useState(0);   // start_sec of chosen snippet
   const [pickedName, setPickedName] = useState(null);    // 'peak_energy' | 'bantu_drop' | 'main_hook' | null
 
+  // === Auto-share state ===
+  const [shareStatus, setShareStatus] = useState(null);
+  const [sharePack, setSharePack] = useState(null);     // { platforms:{ tiktok, instagram, youtube }, hashtags }
+  const [shareDesc, setShareDesc] = useState('');
+  const [shareExtraTags, setShareExtraTags] = useState('');
+  const [shareSchedule, setShareSchedule] = useState('');
+  const [sharePublishing, setSharePublishing] = useState(null); // platform id while in flight
+  const [shareJobs, setShareJobs] = useState([]);
+
   useEffect(() => {
     fetch(`${API}/ai/remix-status`).then((r) => r.json()).then(setChainStatus).catch(() => {});
     fetch(`${API}/ai/reel-status`).then((r) => r.json()).then(setReelStatus).catch(() => {});
+    fetch(`${API}/ai/share/status`).then((r) => r.json()).then(setShareStatus).catch(() => {});
   }, []);
 
   // Reset snippet selection when a new remix result lands
@@ -250,6 +260,77 @@ export function MagicRemixModal({ onClose, onImportStems }) {
     setPickedOffset(cand.start_sec);
     setPickedName(cand.name);
     setReelMsg(`🎯 Picked ${cand.label} @${cand.start_sec}s — click Generate Bantu Reel`);
+  };
+
+  // === Auto-share handlers ===
+  const prepareSharePack = useCallback(async () => {
+    if (!reelOutput) return;
+    try {
+      const extras = shareExtraTags
+        .split(/[,\s]+/).map((s) => s.trim().replace(/^#/, '')).filter(Boolean);
+      const r = await fetch(`${API}/ai/share/prepare`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title:           reelOutput.title || reelTitle,
+          style:           reelOutput.style_label,
+          description:     shareDesc,
+          extra_hashtags:  extras,
+          mention_riba:    true,
+        }),
+      });
+      const d = await r.json();
+      setSharePack(d);
+    } catch (e) { /* swallow */ }
+  }, [reelOutput, reelTitle, shareDesc, shareExtraTags]);
+
+  // Auto-prepare whenever the reel is rendered or the share inputs change
+  useEffect(() => { if (reelOutput) prepareSharePack(); }, [reelOutput, prepareSharePack]);
+
+  const fetchShareJobs = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/ai/share/jobs`);
+      const d = await r.json();
+      setShareJobs(d.jobs || []);
+    } catch { /* */ }
+  }, []);
+
+  const publishTo = async (platform) => {
+    if (!reelOutput) return;
+    setSharePublishing(platform);
+    try {
+      const pack = sharePack?.platforms?.[platform];
+      const tags = sharePack?.hashtags || [];
+      const body = {
+        reel_id:     reelOutput.id,
+        title:       platform === 'youtube' ? sharePack?.platforms?.youtube?.title : (reelOutput.title || reelTitle),
+        description: pack?.caption || pack?.description || shareDesc,
+        hashtags:    tags,
+        schedule_at: shareSchedule ? new Date(shareSchedule).toISOString() : null,
+        privacy:     'public',
+      };
+      const r = await fetch(`${API}/ai/share/${platform}/publish`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        setReelMsg(`✓ ${platform} ${d.scheduled ? 'scheduled' : 'published'}`);
+      } else {
+        const code = d?.detail?.code || `HTTP_${r.status}`;
+        const missing = d?.detail?.missing?.join(' / ') || '';
+        setReelMsg(`⚠️ ${platform} → ${code}${missing ? ' · need: ' + missing : ''}`);
+      }
+      fetchShareJobs();
+    } catch (e) {
+      setReelMsg(`${platform} publish failed: ${e.message}`);
+    } finally {
+      setSharePublishing(null);
+    }
+  };
+
+  const copyToClipboard = async (text, label = 'caption') => {
+    try { await navigator.clipboard.writeText(text); setReelMsg(`📋 ${label} copied`); }
+    catch { setReelMsg(`Clipboard blocked.`); }
   };
 
   const chainBadge = (txt, ok) => (
@@ -615,6 +696,146 @@ export function MagicRemixModal({ onClose, onImportStems }) {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* ============ AUTO-SHARE PANEL ============ */}
+            {reelOutput && shareStatus && (
+              <div
+                data-testid="auto-share-panel"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(34,211,238,0.06))',
+                  border: '1px solid rgba(99,102,241,0.30)', borderRadius: 10, padding: 12,
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#FAFAFA' }}>📡 Auto-share</span>
+                  <span className="font-mono-r" style={{ fontSize: 9, color: '#A1A1AA', letterSpacing: '0.12em' }}>
+                    TIKTOK · INSTAGRAM REELS · YOUTUBE SHORTS
+                  </span>
+                </div>
+
+                {/* description + schedule */}
+                <textarea
+                  data-testid="share-desc"
+                  value={shareDesc}
+                  onChange={(e) => setShareDesc(e.target.value)}
+                  rows={2}
+                  placeholder="Description (auto-filled if empty)…"
+                  style={input}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
+                  <input
+                    data-testid="share-extra-tags"
+                    value={shareExtraTags}
+                    onChange={(e) => setShareExtraTags(e.target.value)}
+                    placeholder="Extra hashtags (comma separated)"
+                    style={input}
+                  />
+                  <input
+                    data-testid="share-schedule"
+                    type="datetime-local"
+                    value={shareSchedule}
+                    onChange={(e) => setShareSchedule(e.target.value)}
+                    style={input}
+                    title="Schedule (YouTube native; TikTok/IG queued for cron)"
+                  />
+                </div>
+
+                {/* auto hashtag chips */}
+                {sharePack?.hashtags && (
+                  <div data-testid="share-hashtags" style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {sharePack.hashtags.map((t) => (
+                      <span key={t} style={{
+                        fontSize: 9, padding: '2px 7px', borderRadius: 999,
+                        background: 'rgba(99,102,241,0.10)',
+                        border: '1px solid rgba(99,102,241,0.3)',
+                        color: '#A5B4FC', fontFamily: 'JetBrains Mono, monospace',
+                      }}>{t}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* per-platform publish buttons */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                  {['tiktok', 'instagram', 'youtube'].map((p) => {
+                    const st = shareStatus.platforms?.[p];
+                    const ready = !!st?.configured;
+                    const inflight = sharePublishing === p;
+                    const labels = { tiktok: 'TikTok', instagram: 'Instagram Reels', youtube: 'YouTube Shorts' };
+                    const icons  = { tiktok: '🎵', instagram: '📷', youtube: '▶' };
+                    return (
+                      <div key={p} style={{
+                        background: '#0B0B0E', borderRadius: 8, padding: 8,
+                        border: `1px solid ${ready ? 'rgba(34,197,94,0.35)' : 'rgba(245,158,11,0.30)'}`,
+                        display: 'flex', flexDirection: 'column', gap: 6,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#FAFAFA' }}>
+                            {icons[p]} {labels[p]}
+                          </span>
+                          <span style={{
+                            fontSize: 8, padding: '1px 5px', borderRadius: 3,
+                            color: ready ? '#22C55E' : '#F59E0B',
+                            border: `1px solid ${ready ? 'rgba(34,197,94,0.4)' : 'rgba(245,158,11,0.4)'}`,
+                            fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em',
+                          }}>{ready ? 'READY' : 'CONFIG'}</span>
+                        </div>
+                        <button
+                          data-testid={`publish-${p}`}
+                          className="riba-btn"
+                          onClick={() => publishTo(p)}
+                          disabled={!ready || inflight}
+                          style={{
+                            fontSize: 10, padding: '6px 0', fontWeight: 700,
+                            background: ready
+                              ? 'linear-gradient(135deg, #6366F1, #22D3EE)'
+                              : 'rgba(255,255,255,0.05)',
+                            color: ready ? '#fff' : '#71717A',
+                            border: 'none', borderRadius: 6,
+                            cursor: (ready && !inflight) ? 'pointer' : 'not-allowed',
+                            opacity: inflight ? 0.6 : 1,
+                          }}
+                          title={ready ? `Publish to ${labels[p]}` : `Missing: ${(st?.missing || []).join(', ')}`}
+                        >
+                          {inflight ? '⚙ publishing…' : (ready ? '📤 Publish' : '🔒 Setup needed')}
+                        </button>
+                        {/* per-platform caption preview + copy */}
+                        {sharePack?.platforms?.[p] && (
+                          <button
+                            data-testid={`copy-${p}`}
+                            onClick={() => copyToClipboard(
+                              p === 'youtube'
+                                ? `${sharePack.platforms.youtube.title}\n\n${sharePack.platforms.youtube.description}`
+                                : sharePack.platforms[p].caption,
+                              `${labels[p]} caption`,
+                            )}
+                            style={{
+                              fontSize: 8, padding: '3px 0', borderRadius: 4,
+                              color: '#A1A1AA', background: 'transparent',
+                              border: '1px solid rgba(255,255,255,0.06)', fontWeight: 600,
+                              cursor: 'pointer', letterSpacing: '0.1em',
+                            }}
+                          >📋 COPY CAPTION</button>
+                        )}
+                        {!ready && st?.missing?.length > 0 && (
+                          <div style={{ fontSize: 8, color: '#F59E0B', fontFamily: 'JetBrains Mono, monospace' }}>
+                            need: {st.missing.join(', ')}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {shareJobs.length > 0 && (
+                  <div data-testid="share-jobs" style={{
+                    fontSize: 9, color: '#71717A', fontFamily: 'JetBrains Mono, monospace',
+                    borderTop: '1px dashed rgba(255,255,255,0.05)', paddingTop: 6,
+                  }}>
+                    last job: {shareJobs[0].platform} · {shareJobs[0].status} · {shareJobs[0].submitted_at?.slice(11, 19)}
+                  </div>
+                )}
               </div>
             )}
           </div>

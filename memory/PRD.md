@@ -174,6 +174,25 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
 - **Iter 15 (Feb 2026)** : **59/59 backend pytest PASS** (-m "not slow"), 1 slow deselected (Demucs heavy). FAL_KEY actif via clé utilisateur, mode "full" sur tous les status endpoints.
 
+### v2.9 (iter 20 - Feb 2026) — AUTO-SHARE SOCIAL API 📡
+- **Backend** `/app/backend/ai/share.py` — moteur de publication multi-plateformes :
+  - `GET /api/ai/share/status` → readiness par plateforme (TikTok / Instagram Reels / YouTube Shorts) avec `missing` env vars, `schedule_native`, `needs_public_url`
+  - `POST /api/ai/share/prepare` → génère description + hashtags + packs par plateforme respectant chaque limite (caption ≤ 2200, YouTube title ≤ 100 + auto `#Shorts`, YouTube tags sans `#`). Hashtags automatiques basés sur le style (`bikutsi_44` → `#Bikutsi #BikutsiGroove #Cameroon`) + brand stack `#RIBA #BantuOralGrid #MadeWithRIBA` + extras user. Style canonicalization tolérante ("Bikutsi 4/4" → `bikutsi_44`).
+  - `POST /api/ai/share/{platform}/publish` — adaptateurs réels :
+    - **TikTok** : Content Posting API (`/v2/post/publish/video/init/` → PUT chunk upload)
+    - **Instagram Reels** : Graph API v19 (`media` container → polling FINISHED → `media_publish`) — nécessite PUBLIC_BASE_URL pour servir le MP4
+    - **YouTube Shorts** : `google-api-python-client` `videos.insert` avec `publishAt` pour scheduling natif
+  - Fallback structuré 503 `{platform}_CREDS_MISSING` avec la liste exacte des env vars manquantes + message d'aide
+  - `GET /api/ai/share/jobs` → log en mémoire des derniers jobs (publish/scheduled/failed)
+- **Frontend** : nouveau panneau **📡 Auto-share** dans `MagicRemixModal` (gradient indigo→cyan) apparaissant après `reelOutput` :
+  - Description textarea + Extra hashtags input + Schedule datetime-local
+  - Chips automatiques de hashtags (auto-refresh à chaque modification)
+  - 3 cartes plateforme avec badge `READY`/`CONFIG`, bouton "📤 Publish" (actif si configuré), bouton "📋 COPY CAPTION" (toujours disponible pour upload manuel), affichage des env vars manquantes
+  - Affichage du dernier job en cours / publié / programmé
+- **Tests** `test_share_endpoints.py` (9 tests) : status shape, prepare avec/sans style + fuzzy match + skip RIBA brand + limits truncation, unknown platform → 400, missing creds → 503 sur les 3 plateformes avec code+missing+message validés, jobs list. **Tous PASS en 1.12s.**
+- **Suite complète : 89/89 PASS** (80 + 9 nouveaux), 0 régression.
+- **Stack ajoutée** : `google-api-python-client 2.197.0`, `google-auth-oauthlib 1.4.0`, `google-auth-httplib2 0.4.0`. Tous installés via `pip freeze` ➜ requirements.txt.
+
 ### v2.8 (iter 19 - Feb 2026) — MAGIC GENERATOR ENRICHI + GLOBAL TRANSPORT BAR
 - **🎵 MagicGeneratorModal — panneau gauche enrichi** :
   - **Song Title (Optional)** input au-dessus du PROMPT (envoyé au backend via le champ `title` de `MusicGenRequest` → override de `_local_title`)
@@ -271,14 +290,23 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
+- **P1**: 💡 **Album Builder** (validé par l'utilisateur 19 Feb 2026) — onglet dans Magic Generator avec drag-drop d'ordre des tracks, cover collage auto-généré depuis les ProceduralCovers, export "📱 Album Teaser 60s" via ffmpeg avec crossfade aligné sur la Bantu Grid.
 - **P1**: Studio Live Session (WebRTC + Y.js pour collaboration temps réel sur Bantu Grid).
 - **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
-- **P1**: Auto-share TikTok / Instagram / YouTube Shorts API (publication directe depuis le Bantu Reel panel).
+- **P1**: External cron worker (APScheduler) pour exécuter les jobs `share_jobs` `scheduled` sur TikTok/IG (YouTube est natif).
 - **P2**: WebMIDI input pour claviers MIDI externes.
 - **P2**: Vue Bantu Heatmap.
 - **P2**: Refactor `engine.js` (audio engine large) en React hooks.
 - **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py` (DRY parité math).
-- **P2**: Snippet preview audio (lecture inline du 30 s candidat avant export — 1 clic = preview, double-clic = pick).
+- **P2**: Snippet preview audio inline (lecture du 30 s candidat avant export).
+- **P2**: Bantu Reel Series (3 MP4 parallèles depuis Peak/Drop/Hook).
+- **P2**: Drag-drop sur le Library panel du Magic Generator.
+- **P2**: Auto-refresh des tokens TikTok via le refresh endpoint pour éviter l'expiration silencieuse.
 
 ## Next Action Items
-- 🟢 Choix utilisateur pour le prochain sprint : **Auto-share Social API** (publication directe Reels) **OU** **Studio Live Session** (collaboration temps réel) **OU** **Tauri local build** (export .exe/.dmg).
+- 🟢 **P1 Album Builder** (next sprint, déjà validé par l'utilisateur).
+- ⚠️ Pour activer l'Auto-share réel, ajouter dans `/app/backend/.env` les credentials des plateformes désirées :
+  - `TIKTOK_ACCESS_TOKEN=...` (TikTok Developer App approuvée pour `video.publish`)
+  - `IG_USER_ID=...` + `IG_ACCESS_TOKEN=...` + `PUBLIC_BASE_URL=https://...` (Instagram Business Account via Facebook Graph API + URL publique pour servir le MP4)
+  - `YOUTUBE_CLIENT_ID=...` + `YOUTUBE_CLIENT_SECRET=...` + `YOUTUBE_REFRESH_TOKEN=...` (Google Cloud Console + OAuth `youtube.upload`)
+  Puis `sudo supervisorctl restart backend`. L'UI affiche automatiquement `READY` au lieu de `CONFIG` dès qu'une plateforme est prête.
