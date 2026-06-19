@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export function Modal({ title, onClose, children, width = 600 }) {
+  const { t } = useTranslation();
   // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
@@ -23,7 +25,7 @@ export function Modal({ title, onClose, children, width = 600 }) {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="font-heading" style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
-          <button className="riba-btn" onClick={onClose}>Close</button>
+          <button className="riba-btn" onClick={onClose} data-testid="modal-close-btn">{t('common.close')}</button>
         </div>
         <div style={{ overflowY: 'auto' }}>{children}</div>
       </div>
