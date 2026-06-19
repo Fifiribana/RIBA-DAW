@@ -9,6 +9,8 @@ from .reel import router as reel_router
 from .snippets import router as snippets_router
 from .share import router as share_router
 from .album import router as album_router
+from .promo import router as promo_router
+from .studio_live import router as studio_live_router
 from .scheduler import start_scheduler, shutdown_scheduler
 
 __all__ = [
@@ -22,6 +24,8 @@ __all__ = [
     "snippets_router",
     "share_router",
     "album_router",
+    "promo_router",
+    "studio_live_router",
     "start_scheduler",
     "shutdown_scheduler",
 ]

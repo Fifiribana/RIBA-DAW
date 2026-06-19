@@ -174,6 +174,34 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Iter 6**: **16/16 backend pytest PASS**, frontend 100% (chargement sans crash, menus Reverse Audio + Auto Tempo OK, 5 assets PWA servis 200, manifest valide, meta tags présents).
 - **Iter 15 (Feb 2026)** : **59/59 backend pytest PASS** (-m "not slow"), 1 slow deselected (Demucs heavy). FAL_KEY actif via clé utilisateur, mode "full" sur tous les status endpoints.
 
+### v3.1 (iter 22 - Feb 2026) — STUDIO LIVE SESSION 🎛 + PROMO CASCADE ⚡
+- **🎛 Studio Live Session** — collaboration temps réel WebRTC/Y.js :
+  - **Backend `ai/studio_live.py`** : route `WS /api/ws/session/{id}` qui relaye en broadcast tous les frames Y.js (binaire) + frames presence (texte) entre les peers connectés. `_PEERS: dict[session_id, set[WebSocket]]` thread-safe via asyncio.Lock. **Aucun frame JSON envoyé aux clients y-websocket** (briserait le protocole binaire de Y.js).
+  - Endpoint `GET /api/sessions` → liste des sessions actives avec peer counts.
+  - **Frontend `useStudioLive.js`** : hook React qui se connecte automatiquement quand `?session=<id>` est présent dans l'URL. Synchronise `tempo`, `bantuStyle`, `bantuDensity`, `bantuBars` à une `Y.Map` partagée → chaque modif locale est broadcasted aux collaborateurs.
+  - **Awareness Y.js** : chaque user reçoit un nom aléatoire (WildDrum, SolarPhoenix…) + une couleur dans la palette RIBA. `StudioLiveBadge` top-right affiche : indicateur vert connecté / session ID / peer count + jusqu'à 4 avatars colorés des collaborateurs.
+  - Mode solo (sans `?session=`) → hook inerte, aucun overhead.
+  - Stack : **yjs 13.6.31 + y-websocket 3.0.0** (frontend) ; **websockets + pytest-asyncio** (tests).
+
+- **⚡ Promo Cascade** — plan média auto-piloté 7 jours :
+  - Backend `ai/promo.py` : `POST /api/ai/promo-cascade` (body: track_ids, mode, schedule offsets [0,2,4,6] jours, platforms, autopublish)
+  - Pipeline complet :
+    1. Génère le **teaser album 60s** via `album_teaser()` (réutilise Bantu Drop Map)
+    2. Extrait l'audio du teaser en WAV temp via ffmpeg
+    3. `analyze_snippets` sur le teaser → Peak / Drop / Hook offsets
+    4. Coupe **3 micro-reels 15s** depuis le teaser MP4 avec les overlays RIBA (`_build_filter_complex` réutilisé)
+    5. Planifie **4 publish jobs par plateforme** via `schedule_publish_job()` → APScheduler
+  - Statut `scheduled` si plateforme READY, sinon `pack_only` (téléchargeables manuellement)
+  - **Frontend** : bouton "⚡ Launch Promo Cascade (7 days, 4 reels)" gradient orange→magenta dans `AlbumBuilderPanel` avec affichage du plan : J+0/J+2/J+4/J+6 × platform + status par job + 3 cartes de download des micro-reels Peak/Drop/Hook.
+
+- **5 nouveaux tests** (`test_promo_and_studio_live.py`) :
+  - Cascade `pack_only` quand aucune plateforme configurée (teaser + 3 micro-reels validés)
+  - Cascade validation errors (empty/bad schedule/unknown platform)
+  - Sessions endpoint vide
+  - WebSocket relay 2 clients (binary bytes A→B + text frame B→A)
+  - Sessions listées pendant connexion
+- **Suite complète : 100/100 PASS** ✅ (95 → +5 nouveaux). **Verrou 100+ franchi.** 0 régression.
+
 ### v3.0 (iter 21 - Feb 2026) — ALBUM BUILDER 🎼 + BANTU DROP MAP + APSCHEDULER
 - **🎼 Backend `ai/album.py`** — moteur d'album teaser avec Bantu Drop Map :
   - `POST /api/ai/album/teaser` (body : track_ids 1-16, mode drop_map|sequential, target_duration 15-120, transition_sec 0.5-3, bantu_style, title, style_label)
@@ -311,21 +339,22 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 
 ## Prioritized Backlog
-- **P1**: Studio Live Session (WebRTC + Y.js pour collaboration temps réel sur Bantu Grid).
 - **P1**: Tauri local build (`yarn desktop:build` → .exe / .dmg).
+- **P1**: Studio Live mixer fader sync (currently only tempo + Bantu params sync ; track volumes/pans pas encore mappés sur la Y.Map).
+- **P1**: Studio Live cursor overlay (afficher la position de la souris/timeline de chaque collaborateur en temps réel — l'awareness est en place, juste à rendre).
 - **P2**: WebMIDI input pour claviers MIDI externes.
 - **P2**: Vue Bantu Heatmap.
 - **P2**: Refactor `engine.js` (audio engine large) en React hooks.
 - **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py` (DRY parité math).
 - **P2**: Snippet preview audio inline (lecture du 30 s candidat avant export).
-- **P2**: Bantu Reel Series (3 MP4 parallèles depuis Peak/Drop/Hook).
 - **P2**: Drag-drop sur le Library panel du Magic Generator.
 - **P2**: Auto-refresh des tokens TikTok via le refresh endpoint pour éviter l'expiration silencieuse.
 - **P2**: Album Builder — ré-utiliser le Snippet Picker UI inline pour visualiser/corriger manuellement chaque pick avant l'export.
+- **P2**: Promo Cascade — UI calendrier visuel des 4 publications planifiées + bouton "Cancel cascade" qui purge les jobs APScheduler.
 
 ## Next Action Items
 - 🟢 Choix utilisateur prochain sprint P1 :
-  - **a) Studio Live Session** (WebRTC + Y.js collaboration temps réel Bantu Grid)
-  - **b) Tauri local build** (.exe/.dmg natifs)
-  - **c) WebMIDI input** (claviers MIDI externes)
-- ⚠️ Pour activer l'Auto-share réel + le scheduling APScheduler, ajouter dans `/app/backend/.env` les credentials des plateformes désirées (TIKTOK_ACCESS_TOKEN / IG_USER_ID+IG_ACCESS_TOKEN+PUBLIC_BASE_URL / YOUTUBE_CLIENT_ID+SECRET+REFRESH_TOKEN). Puis `sudo supervisorctl restart backend`.
+  - **a) Tauri local build** (.exe/.dmg natifs — RIBA Desktop)
+  - **b) Studio Live mixer + cursor overlay** (compléter la couche collaboration sur les faders et les positions souris)
+  - **c) WebMIDI input**
+- ⚠️ Pour activer Auto-share + Promo Cascade publication réelle : ajouter les tokens (TIKTOK_ACCESS_TOKEN / IG_USER_ID+IG_ACCESS_TOKEN+PUBLIC_BASE_URL / YOUTUBE_CLIENT_ID+SECRET+REFRESH_TOKEN) dans `/app/backend/.env` + restart backend.

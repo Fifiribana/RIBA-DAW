@@ -422,6 +422,8 @@ from ai import (  # noqa: E402
     snippets_router,
     share_router,
     album_router,
+    promo_router,
+    studio_live_router,
     start_scheduler,
     shutdown_scheduler,
 )
@@ -436,6 +438,9 @@ api_ai.include_router(reel_router)
 api_ai.include_router(snippets_router)
 api_ai.include_router(share_router)
 api_ai.include_router(album_router)
+api_ai.include_router(promo_router)
+# Studio-Live exposes a WebSocket route at /api/ws/session/{id} + /api/sessions
+api_ai.include_router(studio_live_router)
 app.include_router(api_ai)
 
 app.add_middleware(

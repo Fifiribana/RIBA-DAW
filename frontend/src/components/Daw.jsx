@@ -30,6 +30,7 @@ import { AssistantModal } from './daw/modals/AssistantModal';
 import { MagicGeneratorModal } from './daw/modals/MagicGeneratorModal';
 import { MagicRemixModal } from './daw/modals/MagicRemixModal';
 import { GlobalTransportPlayer } from './daw/GlobalTransportPlayer';
+import { useStudioLive, StudioLiveBadge } from './daw/useStudioLive';
 import { MagentaOverlay } from './daw/MagentaSpinner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -126,6 +127,46 @@ export default function Daw() {
   const [bantuDensity, setBantuDensity] = useState(16);
   const [bantuBars, setBantuBars] = useState(4);
   const [bantuStyles, setBantuStyles] = useState([]);
+
+  // ===== Studio Live Session (Y.js + WebSocket relay) =====
+  // Inert when no ?session=ID URL param (solo mode).
+  const live = useStudioLive();
+  // Sync tempo + Bantu config to/from the shared Y.Map
+  useEffect(() => {
+    if (!live?.ymap) return undefined;
+    const ymap = live.ymap;
+    // Initial pull : remote state overrides local on first connection
+    const remoteTempo = ymap.get('tempo');
+    if (typeof remoteTempo === 'number') setTempo(remoteTempo);
+    const remoteStyle = ymap.get('bantuStyle');
+    if (typeof remoteStyle === 'string') setBantuStyle(remoteStyle);
+    const remoteDensity = ymap.get('bantuDensity');
+    if (typeof remoteDensity === 'number') setBantuDensity(remoteDensity);
+    const remoteBars = ymap.get('bantuBars');
+    if (typeof remoteBars === 'number') setBantuBars(remoteBars);
+
+    const obs = () => {
+      const t = ymap.get('tempo'); if (typeof t === 'number') setTempo(t);
+      const s = ymap.get('bantuStyle'); if (typeof s === 'string') setBantuStyle(s);
+      const d = ymap.get('bantuDensity'); if (typeof d === 'number') setBantuDensity(d);
+      const b = ymap.get('bantuBars'); if (typeof b === 'number') setBantuBars(b);
+    };
+    ymap.observe(obs);
+    return () => { try { ymap.unobserve(obs); } catch { /* */ } };
+  }, [live?.ymap]);
+  // Push local state changes back to the Y.Map
+  useEffect(() => {
+    if (live?.ymap && live.ymap.get('tempo') !== tempo) live.ymap.set('tempo', tempo);
+  }, [tempo, live?.ymap]);
+  useEffect(() => {
+    if (live?.ymap && live.ymap.get('bantuStyle') !== bantuStyle) live.ymap.set('bantuStyle', bantuStyle);
+  }, [bantuStyle, live?.ymap]);
+  useEffect(() => {
+    if (live?.ymap && live.ymap.get('bantuDensity') !== bantuDensity) live.ymap.set('bantuDensity', bantuDensity);
+  }, [bantuDensity, live?.ymap]);
+  useEffect(() => {
+    if (live?.ymap && live.ymap.get('bantuBars') !== bantuBars) live.ymap.set('bantuBars', bantuBars);
+  }, [bantuBars, live?.ymap]);
   // Show asymmetric grid markers on the timeline (RIBA innovation visual)
   const [showBantuMarkers, setShowBantuMarkers] = useState(false);
   // Bantu Swing Live — non-destructive humanization during playback
@@ -2383,6 +2424,7 @@ export default function Daw() {
         />
       )}
       <GlobalTransportPlayer />
+      <StudioLiveBadge live={live} />
     </div>
   );
 }

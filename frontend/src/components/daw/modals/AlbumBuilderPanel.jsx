@@ -38,6 +38,10 @@ export function AlbumBuilderPanel({ workspaceItems = [] }) {
   const [output, setOutput] = useState(null);            // last album response
   const [dragId, setDragId] = useState(null);
 
+  // Promo Cascade
+  const [cascade, setCascade] = useState(null);
+  const [cascadeBusy, setCascadeBusy] = useState(false);
+
   const playable = useMemo(
     () => workspaceItems.filter((it) => it.audio_url && it.kind !== 'lyrics'),
     [workspaceItems],
@@ -84,6 +88,35 @@ export function AlbumBuilderPanel({ workspaceItems = [] }) {
       setStatus(`Album build failed: ${e.message}`);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const launchCascade = async () => {
+    if (selected.length < 1) { setStatus('Pick at least 1 track for the cascade.'); return; }
+    setCascadeBusy(true); setCascade(null);
+    setStatus('⚡ Promo Cascade · building teaser + Peak/Drop/Hook micro-reels + 7-day plan…');
+    try {
+      const r = await fetch(`${API}/ai/promo-cascade`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          track_ids:   selected,
+          mode,
+          bantu_style: bantuStyle,
+          title, style_label: styleLabel,
+          micro_duration_sec: 15,
+          platforms:   ['tiktok', 'instagram', 'youtube'],
+          autopublish: true,
+        }),
+      });
+      if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(b.detail || `HTTP ${r.status}`); }
+      const d = await r.json();
+      setCascade(d);
+      const tag = d.jobs_queued > 0 ? `${d.jobs_queued} jobs scheduled` : 'pack only (no platform configured)';
+      setStatus(`⚡ Cascade ready · teaser + 3 micro-reels · ${tag}`);
+    } catch (e) {
+      setStatus(`Cascade failed: ${e.message}`);
+    } finally {
+      setCascadeBusy(false);
     }
   };
 
@@ -209,6 +242,23 @@ export function AlbumBuilderPanel({ workspaceItems = [] }) {
           {busy ? '⚙ Building Bantu Drop Map…' : '📱 Export Full Album Teaser'}
         </button>
 
+        <button
+          data-testid="promo-cascade-launch"
+          onClick={launchCascade}
+          disabled={cascadeBusy || selected.length < 1}
+          className="riba-btn"
+          style={{
+            padding: '12px 0', fontSize: 13, fontWeight: 800,
+            background: 'linear-gradient(135deg, #F59E0B, #D946EF)',
+            color: '#fff', border: 'none', borderRadius: 10,
+            boxShadow: '0 0 16px rgba(245,158,11,0.35)',
+            cursor: cascadeBusy ? 'wait' : 'pointer', opacity: (cascadeBusy || selected.length < 1) ? 0.6 : 1,
+          }}
+          title="Generate teaser + Peak/Drop/Hook micro-reels + schedule 4 publishes over 7 days"
+        >
+          {cascadeBusy ? '⚙ Building 7-day cascade…' : '⚡ Launch Promo Cascade (7 days, 4 reels)'}
+        </button>
+
         {status && (
           <div data-testid="album-status" style={{
             fontSize: 11, color: busy ? '#D946EF' : '#A1A1AA',
@@ -288,6 +338,44 @@ export function AlbumBuilderPanel({ workspaceItems = [] }) {
                 {i + 1}. {s.title?.slice(0, 24)} → @{s.start_sec}s ({s.debug?.picked_name || 'n/a'})
               </div>
             ))}
+          </div>
+        )}
+
+        {cascade && (
+          <div data-testid="cascade-output" style={{
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.10), rgba(217,70,239,0.10))',
+            border: '1px solid rgba(245,158,11,0.35)', borderRadius: 10, padding: 10,
+            display: 'flex', flexDirection: 'column', gap: 6,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#FAFAFA' }}>⚡ Promo Cascade</span>
+              <span className="font-mono-r" style={{
+                fontSize: 9,
+                color: cascade.status === 'scheduled' ? '#22C55E' : '#F59E0B',
+                letterSpacing: '0.12em',
+              }}>{cascade.status === 'scheduled' ? `${cascade.jobs_queued} JOBS SCHEDULED` : 'PACK ONLY · NO PLATFORM READY'}</span>
+            </div>
+            <div className="font-mono-r" style={{ fontSize: 9, color: '#A1A1AA' }}>
+              {cascade.micro_reels?.length || 0} micro-reels · 4-step plan starting {cascade.start_at?.slice(0, 16)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+              {cascade.micro_reels?.map((m) => (
+                <a key={m.id} href={`${BACKEND_URL}${m.mp4_url}`} target="_blank" rel="noreferrer"
+                  data-testid={`cascade-${m.label.toLowerCase()}`}
+                  style={{
+                    background: '#0B0B0E', border: '1px solid rgba(217,70,239,0.3)',
+                    borderRadius: 6, padding: 6, textDecoration: 'none',
+                    color: '#D946EF', fontSize: 10, fontWeight: 700, textAlign: 'center',
+                  }}>
+                  {m.label} @{m.offset_sec}s · {Math.round(m.mp4_bytes / 1024)}KB
+                </a>
+              ))}
+            </div>
+            <div style={{ fontSize: 9, color: '#52525B', fontFamily: 'JetBrains Mono, monospace' }}>
+              {cascade.schedule?.slice(0, 4).map((s, i) => (
+                <div key={i}>J+{cascade.schedule_offsets_days[Math.floor(i)]} · {s.label} → {s.platform}{s.queued ? ' ✓' : ' ✕'}</div>
+              ))}
+            </div>
           </div>
         )}
       </div>
