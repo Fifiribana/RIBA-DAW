@@ -93,6 +93,64 @@ def _serialize_public(doc: dict) -> dict:
     }
 
 
+@router.get("/library/featured")
+async def library_featured(limit: int = Query(3, ge=1, le=10)):
+    """Top-N stories curated for the monthly #MvettWorldwide spotlight.
+
+    The "featured" list combines :
+      • any document explicitly flagged `is_featured=true` (curator override)
+      • else the most-played records of the past 30 days (popularity proxy)
+    """
+    from datetime import timedelta
+    db = _db()
+    # Explicit curation takes priority
+    cursor = db.storytelling_library.find({"is_featured": True}).sort("plays", -1).limit(limit)
+    items = [_serialize_public(d) async for d in cursor]
+    if len(items) < limit:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        remaining = limit - len(items)
+        existing_ids = {d["id"] for d in items}
+        cursor2 = db.storytelling_library.find(
+            {"id": {"$nin": list(existing_ids)},
+             "created_at": {"$gte": cutoff}}
+        ).sort([("plays", -1), ("created_at", -1)]).limit(remaining)
+        items.extend([_serialize_public(d) async for d in cursor2])
+    # Tag returned items so the frontend can stamp the badge
+    for it in items:
+        it["badge"] = "featured" if it.get("is_featured") else "trending"
+    return {
+        "month": datetime.now(timezone.utc).strftime("%Y-%m"),
+        "hashtag": "#MvettWorldwide",
+        "limit": limit,
+        "items": items,
+    }
+
+
+@router.post("/library/{story_id}/feature")
+async def feature_story(
+    story_id: str,
+    enabled: bool = Query(True),
+    x_curator_token: Optional[str] = Header(default=None),
+):
+    """Curator-only toggle of the `is_featured` flag for #MvettWorldwide.
+
+    Requires the `RIBA_CURATOR_TOKEN` environment variable to be set; the
+    caller must echo it back via `X-Curator-Token`. If the env var is unset,
+    feature curation is disabled (the endpoint returns 403).
+    """
+    expected = os.environ.get("RIBA_CURATOR_TOKEN")
+    if not expected:
+        raise HTTPException(403, "Curation is disabled (RIBA_CURATOR_TOKEN not configured)")
+    if x_curator_token != expected:
+        raise HTTPException(403, "Invalid curator token")
+    res = await _db().storytelling_library.update_one(
+        {"id": story_id}, {"$set": {"is_featured": bool(enabled)}}
+    )
+    if res.matched_count == 0:
+        raise HTTPException(404, "story not found")
+    return {"id": story_id, "is_featured": bool(enabled)}
+
+
 @router.get("/library/stats")
 async def library_stats():
     db = _db()

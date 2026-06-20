@@ -138,6 +138,187 @@ def make_phoenix(size: int = 1024) -> Image.Image:
     return final
 
 
+def _gradient_bg(size, c1, c2, c3=None, angle="radial"):
+    """Build a deep-indigo → violet → magenta gradient background.
+
+    `angle="radial"` produces a center-out glow. `angle="vertical"` produces a
+    top-to-bottom gradient. Falls back to a flat fill if Pillow can't draw.
+    """
+    w, h = size
+    img = Image.new("RGB", size, c1[:3])
+    draw = ImageDraw.Draw(img)
+    if angle == "radial":
+        cx, cy = w // 2, int(h * 0.55)
+        r_max = int((w ** 2 + h ** 2) ** 0.5 / 1.6)
+        # iterate from outside in for performance
+        for r in range(r_max, 0, -10):
+            t = 1 - r / r_max
+            r_v = int(c1[0] + (c2[0] - c1[0]) * t)
+            g_v = int(c1[1] + (c2[1] - c1[1]) * t)
+            b_v = int(c1[2] + (c2[2] - c1[2]) * t)
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(r_v, g_v, b_v))
+    else:  # vertical
+        for y in range(h):
+            t = y / max(1, h - 1)
+            r_v = int(c1[0] + (c2[0] - c1[0]) * t)
+            g_v = int(c1[1] + (c2[1] - c1[1]) * t)
+            b_v = int(c1[2] + (c2[2] - c1[2]) * t)
+            draw.rectangle([0, y, w, y + 1], fill=(r_v, g_v, b_v))
+    # Optional third color punch in the bottom-right
+    if c3 is not None:
+        punch = Image.new("RGBA", size, (0, 0, 0, 0))
+        pd = ImageDraw.Draw(punch)
+        pr = int(min(w, h) * 0.35)
+        pcx, pcy = int(w * 0.82), int(h * 0.78)
+        for i in range(pr, 0, -3):
+            a = int(160 * (1 - i / pr) ** 2.2)
+            pd.ellipse([pcx - i, pcy - i, pcx + i, pcy + i], fill=(*c3[:3], a))
+        punch = punch.filter(ImageFilter.GaussianBlur(28))
+        img = Image.alpha_composite(img.convert("RGBA"), punch).convert("RGB")
+    return img.convert("RGBA")
+
+
+def _phoenix_thumb(phoenix_master, target_size):
+    """Crop+resize the 1024² Phoenix master into a square fit for compositing."""
+    return phoenix_master.resize((target_size, target_size), Image.LANCZOS)
+
+
+def _draw_text_block(canvas, lines, anchor, color=(250, 250, 250, 255),
+                     font_sizes=None, line_spacing=8, max_width=None):
+    """Render a small stack of lines centered on `anchor=(x, y)`.
+
+    Pillow's default bitmap fonts produce slightly stylish lo-fi text — fine
+    for visuals served at small thumbnails. If the host system has DejaVuSans
+    installed we use it; otherwise we fall back to the bundled default.
+    """
+    from PIL import ImageFont  # local import — keeps top of module light
+    draw = ImageDraw.Draw(canvas)
+    font_sizes = font_sizes or [44] * len(lines)
+    fonts = []
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
+    ]
+    for sz in font_sizes:
+        f = None
+        for c in candidates:
+            try:
+                f = ImageFont.truetype(c, sz)
+                break
+            except Exception:
+                continue
+        fonts.append(f or ImageFont.load_default())
+    # Measure total height
+    heights = []
+    widths = []
+    for line, font in zip(lines, fonts):
+        bb = draw.textbbox((0, 0), line, font=font)
+        widths.append(bb[2] - bb[0])
+        heights.append(bb[3] - bb[1])
+    total_h = sum(heights) + line_spacing * (len(lines) - 1)
+    cx, cy = anchor
+    y = cy - total_h // 2
+    for line, font, w, h in zip(lines, fonts, widths, heights):
+        draw.text((cx - w // 2, y), line, font=font, fill=color)
+        y += h + line_spacing
+
+
+def _composite_launch(layout: str, phoenix_master):
+    """Compose one of the 4 promotional visuals.
+
+    Sizes & palette per /app/docs/LAUNCH_DAY_KIT.md.
+    """
+    PALETTE_BG_1 = (15, 17, 56)          # deep indigo
+    PALETTE_BG_2 = (40, 22, 88)          # violet-bridge
+    PALETTE_PUNCH = (217, 70, 239)       # neon magenta
+    GLOW = (217, 70, 239, 255)
+    if layout == "hero":
+        size = (2048, 1152)
+        bg = _gradient_bg(size, PALETTE_BG_1, PALETTE_BG_2, PALETTE_PUNCH, "radial")
+        ph = _phoenix_thumb(phoenix_master, 620)
+        bg.paste(ph, (size[0] // 2 - 310, size[1] // 2 - 380), ph)
+        _draw_text_block(bg, [
+            "RIBA · FIRST BANTU DAW",
+            "Studio Live  ·  Mvett Storytelling  ·  5 langues",
+        ], anchor=(size[0] // 2, size[1] - 200),
+            font_sizes=[80, 38], line_spacing=24)
+    elif layout == "square":
+        size = (1080, 1080)
+        bg = _gradient_bg(size, PALETTE_BG_1, PALETTE_BG_2, PALETTE_PUNCH, "radial")
+        # 4 chapter bands (intro · défi · combat · sagesse)
+        band_colors = [(34, 211, 238), (245, 158, 11), (217, 70, 239), (34, 197, 94)]
+        draw = ImageDraw.Draw(bg, "RGBA")
+        bw = (size[0] - 100) // 4
+        for i, c in enumerate(band_colors):
+            x0 = 50 + i * bw
+            draw.rectangle([x0, size[1] - 280, x0 + bw - 12, size[1] - 80],
+                            fill=(*c, 220))
+        ph = _phoenix_thumb(phoenix_master, 540)
+        bg.paste(ph, (size[0] // 2 - 270, 90), ph)
+        _draw_text_block(bg, [
+            "Yaoundé  ↔  Paris  ↔  Brooklyn",
+            "ONE  ·  TIMELINE",
+        ], anchor=(size[0] // 2, 720), font_sizes=[42, 60], line_spacing=18)
+    elif layout == "vertical":
+        size = (1080, 1920)
+        bg = _gradient_bg(size, PALETTE_BG_1, PALETTE_BG_2, angle="vertical")
+        ph = _phoenix_thumb(phoenix_master, 760)
+        bg.paste(ph, (size[0] // 2 - 380, 240), ph)
+        _draw_text_block(bg, [
+            "Each beat is a memory.",
+            "Each session,  a reunion.",
+        ], anchor=(size[0] // 2, 1280), font_sizes=[58, 58], line_spacing=22)
+        # Bantu Grid markers strip
+        draw = ImageDraw.Draw(bg, "RGBA")
+        for i in range(16):
+            x = 60 + i * ((size[0] - 120) // 16)
+            jitter = 0 if i % 3 == 0 else (-10 if i % 4 == 0 else 6)
+            draw.rectangle([x + jitter, size[1] - 280, x + 6 + jitter, size[1] - 180],
+                            fill=(*GLOW[:3], 200))
+        _draw_text_block(bg, ["BANTU ORAL GRID"],
+                         anchor=(size[0] // 2, size[1] - 120),
+                         font_sizes=[34], color=(161, 161, 170, 255))
+    elif layout == "dev":
+        size = (2400, 1260)
+        bg = _gradient_bg(size, PALETTE_BG_1, PALETTE_BG_2, PALETTE_PUNCH, "radial")
+        ph = _phoenix_thumb(phoenix_master, 500)
+        bg.paste(ph, (140, size[1] // 2 - 250), ph)
+        _draw_text_block(bg, [
+            "Open by design.  Bantu by root.",
+            "Free to remix.",
+            "github.com/emergent-labs/riba",
+        ], anchor=(int(size[0] * 0.65), size[1] // 2),
+            font_sizes=[70, 54, 36], line_spacing=22)
+    else:
+        raise ValueError(f"unknown layout {layout!r}")
+
+    # Final soft vignette to ground all 4 visuals into the same brand mood
+    vignette = Image.new("RGBA", size, (0, 0, 0, 0))
+    vd = ImageDraw.Draw(vignette)
+    border = int(min(size) * 0.10)
+    for i in range(border):
+        a = int(80 * (i / border))
+        vd.rectangle([i, i, size[0] - i, size[1] - i], outline=(0, 0, 0, a))
+    return Image.alpha_composite(bg, vignette).convert("RGB")
+
+
+def make_launch_pack(phoenix_master, out_dir: Path):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    artifacts = []
+    for layout, name in [
+        ("hero",     "launch_hero_2048x1152.png"),
+        ("square",   "launch_grid_1080x1080.png"),
+        ("vertical", "launch_story_1080x1920.png"),
+        ("dev",      "launch_dev_2400x1260.png"),
+    ]:
+        img = _composite_launch(layout, phoenix_master)
+        path = out_dir / name
+        img.save(path, "PNG", optimize=True)
+        artifacts.append(path)
+    return artifacts
+
+
 def build_all() -> None:
     master = make_phoenix(1024)
 
@@ -186,6 +367,10 @@ def build_all() -> None:
         master.resize((512, 512), Image.LANCZOS).save(TAURI_ICONS / "icon.icns", "PNG", optimize=True)
         print(f"   ⚠ ICNS write failed ({exc}); wrote PNG fallback under .icns")
 
+    # === Launch Day Kit visuals (v3.6) ===========================================
+    LAUNCH_DIR = FRONT_PUBLIC / "launch"
+    launch_assets = make_launch_pack(master, LAUNCH_DIR)
+
     print("✓ Phoenix assets written :")
     for p in (
         FRONT_PUBLIC / "riba-logo.png",
@@ -204,6 +389,8 @@ def build_all() -> None:
     ):
         if p.exists():
             print(f"   {p.relative_to(Path('/app'))}  ({p.stat().st_size//1024} KB)")
+    for p in launch_assets:
+        print(f"   {p.relative_to(Path('/app'))}  ({p.stat().st_size//1024} KB) [launch]")
 
 
 if __name__ == "__main__":

@@ -339,7 +339,29 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 - **Desktop build** : cross-compile depuis le container Linux ARM64 vers Windows/macOS impossible — voir `/app/DESKTOP_RELEASE.md`. Le pipeline GitHub Actions `release.yml` produit les vrais installateurs signables sur push de tag `v*.*.*`.
 
-### v3.5 (this iteration - Feb 2026) — BANTU STORYTELLING LIBRARY + LAUNCH KIT 🌍📖🚀
+### v3.6 (this iteration - Feb 2026) — LAUNCH VISUALS + #MVETTWORLDWIDE BADGE 🏆🎨
+- **🎨 Procedural Launch Day Visuals** (`/app/backend/setup_icons.py` étendu) :
+  - `make_launch_pack(master, out_dir)` génère 4 visuels promotionnels en Pillow direct depuis le master Phoenix 1024² :
+    - `launch_hero_2048x1152.png` (YouTube cover · Twitter pinned · Product Hunt banner) — Phoenix radial gradient indigo→violet→magenta + headline "RIBA · FIRST BANTU DAW".
+    - `launch_grid_1080x1080.png` (Instagram feed · Spotify Canvas) — Phoenix + 4 bandes chapitres cyan/ambre/magenta/vert.
+    - `launch_story_1080x1920.png` (TikTok · Reels · Stories) — pillar vertical avec Phoenix au-dessus + Bantu Grid markers asymétriques en bas.
+    - `launch_dev_2400x1260.png` (GitHub social preview · blog header) — Phoenix latéral + slogan "Open by design. Bantu by root."
+  - Tous générés en un appel `python backend/setup_icons.py` ; sortie dans `/app/frontend/public/launch/`.
+  - Helpers internes : `_gradient_bg()` (radial ou vertical avec punch magenta), `_draw_text_block()` (auto-loadDejaVu fallback), `_composite_launch()` (one switch par layout).
+- **🏆 Badge #MvettWorldwide "Featured this month"** :
+  - Backend `GET /api/storytelling/library/featured?limit=N` : retourne le mois courant `YYYY-MM`, hashtag `#MvettWorldwide`, et un mélange (curator-flagged via `is_featured=True` en priorité, sinon top-plays des 30 derniers jours). Tag automatique `badge: "featured" | "trending"` injecté sur chaque item retourné.
+  - Backend `POST /api/storytelling/library/{id}/feature?enabled=true` : endpoint curateur protégé par `RIBA_CURATOR_TOKEN` env var + `X-Curator-Token` header. Désactivé (403) tant que la variable d'env n'est pas configurée.
+  - Frontend `BantuStorytellingLibrary.jsx` :
+    - **Spotlight strip** en haut du panel : bandeau or/magenta `🏆 #MvettWorldwide · Featured this month · top N` avec scroll horizontal de 3 cartes featured cliquables (chaque carte porte un badge pill `★ FEATURED` ou `↑ TRENDING`).
+    - **Badge corner-stamp** sur chaque card de la grille principale (`data-testid="library-badge-{id}"`) : pill gradient ambre→magenta pour `★ FEAT` curé, ou cyan→indigo pour `↑ TREND`, avec glow et bordure colorée appliquée à la carte entière.
+  - Clé i18n `library.featuredTitle` ajoutée dans les 5 langues (FR/EN/ES/PT/SW).
+- **📊 Tests** :
+  - `test_launch_visuals.py` (2 tests) : présence + dimensions byte-exact des 4 PNG.
+  - `test_featured_curation.py` (5 tests) : shape de `/featured`, limit param, trending auto-inclusion, curator 403 sans token et avec mauvais token.
+  - **153/153 PASS** (était 146, +7 nouveaux, 0 régression).
+- **Smoke E2E Playwright** ✅ : spotlight strip rendu, 3 cartes Trending visibles dans le grid principal avec badge stamp, hashtag affiché en uppercase doré.
+
+### v3.5 (iter 26 - Feb 2026) — BANTU STORYTELLING LIBRARY + LAUNCH KIT 🌍📖🚀
 - **🌍 Bantu Storytelling Library** — premier réseau social de griots numériques :
   - Backend `/app/backend/ai/library.py` : collection MongoDB `storytelling_library`. Endpoints :
     - `POST /api/storytelling/library` — publication validée (langue ∈ {fr,en,es,pt,sw}, style ∈ {asiko_wisdom, makossa_roots, bikutsi_44/68/1224}, 4 chapitres contigus 1..total_bars, arrangement_hint ∈ allowed set, lyrics 2-64). Retourne `id` public + `author_token` (montré une seule fois).
@@ -411,27 +433,27 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **Smoke test E2E Playwright** ✅ : switch FR→SW vérifié, menu basculé en `Fichier/Édition/...` et `Faili/Hariri/...` byte-exact ; logo Phoenix visible dans la TopBar (boxShadow magenta + cyan).
 
 ## Prioritized Backlog
-- **P0 (v3.6)**: Procedural Launch visuals — étendre `setup_icons.py` avec `make_launch_pack()` qui compose les 4 visuels promotionnels (hero / square / vertical / dev) directement à partir du master Phoenix + Bantu Grid overlays. Asset spec déjà dans `/app/docs/LAUNCH_DAY_KIT.md`.
+- **P0 (v3.7)**: Library v2 — système de likes/stars + commentaires modérés + page profil griot `/griot/:name` (extension MongoDB pour les votes et threads).
 - **P1**: WebMIDI input pour claviers MIDI externes.
-- **P1**: Code-signing macOS + EV cert Windows (secrets cablés dans release.yml ; à remplir dans GitHub Settings).
-- **P1**: Library — like/star system + commentaires modérés (extension MongoDB).
-- **P1**: Library — page utilisateur profil griot (`/griot/:author_name`) regroupant ses récits.
-- **P2**: Vue Bantu Heatmap (visualisation 2D des patterns asymétriques).
+- **P1**: Code-signing macOS + EV cert Windows.
+- **P1**: Setup `RIBA_CURATOR_TOKEN` côté prod + UI curator (toggle ★ FEATURED depuis le badge).
+- **P2**: Vue Bantu Heatmap.
 - **P2**: Refactor `engine.js` en React hooks.
-- **P2**: Extraire `_build_bantu_grid` en module partagé `ai/bantu_grid.py`.
+- **P2**: Extraire `_build_bantu_grid` en module partagé.
 - **P2**: Snippet preview audio inline.
-- **P2**: Drag-drop sur le Library panel du Magic Generator.
-- **P2**: Auto-refresh des tokens TikTok.
-- **P2**: Storytelling — preview audio des arrangement_hints (drum solo, vocal chant samples).
+- **P2**: Storytelling — preview audio des arrangement_hints.
 - **P2**: Album Builder — Snippet Picker UI inline.
-- **P2**: Promo Cascade — UI calendrier visuel des 4 publications planifiées + bouton "Cancel cascade".
+- **P2**: Promo Cascade — UI calendrier visuel.
 - **P2**: Tauri updater integration.
+- **P2**: Auto-share — finir l'OAuth flows TikTok/IG/YT pour la prod (tokens env vars).
 
 ## Next Action Items
-- 🟢 Sprint v3.6 — choix utilisateur :
-  - **a) Push GitHub + tag v3.5.0** → premier build officiel `.exe/.dmg/.AppImage` + lancer la session live `?session=launch-day` 🚀
-  - **b) Procedural Launch visuals** : étendre `setup_icons.py` pour générer automatiquement les 4 visuels du Launch Kit
-  - **c) Library — like/star + commentaires** (interaction communautaire)
-  - **d) WebMIDI input** pour claviers externes
-  - **e) Vue Bantu Heatmap**
+- 🟢 Sprint v3.7 — choix utilisateur :
+  - **a) Library v2 (Likes + Comments + Profil Griot)** : extension communautaire complète
+  - **b) Curator UI** : panneau admin pour toggle ★ FEATURED depuis l'interface (avec `RIBA_CURATOR_TOKEN`)
+  - **c) WebMIDI input** pour claviers externes
+  - **d) Auto-share OAuth** : finir l'intégration TikTok/IG/YT pour publier en prod
+  - **e) Vue Bantu Heatmap** : visualisation 2D des patterns asymétriques
+- 🔥 **Le tag `v3.5.0` est-il déjà sorti ?** Si oui, vérifie la page GitHub Releases pour récupérer les `.exe + .dmg + .AppImage`. Si non, lance maintenant : `git tag v3.5.0 && git push --tags`.
 - ⚠️ Pour activer Auto-share + Promo Cascade publication réelle : ajouter les tokens (TIKTOK_ACCESS_TOKEN / IG_USER_ID+IG_ACCESS_TOKEN+PUBLIC_BASE_URL / YOUTUBE_CLIENT_ID+SECRET+REFRESH_TOKEN) dans `/app/backend/.env` + restart backend.
+- ⚠️ Pour activer la curation ★ FEATURED : `RIBA_CURATOR_TOKEN=<random_string>` dans `/app/backend/.env` + restart.

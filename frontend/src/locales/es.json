@@ -158,7 +158,8 @@
     "publishBtn": "Publicar en la biblioteca",
     "publishedTitle": "¡Publicado en la biblioteca!",
     "publishedHint": "Guarda este author-token para poder eliminar tu relato más tarde (mostrado una sola vez):",
-    "authorPlaceholder": "Tu nombre de griot…"
+    "authorPlaceholder": "Tu nombre de griot…",
+    "featuredTitle": "#MvettWorldwide · Destacado este mes"
   },
   "bantuGrid": {
     "title": "Bantu Oral Grid · Cuantización Asimétrica",

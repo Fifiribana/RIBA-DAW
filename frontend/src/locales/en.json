@@ -158,7 +158,8 @@
     "publishBtn": "Publish to library",
     "publishedTitle": "Published to the library!",
     "publishedHint": "Keep this author-token to delete your story later (shown only once):",
-    "authorPlaceholder": "Your griot name…"
+    "authorPlaceholder": "Your griot name…",
+    "featuredTitle": "#MvettWorldwide · Featured this month"
   },
   "bantuGrid": {
     "title": "Bantu Oral Grid · Asymmetric Quantization",

@@ -158,7 +158,8 @@
     "publishBtn": "Publier dans la bibliothèque",
     "publishedTitle": "Publié dans la bibliothèque !",
     "publishedHint": "Garde ce author-token pour pouvoir supprimer ton récit plus tard (affiché une seule fois) :",
-    "authorPlaceholder": "Ton nom de griot…"
+    "authorPlaceholder": "Ton nom de griot…",
+    "featuredTitle": "#MvettWorldwide · À l'honneur ce mois-ci"
   },
   "bantuGrid": {
     "title": "Bantu Oral Grid · Quantification Asymétrique",
