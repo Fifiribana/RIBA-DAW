@@ -339,7 +339,31 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 - **Desktop build** : cross-compile depuis le container Linux ARM64 vers Windows/macOS impossible — voir `/app/DESKTOP_RELEASE.md`. Le pipeline GitHub Actions `release.yml` produit les vrais installateurs signables sur push de tag `v*.*.*`.
 
-### v3.7 (this iteration - Feb 2026) — LIBRARY v2 (Likes/Comments/Griot Profile) + HEATMAP DIASPORA 🌍❤️💬
+### v3.8 (this iteration - Feb 2026) — WEBMIDI INPUT 🎹 (Premier contrôle matériel)
+- **🎹 WebMIDI Engine** (`/app/frontend/src/hooks/useWebMIDI.js` + `/app/frontend/src/lib/midiMapping.js`) :
+  - `navigator.requestMIDIAccess({sysex:false})` auto-déclenché à l'ouverture du panneau MIDI ; détection live des `inputs` / `outputs` USB (claviers maîtres, pads, surfaces de contrôle) avec `onstatechange` qui rafraîchit la liste sans reload.
+  - Décodeur MIDI pur (`decodeMidiMessage`) : note-on / note-off / CC / pitch-bend ; les status bytes non-data (clock, sysex) sont ignorés proprement → zéro crash en présence d'un MPK mini, Launchkey, etc.
+  - **Mapping factory** : 5 notes transport (60→Play, 61→Stop, 62→Record, 63→Loop, 64→Metronome) + 6 CCs macro (CC16→tempo 40-240 BPM, CC17→Bantu Swing %, CC18→Swing ON/OFF, CC19→style Bantu sur les 5 grooves, CC7→volume master, CC1→pan master).
+- **🎯 Transport & Grille Bantu live** (Daw.jsx → `midiDispatchRef`) :
+  - Touches physiques mappées à `playAll` / `engine.stopAll` / `toggleRecording` / `toggleLoop` / `toggleMetronome`.
+  - Molettes/potentiomètres → `setTempo` (ccToTempo), `setBantuSwingIntensity` (auto-active le swing si > 0), `setBantuStyle` (ccToStyle bucket sur les 5 grooves), `setMasterVol` + pan track sélectionné.
+  - **Capture low-latency** : les notes libres jouées sur un clavier branché atterrissent dans le MIDI track sélectionné après quantisation `quantizeBeatToBantu` calée sur le swing/style actifs (Bikutsi 4/4, 6/8, 12/24, Makossa, Asiko) — alignement live sans quantize destructif post-coup.
+- **🛠️ SetupModal · onglet MIDI** (`/app/frontend/src/components/daw/modals/SetupModal.jsx`) :
+  - 4 onglets : Playback / I/O / **MIDI** / Preferences avec `data-testid='setup-tab-midi'`.
+  - Panneau `setup-midi-panel` : statut WebMIDI (`Available / Not available`), permission (Granted/Denied/Idle), bouton **Detect MIDI devices** (`setup-midi-request-access`), liste des inputs avec dot d'activité 9 px (vert pulsant 220 ms à chaque message), liste des outputs, indicateur **Last incoming signal** (note-on/CC/pitch-bend décodé en temps réel), et **carte de référence du mapping** (11 lignes).
+  - Menu PT : **Setup → MIDI Input...** (`openMidi` → ouvre le panneau + `requestAccess()`).
+- **🌐 i18n complet** : 25 nouvelles clés `setup.midi.*` (support, supportedYes, supportedNo, permission, granted, denied, idle, requestAccess, devicesLabel, outputsLabel, noInputs, lastEvent, lastEventEmpty, mappingLabel, action{Play,Stop,Record,Loop,Metronome,Tempo,SwingIntensity,SwingEnable,SwingStyle,Volume,Pan}, note) + 4 labels d'onglets (playbackTab, ioTab, midiTab, preferencesTab) traduits dans **EN / FR / ES / PT / SW** (script `/tmp/inject_midi_i18n.py`). Le test `test_locale_coverage.py` exige désormais ces clés sur les 5 locales → garde-fou de régression CI.
+- **🔧 Backend** (`/app/backend/ai/midi.py`) : router `/api/midi/*` léger (analytics + mappings persistés) :
+  - `GET /api/midi/status` → capacités (5 transport actions, 6 macros, 5 styles, tempo_range [40,240], low_latency_target_ms=12).
+  - `GET /api/midi/mapping/default` → factory map (notes + cc + styles + tempo_range).
+  - `POST /api/midi/mapping` → upsert par owner (`^[A-Za-z0-9_-]{1,48}$`, pitch 0..127, CC 0..127, actions ≤ 64 chars).
+  - `GET /api/midi/mapping/{owner}` → recall ou fallback factory si owner inconnu.
+  - `POST /api/midi/session` → log d'une take (device_name, event/note/cc counts, duration_ms, bantu_style ∈ 5, tempo, swing_intensity, avg_latency_ms).
+  - `GET /api/midi/session/recent` → derniers takes (clampé ≤ 100 côté serveur).
+- **📊 Tests** : `test_midi.py` ajoute **21 tests** (status, default mapping shape, save/recall roundtrip, fallback unknown owner, 6 invalid-owner parametrize, range checks pitch + CC, path-level validation, session full + minimal + bad style, recent list + limit clamp, helpers `_cc_to_tempo` / `_cc_to_pan` / `_slice_style`). Locale parity étendu à `setup.midi.*` + 4 tab labels = +3 tests. **185/185 PASS** (164 → 185, +21 net, **0 régression**).
+- **🎬 Smoke UI** : Setup → MIDI Input... ouvre le modal sur l'onglet MIDI ; les 7 data-testid (`setup-midi-panel`, `setup-tab-midi`, `setup-midi-request-access`, `setup-midi-support`, `setup-midi-permission`, `setup-midi-no-event`, `setup-midi-no-inputs`) sont présents ; default control map intégralement rendu ; chemin permission-denied gère gracieusement (aucune exception JS).
+
+### v3.7 (iter 28 - Feb 2026) — LIBRARY v2 (Likes/Comments/Griot Profile) + HEATMAP DIASPORA 🌍❤️💬
 - **❤️ Likes** : `POST /api/storytelling/library/{id}/like` (toggle idempotent par `X-Client-Id`), `GET /like-status`. Anti-spam : `like_clients` plafonné à 50k entries.
 - **💬 Commentaires modérés** :
   - `GET /api/storytelling/library/{id}/comments` (filtre `approved=true` si `RIBA_MODERATE_COMMENTS=true`).
