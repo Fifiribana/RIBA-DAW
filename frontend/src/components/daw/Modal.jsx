@@ -18,7 +18,7 @@ export function Modal({ title, onClose, children, width = 600 }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         backdropFilter: 'blur(4px)'
       }}>
-      <div style={{
+      <div className="riba-modal-content" style={{
         background: '#18181B', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
         width: `min(${width}px, 92vw)`, maxHeight: '85vh', padding: 22,
         display: 'flex', flexDirection: 'column', gap: 12

@@ -103,6 +103,7 @@ export function MenuBar({ openMenu, setOpenMenu, actions }) {
   const openManual = actions.openManual;
   return (
     <div
+      className="riba-menubar"
       style={{
         height: 32, background: '#0B0B0E', borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex', alignItems: 'stretch', padding: '0 8px', position: 'relative', flexShrink: 0

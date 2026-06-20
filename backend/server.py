@@ -429,6 +429,7 @@ from ai import (  # noqa: E402
     library_router,
     library_v2_router,
     midi_router,
+    oauth_flow_router,
     start_scheduler,
     shutdown_scheduler,
 )
@@ -442,6 +443,9 @@ api_ai.include_router(remix_router)
 api_ai.include_router(reel_router)
 api_ai.include_router(snippets_router)
 api_ai.include_router(share_router)
+# OAuth web-flow lives under /api/ai/share/oauth/* — must follow share_router
+# so the static /share/oauth/* routes win over any /share/{id} variant.
+api_ai.include_router(oauth_flow_router)
 api_ai.include_router(album_router)
 api_ai.include_router(promo_router)
 api_ai.include_router(translate_router)

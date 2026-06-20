@@ -339,7 +339,32 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 - **Desktop build** : cross-compile depuis le container Linux ARM64 vers Windows/macOS impossible — voir `/app/DESKTOP_RELEASE.md`. Le pipeline GitHub Actions `release.yml` produit les vrais installateurs signables sur push de tag `v*.*.*`.
 
-### v3.11 (this iteration - Feb 2026) — SNAPSHOT OF THE WEEK 🏆 + UX POLISH ✨
+### v3.12 (this iteration - Feb 2026) — OAUTH WEB-FLOW 🔐 + MOBILE RESPONSIVE 📱 + FFMPEG FIX 🐛
+- **🔐 P0 · OAuth 2.0 Authorization-Code Web-Flow** (`/app/backend/ai/oauth_flow.py`) :
+  - **4 routes** sous `/api/ai/share/oauth/{provider}/` :
+    - `GET /authorize?owner=X` → génère URL avec **state CSRF token** (32 octets URL-safe) + **PKCE S256** (TikTok, Google) + scopes par provider ; state + verifier persistés dans `oauth_states` collection.
+    - `GET /callback?code=&state=&error=` → consume du state (find_one_and_delete pour anti-replay), exchange code → tokens via `httpx.AsyncClient`, **encrypt Fernet AES-128** (clé `FERNET_KEY` env), upsert dans `oauth_tokens` ; en cas d'erreur provider (`?error=user_denied`), redirect graceful vers home avec `?oauth_error=` au lieu de 500.
+    - `GET /status?owner=X` → readiness check (connected/expires_at/scope), **redaction systématique** des champs access_token/refresh_token (jamais sur la wire).
+    - `DELETE /disconnect?owner=X` → suppression idempotente.
+  - **Provider config** : TikTok (`client_key` param spécial), Instagram (Meta Graph), YouTube (Google avec `access_type=offline&prompt=consent` pour obtenir un `refresh_token`).
+  - **Chiffrement** : `cryptography.fernet.Fernet` — `encrypt()`/`decrypt()` helpers gèrent `None`/`""` proprement, decrypt sur ciphertext corrompu → `None` (jamais d'exception).
+  - **Auto-refresh background task** : `refresh_expiring_tokens(window_minutes=5)` ajouté au scheduler APScheduler — tourne **toutes les 2 minutes** ; pour chaque token expirant dans 5 min, POST refresh_token, re-chiffre, met à jour `expires_at`.
+  - **Path ordering** : oauth_flow_router enregistré après share_router sous le même api_ai pour éviter shadowing avec les routes legacy `/setup-guide` et `/{provider}` de share.py.
+- **📱 P1 · Mobile & Tablet Responsive CSS** (`/app/frontend/src/index.css`) :
+  - **2 breakpoints** : tablette ≤ 1024 px (touch targets 38 px) + mobile ≤ 768 px (touch targets 44 px / WCAG 2.5.5 conforme).
+  - **Layout stack** : `.riba-main-stack` passe en `flex-direction: column` sur mobile, `.riba-sidebar` devient `width: 100%; max-height: 50vh` + scroll, `.riba-track-meta` stack au-dessus du waveform.
+  - **Menu bar scrollable** : `.riba-menubar` devient `overflow-x: auto; -webkit-overflow-scrolling: touch` sur petits écrans.
+  - **Sliders touch-friendly** : `touch-action: manipulation`, thumbs 22-26 px, `pan-y` sur canvas waveform (scroll vertical naturel, drag horizontal = slider).
+  - **Modals responsives** : `max-width: 92vw; max-height: 88vh`.
+  - 5 hooks de classes ajoutés (`riba-topbar`, `riba-main-stack`, `riba-sidebar`, `riba-menubar`, `riba-modal-content`) — verified live via JS eval (`hasMainStack: true`).
+- **🐛 P2 · FFmpeg + Tests** :
+  - `apt-get install ffmpeg` (5.1.9-0+deb12u1) dans le container preview.
+  - **24 tests précédemment échoués maintenant verts** : `test_boot_and_snippets.py`, `test_album_and_scheduler.py`, `test_reel_endpoint.py`, `test_promo_and_studio_live.py`.
+  - Ajout `/app/backend/conftest.py` qui charge `.env` via python-dotenv pour que les tests in-process accèdent à `FERNET_KEY` / `MONGO_URL` / `DB_NAME` sans nécessiter le service backend.
+- **📊 Tests** : **+20 nets** (237 → **257 collectés**). **251/251 PASS** suite stable (1 deselected = pré-existant fal.ai network call qui hang, sans rapport avec v3.12).
+- **🎬 Smoke UI** : OAuth status endpoint `200 OK`, redact bien access_token/refresh_token. Classes CSS responsive bundlées (`max-width: 768`, `riba-main-stack`, etc. confirmés dans bundle.js). Desktop layout 100 % intact (zéro régression visuelle).
+
+### v3.11 (iter 32 - Feb 2026) — SNAPSHOT OF THE WEEK 🏆 + UX POLISH ✨
 - **🏆 Snapshot of the Week** (`/app/backend/ai/midi.py`) — moteur communautaire de découverte :
   - **`POST /api/midi/snapshots/{id}/import`** : log d'un import sur snapshot **public uniquement** (snapshots privés → 403). Insertion dans `midi_snapshot_imports` (timestamp + importer + owner) **+ denormalisation** sur le doc snapshot (`import_count++`, `last_imported_at`). Pas de dédup par importer — re-importer dans une autre session est un signal de valeur réel ; la fenêtre rolling 7 jours limite naturellement les abus.
   - **`GET /api/midi/snapshots/featured?window_days=7`** : Mongo aggregate `$match cutoff → $group snapshot_id → $sort desc → $limit 20` puis **fallback sur les 20 top candidats** (skip ceux unshared/supprimés depuis) — un snapshot révoqué ne réduit jamais la bannière au silence. Retourne `{featured, window_days, window_count, computed_at}` ou `featured=null` si aucun import.

@@ -16,6 +16,7 @@ from .storytelling import router as storytelling_router
 from .library import router as library_router
 from .library_v2 import router as library_v2_router
 from .midi import router as midi_router
+from .oauth_flow import router as oauth_flow_router
 from .scheduler import start_scheduler, shutdown_scheduler
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "library_router",
     "library_v2_router",
     "midi_router",
+    "oauth_flow_router",
     "start_scheduler",
     "shutdown_scheduler",
 ]

@@ -2023,8 +2023,8 @@ export default function Daw() {
       />
 
       {/* TOP BAR */}
-      <div style={{
-        height: 64, borderBottom: '1px solid rgba(255,255,255,0.06)',
+      <div className="riba-topbar" style={{
+        minHeight: 64, borderBottom: '1px solid rgba(255,255,255,0.06)',
         background: themePanel, display: 'flex', alignItems: 'center',
         padding: '0 16px', gap: 12, flexShrink: 0
       }}>
@@ -2303,9 +2303,9 @@ export default function Daw() {
       />
 
       {/* MAIN AREA */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className="riba-main-stack" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* LEFT TOOLBAR */}
-        <div style={{
+        <div className="riba-sidebar" style={{
           width: 220, background: themePanel, borderRight: '1px solid rgba(255,255,255,0.06)',
           padding: 12, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto'
         }}>

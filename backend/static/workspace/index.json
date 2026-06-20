@@ -26,6 +26,988 @@
     ],
     "fallback": true,
     "fallback_reason": "ChatError",
+    "id": "5470db44-755b-4dbe-9072-d7bd7d3712c5",
+    "created_at": 1781976436
+  },
+  {
+    "kind": "music",
+    "prompt": "groovy bikutsi",
+    "style": "Bikutsi",
+    "title": "Groovy Bikutsi",
+    "user_title": false,
+    "tags": [
+      "BIKUTSI",
+      "GROOVY",
+      "BIKUTSI",
+      "RIBA"
+    ],
+    "duration": 8,
+    "instrumental": true,
+    "id": "ba04ac95-bc85-47be-95ad-01baebfea683",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/ba04ac95-bc85-47be-95ad-01baebfea683",
+    "source_url": "https://v3b.fal.media/files/b/0a9f148b/MetWI_lgCzDvrkwWELojy_tmpre7a5xcr.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1411278,
+    "created_at": 1781976435
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_lyrics_persistence_marker",
+    "style": "Rumba",
+    "title": "Test_Lyrics_Persistence_Marker",
+    "tags": [
+      "RUMBA",
+      "TEST",
+      "LYRICS",
+      "PERSISTENCE"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "841f74fb-a4a5-457d-97a6-7772f5cfa55d",
+    "created_at": 1781976398
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "phoenix rising over Yaoundé",
+    "style": "Bikutsi",
+    "title": "Phoenix Rising Over Yaoundé",
+    "tags": [
+      "BIKUTSI",
+      "PHOENIX",
+      "RISING",
+      "OVER"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "c3530268-8b54-4855-8966-344e10b1fabd",
+    "created_at": 1781976398
+  },
+  {
+    "kind": "music",
+    "prompt": "TEST_track_marker afro groove",
+    "style": "Afrobeat",
+    "title": "Test_Track_Marker Afro Groove",
+    "user_title": false,
+    "tags": [
+      "AFROBEAT",
+      "TEST",
+      "TRACK",
+      "MARKER"
+    ],
+    "duration": 6,
+    "instrumental": true,
+    "id": "4e84c4c5-a030-4804-bafb-d0163e9bc0fd",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/4e84c4c5-a030-4804-bafb-d0163e9bc0fd",
+    "source_url": "https://v3b.fal.media/files/b/0a9f148c/l3BZkTUjbzMWiUpvwkq4o_tmpzotjq2dl.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1058478,
+    "created_at": 1781976372
+  },
+  {
+    "kind": "music",
+    "prompt": "groovy bikutsi",
+    "style": "Bikutsi",
+    "title": "Groovy Bikutsi",
+    "user_title": false,
+    "tags": [
+      "BIKUTSI",
+      "GROOVY",
+      "BIKUTSI",
+      "RIBA"
+    ],
+    "duration": 8,
+    "instrumental": true,
+    "id": "e50a5282-491f-4ee3-b403-23d3e1cb261e",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/e50a5282-491f-4ee3-b403-23d3e1cb261e",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1480/i3IXILXnJ0pbYfQOXiBOG_tmpv6qp8txt.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1411278,
+    "created_at": 1781976324
+  },
+  {
+    "kind": "music",
+    "prompt": "groovy bikutsi",
+    "style": "Bikutsi",
+    "title": "Groovy Bikutsi",
+    "user_title": false,
+    "tags": [
+      "BIKUTSI",
+      "GROOVY",
+      "BIKUTSI",
+      "RIBA"
+    ],
+    "duration": 8,
+    "instrumental": true,
+    "id": "6e50355e-820b-4a17-aeb5-0eb1375132ce",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/6e50355e-820b-4a17-aeb5-0eb1375132ce",
+    "source_url": "https://v3b.fal.media/files/b/0a9f147c/9-VaQ64Gj58LN52xkGi9M_tmpzkjtg1k0.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1411278,
+    "created_at": 1781976288
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_lyrics_persistence_marker",
+    "style": "Rumba",
+    "title": "Test_Lyrics_Persistence_Marker",
+    "tags": [
+      "RUMBA",
+      "TEST",
+      "LYRICS",
+      "PERSISTENCE"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "ba4946a3-0c2c-4115-9f6d-0677859474b5",
+    "created_at": 1781976270
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "phoenix rising over Yaoundé",
+    "style": "Bikutsi",
+    "title": "Phoenix Rising Over Yaoundé",
+    "tags": [
+      "BIKUTSI",
+      "PHOENIX",
+      "RISING",
+      "OVER"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "9f22cb50-54df-46d7-b1d3-f057bde1e983",
+    "created_at": 1781976270
+  },
+  {
+    "kind": "music",
+    "prompt": "ancient drums of the night",
+    "style": "Bikutsi",
+    "title": "Phoenix at Dawn",
+    "user_title": true,
+    "tags": [
+      "BIKUTSI",
+      "ANCIENT",
+      "DRUMS",
+      "NIGHT"
+    ],
+    "duration": 6,
+    "instrumental": true,
+    "id": "9af47275-4cfc-4100-950a-c6e436d89fa7",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/9af47275-4cfc-4100-950a-c6e436d89fa7",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1480/pF3Z6mVAXPrZSYG92n0Sq_tmp8rgnrg7s.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1058478,
+    "created_at": 1781976251
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_lyrics_persistence_marker",
+    "style": "Rumba",
+    "title": "Test_Lyrics_Persistence_Marker",
+    "tags": [
+      "RUMBA",
+      "TEST",
+      "LYRICS",
+      "PERSISTENCE"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "90ac0422-4617-44da-95ca-fa289d70c213",
+    "created_at": 1781976209
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "phoenix rising over Yaoundé",
+    "style": "Bikutsi",
+    "title": "Phoenix Rising Over Yaoundé",
+    "tags": [
+      "BIKUTSI",
+      "PHOENIX",
+      "RISING",
+      "OVER"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "715c8d0d-b706-4f0d-b70d-207a982121f3",
+    "created_at": 1781976209
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_no_wav_marker",
+    "style": "Highlife",
+    "title": "Test_No_Wav_Marker",
+    "tags": [
+      "HIGHLIFE",
+      "TEST",
+      "MARKER",
+      "RIBA"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "2f156707-0da4-4697-b0c8-9b10d1173b9e",
+    "created_at": 1781976178
+  },
+  {
+    "kind": "music",
+    "prompt": "TEST_track_marker afro groove",
+    "style": "Afrobeat",
+    "title": "Test_Track_Marker Afro Groove",
+    "user_title": false,
+    "tags": [
+      "AFROBEAT",
+      "TEST",
+      "TRACK",
+      "MARKER"
+    ],
+    "duration": 6,
+    "instrumental": true,
+    "id": "c37a4c5f-4641-45c6-a3b1-7e8df12d5316",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/c37a4c5f-4641-45c6-a3b1-7e8df12d5316",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1471/NfCRLGcL6LhWudpDT2SEl_tmpqfrtnb77.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1058478,
+    "created_at": 1781976177
+  },
+  {
+    "kind": "music",
+    "prompt": "groovy bikutsi",
+    "style": "Bikutsi",
+    "title": "Groovy Bikutsi",
+    "user_title": false,
+    "tags": [
+      "BIKUTSI",
+      "GROOVY",
+      "BIKUTSI",
+      "RIBA"
+    ],
+    "duration": 8,
+    "instrumental": true,
+    "id": "5449e88d-335e-4b31-80b1-054f08315a2e",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/5449e88d-335e-4b31-80b1-054f08315a2e",
+    "source_url": "https://v3b.fal.media/files/b/0a9f146d/cV1ZZsMbQi7jF1DcH5ffA_tmpnauq0xti.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1411278,
+    "created_at": 1781976139
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_lyrics_persistence_marker",
+    "style": "Rumba",
+    "title": "Test_Lyrics_Persistence_Marker",
+    "tags": [
+      "RUMBA",
+      "TEST",
+      "LYRICS",
+      "PERSISTENCE"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "6136e636-064a-4184-9d08-bab72555a654",
+    "created_at": 1781976104
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "phoenix rising over Yaoundé",
+    "style": "Bikutsi",
+    "title": "Phoenix Rising Over Yaoundé",
+    "tags": [
+      "BIKUTSI",
+      "PHOENIX",
+      "RISING",
+      "OVER"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "9e5f0bae-8045-4ddc-a667-6d2a908aa7fe",
+    "created_at": 1781976103
+  },
+  {
+    "kind": "music",
+    "prompt": "TEST_track_marker afro groove",
+    "style": "Afrobeat",
+    "title": "Test_Track_Marker Afro Groove",
+    "user_title": false,
+    "tags": [
+      "AFROBEAT",
+      "TEST",
+      "TRACK",
+      "MARKER"
+    ],
+    "duration": 6,
+    "instrumental": true,
+    "id": "d9764245-d642-4930-a61a-66f6107e6ab7",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/d9764245-d642-4930-a61a-66f6107e6ab7",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1467/dytY3S3Pj3UK19nrcbB8z_tmpmklht4rm.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1058478,
+    "created_at": 1781976072
+  },
+  {
+    "kind": "music",
+    "prompt": "groovy bikutsi",
+    "style": "Bikutsi",
+    "title": "Groovy Bikutsi",
+    "user_title": false,
+    "tags": [
+      "BIKUTSI",
+      "GROOVY",
+      "BIKUTSI",
+      "RIBA"
+    ],
+    "duration": 8,
+    "instrumental": true,
+    "id": "5d40296d-44ce-4f23-a297-bffae0e0f636",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/5d40296d-44ce-4f23-a297-bffae0e0f636",
+    "source_url": "https://v3b.fal.media/files/b/0a9f145a/96uB3JdSCRCjhF7n-x3QF_tmpijh1d7_v.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1411278,
+    "created_at": 1781975941
+  },
+  {
+    "kind": "music",
+    "prompt": "ancient drums of the night",
+    "style": "Bikutsi",
+    "title": "Phoenix at Dawn",
+    "user_title": true,
+    "tags": [
+      "BIKUTSI",
+      "ANCIENT",
+      "DRUMS",
+      "NIGHT"
+    ],
+    "duration": 6,
+    "instrumental": true,
+    "id": "d28dff81-d6dc-4ab5-b9f6-37276fb6c674",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/d28dff81-d6dc-4ab5-b9f6-37276fb6c674",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1454/5m9iiOhQCdtx46e40mh4c_tmpydxemxys.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1058478,
+    "created_at": 1781975882
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_lyrics_persistence_marker",
+    "style": "Rumba",
+    "title": "Test_Lyrics_Persistence_Marker",
+    "tags": [
+      "RUMBA",
+      "TEST",
+      "LYRICS",
+      "PERSISTENCE"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "4e7a1f38-1491-48d5-a011-e870af86fc82",
+    "created_at": 1781975879
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "phoenix rising over Yaoundé",
+    "style": "Bikutsi",
+    "title": "Phoenix Rising Over Yaoundé",
+    "tags": [
+      "BIKUTSI",
+      "PHOENIX",
+      "RISING",
+      "OVER"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "5af057fe-2954-4588-b298-882c73fb9edd",
+    "created_at": 1781975878
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_no_wav_marker",
+    "style": "Highlife",
+    "title": "Test_No_Wav_Marker",
+    "tags": [
+      "HIGHLIFE",
+      "TEST",
+      "MARKER",
+      "RIBA"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "4971f2a3-34b3-47b5-b177-1800a7e41d99",
+    "created_at": 1781975823
+  },
+  {
+    "kind": "music",
+    "prompt": "TEST_track_marker afro groove",
+    "style": "Afrobeat",
+    "title": "Test_Track_Marker Afro Groove",
+    "user_title": false,
+    "tags": [
+      "AFROBEAT",
+      "TEST",
+      "TRACK",
+      "MARKER"
+    ],
+    "duration": 6,
+    "instrumental": true,
+    "id": "4bb05477-13e3-479c-8fd0-351db6fe35e0",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/4bb05477-13e3-479c-8fd0-351db6fe35e0",
+    "source_url": "https://v3b.fal.media/files/b/0a9f144e/uju0JkaNnXgP7ly4XHV1U_tmpiuyci9gm.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1058478,
+    "created_at": 1781975822
+  },
+  {
+    "kind": "music",
+    "prompt": "groovy bikutsi",
+    "style": "Bikutsi",
+    "title": "Groovy Bikutsi",
+    "user_title": false,
+    "tags": [
+      "BIKUTSI",
+      "GROOVY",
+      "BIKUTSI",
+      "RIBA"
+    ],
+    "duration": 8,
+    "instrumental": true,
+    "id": "88157e13-a970-4b60-be5c-f4e0155bb25e",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/88157e13-a970-4b60-be5c-f4e0155bb25e",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1449/e-P78MBXiLxVOPTrmae5w_tmppnvh3ull.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1411278,
+    "created_at": 1781975775
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_lyrics_persistence_marker",
+    "style": "Rumba",
+    "title": "Test_Lyrics_Persistence_Marker",
+    "tags": [
+      "RUMBA",
+      "TEST",
+      "LYRICS",
+      "PERSISTENCE"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "a4831860-0758-4634-9c0c-09edcaf7b2a2",
+    "created_at": 1781975663
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "phoenix rising over Yaoundé",
+    "style": "Bikutsi",
+    "title": "Phoenix Rising Over Yaoundé",
+    "tags": [
+      "BIKUTSI",
+      "PHOENIX",
+      "RISING",
+      "OVER"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "4af01f0f-8d53-4dd2-b2fd-f671ff5e1e71",
+    "created_at": 1781975663
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_no_wav_marker",
+    "style": "Highlife",
+    "title": "Test_No_Wav_Marker",
+    "tags": [
+      "HIGHLIFE",
+      "TEST",
+      "MARKER",
+      "RIBA"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "e2a7c0b1-a447-481e-b14b-e0e3a96fd35e",
+    "created_at": 1781975449
+  },
+  {
+    "kind": "music",
+    "prompt": "TEST_track_marker afro groove",
+    "style": "Afrobeat",
+    "title": "Test_Track_Marker Afro Groove",
+    "user_title": false,
+    "tags": [
+      "AFROBEAT",
+      "TEST",
+      "TRACK",
+      "MARKER"
+    ],
+    "duration": 6,
+    "instrumental": true,
+    "id": "a59aa363-cf0a-4fa6-a22a-7bf4c786504f",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/a59aa363-cf0a-4fa6-a22a-7bf4c786504f",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1430/gRRAfRGRpRf02Xm6drT55_tmpzcmpgrjj.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1058478,
+    "created_at": 1781975448
+  },
+  {
+    "kind": "music",
+    "prompt": "groovy bikutsi",
+    "style": "Bikutsi",
+    "title": "Groovy Bikutsi",
+    "user_title": false,
+    "tags": [
+      "BIKUTSI",
+      "GROOVY",
+      "BIKUTSI",
+      "RIBA"
+    ],
+    "duration": 8,
+    "instrumental": true,
+    "id": "0b443002-6ade-488e-88fe-b8d8999133e5",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/0b443002-6ade-488e-88fe-b8d8999133e5",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1425/StWQGMXslgm8S3Hfnzoj__tmpfsrjbbbf.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1411278,
+    "created_at": 1781975414
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_lyrics_persistence_marker",
+    "style": "Rumba",
+    "title": "Test_Lyrics_Persistence_Marker",
+    "tags": [
+      "RUMBA",
+      "TEST",
+      "LYRICS",
+      "PERSISTENCE"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "debfed60-4c54-4b50-a190-6700a7d565ad",
+    "created_at": 1781975305
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "phoenix rising over Yaoundé",
+    "style": "Bikutsi",
+    "title": "Phoenix Rising Over Yaoundé",
+    "tags": [
+      "BIKUTSI",
+      "PHOENIX",
+      "RISING",
+      "OVER"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "9ddf67e4-e7b1-4e8c-a6a6-88b6e93a2be9",
+    "created_at": 1781975304
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_no_wav_marker",
+    "style": "Highlife",
+    "title": "Test_No_Wav_Marker",
+    "tags": [
+      "HIGHLIFE",
+      "TEST",
+      "MARKER",
+      "RIBA"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "265fd51b-a6bb-4b75-ad93-791e63938ada",
+    "created_at": 1781975118
+  },
+  {
+    "kind": "music",
+    "prompt": "TEST_track_marker afro groove",
+    "style": "Afrobeat",
+    "title": "Test_Track_Marker Afro Groove",
+    "user_title": false,
+    "tags": [
+      "AFROBEAT",
+      "TEST",
+      "TRACK",
+      "MARKER"
+    ],
+    "duration": 6,
+    "instrumental": true,
+    "id": "ef4c95b4-8634-47be-8bb9-9ae6d984f889",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/ef4c95b4-8634-47be-8bb9-9ae6d984f889",
+    "source_url": "https://v3b.fal.media/files/b/0a9f1407/T_VfF3Xw7Y6iLtvv0h1Mn_tmpksys7f2r.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1058478,
+    "created_at": 1781975117
+  },
+  {
+    "kind": "music",
+    "prompt": "groovy bikutsi",
+    "style": "Bikutsi",
+    "title": "Groovy Bikutsi",
+    "user_title": false,
+    "tags": [
+      "BIKUTSI",
+      "GROOVY",
+      "BIKUTSI",
+      "RIBA"
+    ],
+    "duration": 8,
+    "instrumental": true,
+    "id": "471935a2-0021-4279-b0a4-ed69b14becba",
+    "fallback": false,
+    "audio_url": "/api/ai/workspace/file/471935a2-0021-4279-b0a4-ed69b14becba",
+    "source_url": "https://v3b.fal.media/files/b/0a9f140b/FPLtMgGPMfd0Bw2nPOIeg_tmp7kcuxb3s.wav",
+    "model": "fal-ai/stable-audio",
+    "bytes": 1411278,
+    "created_at": 1781975083
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_lyrics_persistence_marker",
+    "style": "Rumba",
+    "title": "Test_Lyrics_Persistence_Marker",
+    "tags": [
+      "RUMBA",
+      "TEST",
+      "LYRICS",
+      "PERSISTENCE"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "8075e05a-75a6-449c-b7e5-61aaa4366a06",
+    "created_at": 1781975005
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "phoenix rising over Yaoundé",
+    "style": "Bikutsi",
+    "title": "Phoenix Rising Over Yaoundé",
+    "tags": [
+      "BIKUTSI",
+      "PHOENIX",
+      "RISING",
+      "OVER"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
+    "id": "b3e0012c-1596-4d6d-b43b-707803c1e2b3",
+    "created_at": 1781975005
+  },
+  {
+    "kind": "lyrics",
+    "prompt": "TEST_no_wav_marker",
+    "style": "Highlife",
+    "title": "Test_No_Wav_Marker",
+    "tags": [
+      "HIGHLIFE",
+      "TEST",
+      "MARKER",
+      "RIBA"
+    ],
+    "sections": [
+      {
+        "type": "Verse",
+        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
+      },
+      {
+        "type": "Chorus",
+        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
+      },
+      {
+        "type": "Verse",
+        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
+      }
+    ],
+    "fallback": true,
+    "fallback_reason": "ChatError",
     "id": "5248523a-6bac-4755-8518-8152556b4257",
     "created_at": 1781956182
   },
@@ -578,995 +1560,5 @@
     "model": "fal-ai/stable-audio",
     "bytes": 1411278,
     "created_at": 1781921659
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "cd485354-dc3c-46de-b884-47fe59918c9a",
-    "created_at": 1781921486
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "phoenix rising over Yaoundé",
-    "style": "Bikutsi",
-    "title": "Phoenix Rising Over Yaoundé",
-    "tags": [
-      "BIKUTSI",
-      "PHOENIX",
-      "RISING",
-      "OVER"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "6c47ac05-851c-4721-a4dc-c2996f1ab8c5",
-    "created_at": 1781921486
-  },
-  {
-    "kind": "music",
-    "prompt": "smoky midnight session",
-    "style": "Bikutsi",
-    "title": "Smoky Midnight Session",
-    "user_title": false,
-    "tags": [
-      "BIKUTSI",
-      "SMOKY",
-      "MIDNIGHT",
-      "SESSION"
-    ],
-    "duration": 6,
-    "instrumental": true,
-    "id": "9178c072-ec6d-4938-b9ea-92ce83c2cd82",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/9178c072-ec6d-4938-b9ea-92ce83c2cd82",
-    "source_url": "https://v3b.fal.media/files/b/0a9eff12/36NH855BwRhsZXwTnPp_F_tmpzyuogxpl.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1058478,
-    "created_at": 1781921462
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_no_wav_marker",
-    "style": "Highlife",
-    "title": "Test_No_Wav_Marker",
-    "tags": [
-      "HIGHLIFE",
-      "TEST",
-      "MARKER",
-      "RIBA"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "d52c6a50-d275-4d97-8071-0a6a1874ee47",
-    "created_at": 1781921330
-  },
-  {
-    "kind": "music",
-    "prompt": "TEST_track_marker afro groove",
-    "style": "Afrobeat",
-    "title": "Test_Track_Marker Afro Groove",
-    "user_title": false,
-    "tags": [
-      "AFROBEAT",
-      "TEST",
-      "TRACK",
-      "MARKER"
-    ],
-    "duration": 6,
-    "instrumental": true,
-    "id": "d48c0dce-d902-487a-9e89-4cb7c44d7713",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/d48c0dce-d902-487a-9e89-4cb7c44d7713",
-    "source_url": "https://v3b.fal.media/files/b/0a9eff04/dEm4uaeNGmYUOrmn0raux_tmph2du1wri.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1058478,
-    "created_at": 1781921329
-  },
-  {
-    "kind": "music",
-    "prompt": "groovy bikutsi",
-    "style": "Bikutsi",
-    "title": "Groovy Bikutsi",
-    "user_title": false,
-    "tags": [
-      "BIKUTSI",
-      "GROOVY",
-      "BIKUTSI",
-      "RIBA"
-    ],
-    "duration": 8,
-    "instrumental": true,
-    "id": "facfd967-eb4b-486f-9172-338c26a02f71",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/facfd967-eb4b-486f-9172-338c26a02f71",
-    "source_url": "https://v3b.fal.media/files/b/0a9eff05/0aOz_hVtuli4uRBJ8E6tJ_tmp0mq6wvy4.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1411278,
-    "created_at": 1781921264
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "1a168eea-7f71-46da-9c2a-e32eb3534bd4",
-    "created_at": 1781921230
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "phoenix rising over Yaoundé",
-    "style": "Bikutsi",
-    "title": "Phoenix Rising Over Yaoundé",
-    "tags": [
-      "BIKUTSI",
-      "PHOENIX",
-      "RISING",
-      "OVER"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "5ab1ab77-d55b-49a7-a41b-2a83595a5d7a",
-    "created_at": 1781921230
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_no_wav_marker",
-    "style": "Highlife",
-    "title": "Test_No_Wav_Marker",
-    "tags": [
-      "HIGHLIFE",
-      "TEST",
-      "MARKER",
-      "RIBA"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "1d080bc3-3d19-4289-830c-307cc9279f1d",
-    "created_at": 1781921006
-  },
-  {
-    "kind": "music",
-    "prompt": "TEST_track_marker afro groove",
-    "style": "Afrobeat",
-    "title": "Test_Track_Marker Afro Groove",
-    "user_title": false,
-    "tags": [
-      "AFROBEAT",
-      "TEST",
-      "TRACK",
-      "MARKER"
-    ],
-    "duration": 6,
-    "instrumental": true,
-    "id": "2625c08c-6f4e-4adf-b92b-dcedc559c128",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/2625c08c-6f4e-4adf-b92b-dcedc559c128",
-    "source_url": "https://v3b.fal.media/files/b/0a9efee4/TsImxlirlydisey1-gbmJ_tmpijf6rjyf.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1058478,
-    "created_at": 1781921004
-  },
-  {
-    "kind": "music",
-    "prompt": "groovy bikutsi",
-    "style": "Bikutsi",
-    "title": "Groovy Bikutsi",
-    "user_title": false,
-    "tags": [
-      "BIKUTSI",
-      "GROOVY",
-      "BIKUTSI",
-      "RIBA"
-    ],
-    "duration": 8,
-    "instrumental": true,
-    "id": "0f4425f4-ae25-48ce-a2da-d787fc8a29a9",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/0f4425f4-ae25-48ce-a2da-d787fc8a29a9",
-    "source_url": "https://v3b.fal.media/files/b/0a9efedd/q4jIMmnHhslIVc-ISNOaI_tmp7fsnc6ro.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1411278,
-    "created_at": 1781920940
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "61147606-d764-4f7e-9ff8-dcd6f4240d7d",
-    "created_at": 1781920906
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "phoenix rising over Yaoundé",
-    "style": "Bikutsi",
-    "title": "Phoenix Rising Over Yaoundé",
-    "tags": [
-      "BIKUTSI",
-      "PHOENIX",
-      "RISING",
-      "OVER"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "05cd50cc-f3ba-4920-8efa-c68a3d4056a0",
-    "created_at": 1781920906
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_no_wav_marker",
-    "style": "Highlife",
-    "title": "Test_No_Wav_Marker",
-    "tags": [
-      "HIGHLIFE",
-      "TEST",
-      "MARKER",
-      "RIBA"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "4d08441f-8f7e-49f2-8c24-142b8c9ab36a",
-    "created_at": 1781920738
-  },
-  {
-    "kind": "music",
-    "prompt": "TEST_track_marker afro groove",
-    "style": "Afrobeat",
-    "title": "Test_Track_Marker Afro Groove",
-    "user_title": false,
-    "tags": [
-      "AFROBEAT",
-      "TEST",
-      "TRACK",
-      "MARKER"
-    ],
-    "duration": 6,
-    "instrumental": true,
-    "id": "37b3d945-7e74-4876-98a1-aa9f039bdb53",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/37b3d945-7e74-4876-98a1-aa9f039bdb53",
-    "source_url": "https://v3b.fal.media/files/b/0a9efec9/T74QaAckOZGlyn69Hew2F_tmpbo_xc09p.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1058478,
-    "created_at": 1781920737
-  },
-  {
-    "kind": "music",
-    "prompt": "groovy bikutsi",
-    "style": "Bikutsi",
-    "title": "Groovy Bikutsi",
-    "user_title": false,
-    "tags": [
-      "BIKUTSI",
-      "GROOVY",
-      "BIKUTSI",
-      "RIBA"
-    ],
-    "duration": 8,
-    "instrumental": true,
-    "id": "0d164eb0-c53f-4dbc-99a8-73eaf91f3cbd",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/0d164eb0-c53f-4dbc-99a8-73eaf91f3cbd",
-    "source_url": "https://v3b.fal.media/files/b/0a9efecd/Q2fwrMd0g_IjpqxrjMIB9_tmp4tx3fg8l.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1411278,
-    "created_at": 1781920702
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "9b032639-db6e-494d-b4f4-e19f02ab541e",
-    "created_at": 1781920598
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "phoenix rising over Yaoundé",
-    "style": "Bikutsi",
-    "title": "Phoenix Rising Over Yaoundé",
-    "tags": [
-      "BIKUTSI",
-      "PHOENIX",
-      "RISING",
-      "OVER"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "30554187-4e3a-4717-8315-a0d27f7fefc5",
-    "created_at": 1781920598
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_no_wav_marker",
-    "style": "Highlife",
-    "title": "Test_No_Wav_Marker",
-    "tags": [
-      "HIGHLIFE",
-      "TEST",
-      "MARKER",
-      "RIBA"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "2baaa194-a47b-456d-90f6-abad19398faa",
-    "created_at": 1781920389
-  },
-  {
-    "kind": "music",
-    "prompt": "TEST_track_marker afro groove",
-    "style": "Afrobeat",
-    "title": "Test_Track_Marker Afro Groove",
-    "user_title": false,
-    "tags": [
-      "AFROBEAT",
-      "TEST",
-      "TRACK",
-      "MARKER"
-    ],
-    "duration": 6,
-    "instrumental": true,
-    "id": "6e87b7e3-cbd9-471e-943a-e915153ce367",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/6e87b7e3-cbd9-471e-943a-e915153ce367",
-    "source_url": "https://v3b.fal.media/files/b/0a9efea6/59ZM0K8gyBltdGQYhh-dg_tmpgzjwuxf9.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1058478,
-    "created_at": 1781920388
-  },
-  {
-    "kind": "music",
-    "prompt": "groovy bikutsi",
-    "style": "Bikutsi",
-    "title": "Groovy Bikutsi",
-    "user_title": false,
-    "tags": [
-      "BIKUTSI",
-      "GROOVY",
-      "BIKUTSI",
-      "RIBA"
-    ],
-    "duration": 8,
-    "instrumental": true,
-    "id": "7b72de07-f11f-4f65-ba70-68bc8a25be3c",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/7b72de07-f11f-4f65-ba70-68bc8a25be3c",
-    "source_url": "https://v3b.fal.media/files/b/0a9efea0/Uzx3MgjiO3NMBkkkwRTEl_tmp7__u4wrk.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1411278,
-    "created_at": 1781920322
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "214251ed-cb6e-4a8b-a214-f73f3d5db3fc",
-    "created_at": 1781920288
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "phoenix rising over Yaoundé",
-    "style": "Bikutsi",
-    "title": "Phoenix Rising Over Yaoundé",
-    "tags": [
-      "BIKUTSI",
-      "PHOENIX",
-      "RISING",
-      "OVER"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "2f68f804-c061-46a6-9513-c8c4d0632da6",
-    "created_at": 1781920288
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_no_wav_marker",
-    "style": "Highlife",
-    "title": "Test_No_Wav_Marker",
-    "tags": [
-      "HIGHLIFE",
-      "TEST",
-      "MARKER",
-      "RIBA"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "2af51e86-4d87-499c-83c1-bc6ab89ff69a",
-    "created_at": 1781919841
-  },
-  {
-    "kind": "music",
-    "prompt": "TEST_track_marker afro groove",
-    "style": "Afrobeat",
-    "title": "Test_Track_Marker Afro Groove",
-    "user_title": false,
-    "tags": [
-      "AFROBEAT",
-      "TEST",
-      "TRACK",
-      "MARKER"
-    ],
-    "duration": 6,
-    "instrumental": true,
-    "id": "aa9f6869-19fa-4093-8766-2d654dde1cae",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/aa9f6869-19fa-4093-8766-2d654dde1cae",
-    "source_url": "https://v3b.fal.media/files/b/0a9efe6f/9azn9x5gBVvdCkvkDn-jZ_tmpl3ibc139.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1058478,
-    "created_at": 1781919840
-  },
-  {
-    "kind": "music",
-    "prompt": "groovy bikutsi",
-    "style": "Bikutsi",
-    "title": "Groovy Bikutsi",
-    "user_title": false,
-    "tags": [
-      "BIKUTSI",
-      "GROOVY",
-      "BIKUTSI",
-      "RIBA"
-    ],
-    "duration": 8,
-    "instrumental": true,
-    "id": "7ad37fc8-e683-4eec-90ec-4f01e960eb2f",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/7ad37fc8-e683-4eec-90ec-4f01e960eb2f",
-    "source_url": "https://v3b.fal.media/files/b/0a9efe6c/yRCUwf5gP1HfBilC4hlMy_tmpbfdpubf2.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1411278,
-    "created_at": 1781919803
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "8e349a62-a0b7-4620-bf68-6e523e70f1d7",
-    "created_at": 1781919696
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "phoenix rising over Yaoundé",
-    "style": "Bikutsi",
-    "title": "Phoenix Rising Over Yaoundé",
-    "tags": [
-      "BIKUTSI",
-      "PHOENIX",
-      "RISING",
-      "OVER"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "9b37d47d-656b-4e99-8fb2-5ff0a28860ef",
-    "created_at": 1781919695
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_no_wav_marker",
-    "style": "Highlife",
-    "title": "Test_No_Wav_Marker",
-    "tags": [
-      "HIGHLIFE",
-      "TEST",
-      "MARKER",
-      "RIBA"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "cb16b65b-baea-42dd-a26b-6df02a53e8ac",
-    "created_at": 1781919533
-  },
-  {
-    "kind": "music",
-    "prompt": "TEST_track_marker afro groove",
-    "style": "Afrobeat",
-    "title": "Test_Track_Marker Afro Groove",
-    "user_title": false,
-    "tags": [
-      "AFROBEAT",
-      "TEST",
-      "TRACK",
-      "MARKER"
-    ],
-    "duration": 6,
-    "instrumental": true,
-    "id": "c017e978-0aef-4c28-a19c-69419d4b9006",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/c017e978-0aef-4c28-a19c-69419d4b9006",
-    "source_url": "https://v3b.fal.media/files/b/0a9efe51/Ojo4RUyPuu3uWNxi86BxZ_tmp1rj69z9y.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1058478,
-    "created_at": 1781919532
-  },
-  {
-    "kind": "music",
-    "prompt": "groovy bikutsi",
-    "style": "Bikutsi",
-    "title": "Groovy Bikutsi",
-    "user_title": false,
-    "tags": [
-      "BIKUTSI",
-      "GROOVY",
-      "BIKUTSI",
-      "RIBA"
-    ],
-    "duration": 8,
-    "instrumental": true,
-    "id": "c14645d7-b13b-43e1-82bf-3b2fb41e922a",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/c14645d7-b13b-43e1-82bf-3b2fb41e922a",
-    "source_url": "https://v3b.fal.media/files/b/0a9efe4d/5qbHiPqJ7nJyT5DKrXh2K_tmpvc_k3zox.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1411278,
-    "created_at": 1781919498
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "a72d72b2-98c8-4cbf-a332-5f097be76b6e",
-    "created_at": 1781919399
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "phoenix rising over Yaoundé",
-    "style": "Bikutsi",
-    "title": "Phoenix Rising Over Yaoundé",
-    "tags": [
-      "BIKUTSI",
-      "PHOENIX",
-      "RISING",
-      "OVER"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Bikutsi night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "phoenix rising over Yaoundé\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "8b1a6a01-9d6f-4680-8c4e-a1ffaf6f0d12",
-    "created_at": 1781919399
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_no_wav_marker",
-    "style": "Highlife",
-    "title": "Test_No_Wav_Marker",
-    "tags": [
-      "HIGHLIFE",
-      "TEST",
-      "MARKER",
-      "RIBA"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Highlife night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_no_wav_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "635eaeb2-66f8-44da-8a0a-75e6258cf44c",
-    "created_at": 1781917990
-  },
-  {
-    "kind": "music",
-    "prompt": "TEST_track_marker afro groove",
-    "style": "Afrobeat",
-    "title": "Test_Track_Marker Afro Groove",
-    "user_title": false,
-    "tags": [
-      "AFROBEAT",
-      "TEST",
-      "TRACK",
-      "MARKER"
-    ],
-    "duration": 6,
-    "instrumental": true,
-    "id": "2f3f0160-5b32-435c-bded-c75ad9db82f0",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/2f3f0160-5b32-435c-bded-c75ad9db82f0",
-    "source_url": "https://v3b.fal.media/files/b/0a9efdb6/Y1_gYxJeFo1PL-TB7lEJd_tmphbfdveql.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1058478,
-    "created_at": 1781917989
-  },
-  {
-    "kind": "music",
-    "prompt": "groovy bikutsi",
-    "style": "Bikutsi",
-    "title": "Groovy Bikutsi",
-    "user_title": false,
-    "tags": [
-      "BIKUTSI",
-      "GROOVY",
-      "BIKUTSI",
-      "RIBA"
-    ],
-    "duration": 8,
-    "instrumental": true,
-    "id": "ab5d9591-d0a4-46e6-a1ae-a038ca993735",
-    "fallback": false,
-    "audio_url": "/api/ai/workspace/file/ab5d9591-d0a4-46e6-a1ae-a038ca993735",
-    "source_url": "https://v3b.fal.media/files/b/0a9efdaf/G6TRzXCrpuTLuFM4xyXmC_tmpvqg5akxy.wav",
-    "model": "fal-ai/stable-audio",
-    "bytes": 1411278,
-    "created_at": 1781917916
-  },
-  {
-    "kind": "lyrics",
-    "prompt": "TEST_lyrics_persistence_marker",
-    "style": "Rumba",
-    "title": "Test_Lyrics_Persistence_Marker",
-    "tags": [
-      "RUMBA",
-      "TEST",
-      "LYRICS",
-      "PERSISTENCE"
-    ],
-    "sections": [
-      {
-        "type": "Verse",
-        "text": "In the heart of the Rumba night\nDrums awake the ancient fire\nVoices rise above the light\nThe groove pulls us higher"
-      },
-      {
-        "type": "Chorus",
-        "text": "TEST_lyrics_persistence_marker\nThe phoenix flies tonight\nBikutsi in our soul\nRIBA makes it right"
-      },
-      {
-        "type": "Verse",
-        "text": "From the river to the sun\nWe dance until the dawn appears\nEvery beat is one with one\nWashing all our fears"
-      }
-    ],
-    "fallback": true,
-    "fallback_reason": "ChatError",
-    "id": "d36079a6-039d-49f5-9f79-19b9167e4d17",
-    "created_at": 1781917841
   }
 ]

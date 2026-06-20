@@ -107,14 +107,26 @@ async def _sweep_scheduled_jobs() -> None:
         _save_jobs(jobs)
 
 
+async def _sweep_oauth_refresh() -> None:
+    """Run every 2 min — refresh OAuth tokens expiring in the next 5 min."""
+    try:
+        from .oauth_flow import refresh_expiring_tokens
+        report = await refresh_expiring_tokens(window_minutes=5)
+        if report["refreshed"] or report["failed"]:
+            log.info("oauth refresher: %s", report)
+    except Exception as exc:
+        log.warning("oauth refresher swallowed exc: %s", exc)
+
+
 def start_scheduler() -> None:
     global _scheduler
     if _scheduler is not None:
         return
     _scheduler = AsyncIOScheduler(timezone="UTC")
     _scheduler.add_job(_sweep_scheduled_jobs, "interval", seconds=30, id="riba_share_sweep", max_instances=1, coalesce=True)
+    _scheduler.add_job(_sweep_oauth_refresh, "interval", minutes=2, id="riba_oauth_refresh", max_instances=1, coalesce=True)
     _scheduler.start()
-    log.info("RIBA scheduler started (sweep every 30 s)")
+    log.info("RIBA scheduler started (share sweep 30 s, oauth refresh 2 min)")
 
 
 def shutdown_scheduler() -> None:

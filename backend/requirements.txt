@@ -150,3 +150,6 @@ watchfiles==1.2.0
 websockets==16.0
 yarl==1.24.2
 zipp==4.1.0
+cryptography==48.0.0
+httpx==0.28.1
+httpx-sse==0.4.3

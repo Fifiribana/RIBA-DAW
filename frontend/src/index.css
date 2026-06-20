@@ -166,3 +166,101 @@ input[type="range"].riba-slider::-moz-range-thumb {
 
 /* Disable selection on transport */
 .no-select { user-select: none; }
+
+/* ============================================================
+   Sprint v3.12 · Mobile & Tablet Responsive
+   Targets: iPad portrait (≤ 1024 px) and phones (≤ 768 px).
+   Strategy:
+     - Make the topbar wrap & inflate touch targets to ≥ 44 px tall.
+     - Stack the timeline + mixer sidebar vertically on narrow screens.
+     - Switch sliders to vertical-stretch so the thumbs stay easy to grab.
+     - Add `touch-action: pan-y` to scrollable strips so vertical scroll
+       always works while horizontal drags target the slider itself.
+   ============================================================ */
+
+/* Tablets and below */
+@media (max-width: 1024px) {
+  .riba-btn {
+    min-height: 38px;
+    min-width: 38px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .riba-topbar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .riba-slider {
+    height: 24px; /* easier to grab */
+  }
+  .riba-slider::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+  /* Modals breathe a bit more on tablets */
+  .riba-modal-content {
+    max-width: 92vw !important;
+    max-height: 88vh !important;
+  }
+}
+
+/* Phones */
+@media (max-width: 768px) {
+  .riba-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .riba-btn-icon {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .riba-slider {
+    height: 28px;
+  }
+  .riba-slider::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+  }
+  /* Force the main app layout to stack — mixer below timeline */
+  .riba-main-stack {
+    flex-direction: column !important;
+    overflow-x: hidden;
+  }
+  .riba-sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 50vh;
+    overflow: auto;
+    border-left: none !important;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  /* The Pro Tools menu bar gets cramped — switch to scrollable strip. */
+  .riba-menubar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+  /* Hide deep cosmetic borders & VU meter labels to claw back vertical space. */
+  .riba-vu-label { display: none; }
+
+  /* Timeline tracks: collapse meta column, give the waveform the floor. */
+  .riba-track-row {
+    flex-wrap: wrap;
+  }
+  .riba-track-meta {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+}
+
+/* Touch-friendly sliders everywhere (also helps trackpads) */
+.riba-slider {
+  touch-action: manipulation;
+}
+.riba-track-canvas, .riba-timeline-canvas {
+  touch-action: pan-y; /* allow vertical scroll, capture horizontal as drag */
+}
