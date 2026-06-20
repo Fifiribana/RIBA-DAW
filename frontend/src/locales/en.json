@@ -290,7 +290,9 @@
       "sharedOn": "Snapshot is now public in the Bantu Library",
       "sharedOff": "Snapshot removed from the Bantu Library",
       "errEmptyName": "Give your snapshot a name first.",
-      "confirmDelete": "Delete this snapshot?"
+      "confirmDelete": "Delete this snapshot?",
+      "sotwLabel": "SNAPSHOT OF THE WEEK",
+      "sotwCount": "{{count}} griots imported it this week"
     },
     "quantize": {
       "label": "Quantize",

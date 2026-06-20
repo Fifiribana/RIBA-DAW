@@ -11,13 +11,15 @@ const API = process.env.REACT_APP_BACKEND_URL?.replace(/\/$/, '') || '';
 
 export function MidiSnapshotLibrary() {
   const { t } = useTranslation();
-  const { owner, assignments } = useMidiLearn();
+  const { owner, assignments, replaceAssignments } = useMidiLearn();
   const [items, setItems] = useState([]);
   const [name, setName] = useState('');
   const [shareLabel, setShareLabel] = useState('');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [publicItems, setPublicItems] = useState([]);
+  const [featured, setFeatured] = useState(null);
+  const [featuredCount, setFeaturedCount] = useState(0);
 
   const refresh = useCallback(async () => {
     if (!owner) return;
@@ -38,7 +40,21 @@ export function MidiSnapshotLibrary() {
     } catch { /* offline */ }
   }, []);
 
-  useEffect(() => { refresh(); refreshPublic(); }, [refresh, refreshPublic]);
+  const refreshFeatured = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/api/midi/snapshots/featured?window_days=7`);
+      if (!r.ok) return;
+      const data = await r.json();
+      setFeatured(data.featured);
+      setFeaturedCount(data.window_count || 0);
+    } catch { /* offline */ }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    refreshPublic();
+    refreshFeatured();
+  }, [refresh, refreshPublic, refreshFeatured]);
 
   // Build the current mapping payload from live MIDI Learn assignments.
   const buildPayload = useCallback(() => {
@@ -77,7 +93,9 @@ export function MidiSnapshotLibrary() {
     setStatus(`… ${t('midi.snapshots.applying')} · ${snap.name}`);
     try {
       // Replace the user mapping wholesale with this snapshot — done via the
-      // existing PATCH endpoint, key by key (idempotent merge).
+      // existing PATCH endpoint, key by key (idempotent merge). Persistence
+      // and local-state refresh happen in parallel so the UI updates without
+      // a full page reload.
       const tasks = [];
       for (const [k, action] of Object.entries(snap.notes || {})) {
         tasks.push(fetch(`${API}/api/midi/mapping/${owner}/learn`, {
@@ -98,13 +116,14 @@ export function MidiSnapshotLibrary() {
         }));
       }
       await Promise.all(tasks);
+      // Local assignments refresh — no more forced reload.
+      replaceAssignments(snap);
       setStatus(`✓ ${t('midi.snapshots.applied')} · ${snap.name} (${tasks.length} bindings)`);
-      // Hint user that a reload syncs the UI's local `assignments` map.
-      setTimeout(() => window.location.reload(), 900);
+      setTimeout(() => setStatus(''), 2500);
     } catch (e) {
       setStatus(`⚠️ ${e.message}`);
     } finally { setBusy(false); }
-  }, [owner, t]);
+  }, [owner, replaceAssignments, t]);
 
   const shareToggle = useCallback(async (snap) => {
     setBusy(true);
@@ -150,10 +169,16 @@ export function MidiSnapshotLibrary() {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const full = await r.json();
       await apply(full);
+      // Log the import event so the Featured-this-week ranking reflects it.
+      fetch(`${API}/api/midi/snapshots/${sid}/import?importer=${encodeURIComponent(owner)}`, {
+        method: 'POST',
+      })
+        .then(() => refreshFeatured())
+        .catch(() => { /* best-effort */ });
     } catch (e) {
       setStatus(`⚠️ ${e.message}`);
     } finally { setBusy(false); }
-  }, [apply]);
+  }, [apply, owner, refreshFeatured]);
 
   const liveCount = Object.keys(assignments || {}).length;
 
@@ -165,6 +190,52 @@ export function MidiSnapshotLibrary() {
       <div className="font-mono-r" style={{ fontSize: 10, color: '#A1A1AA', letterSpacing: '0.1em' }}>
         {t('midi.snapshots.title')} · {t('midi.snapshots.liveCount', { count: liveCount })}
       </div>
+
+      {/* 🏆 Snapshot of the Week — featured banner */}
+      {featured && (
+        <div
+          data-testid="midi-snapshot-featured-banner"
+          style={{
+            position: 'relative',
+            padding: '10px 12px',
+            background: 'linear-gradient(135deg, rgba(217,70,239,0.18), rgba(245,158,11,0.18))',
+            border: '1px solid rgba(245,158,11,0.45)',
+            borderRadius: 6,
+            display: 'flex', alignItems: 'center', gap: 10,
+            boxShadow: '0 4px 14px rgba(245,158,11,0.18) inset',
+          }}
+        >
+          <div style={{ fontSize: 22 }}>🏆</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="font-mono-r" style={{ fontSize: 9, color: '#F59E0B', letterSpacing: '0.1em' }}>
+              {t('midi.snapshots.sotwLabel')}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#FAFAFA', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+              {featured.name}
+            </div>
+            <div style={{ fontSize: 10, color: '#A1A1AA' }}>
+              {featured.share_label && <>{featured.share_label} · </>}
+              <span data-testid="midi-snapshot-featured-count">
+                {t('midi.snapshots.sotwCount', { count: featuredCount })}
+              </span>
+              <span style={{ marginLeft: 6, color: '#71717A' }}>by {featured.owner}</span>
+            </div>
+          </div>
+          <button
+            data-testid="midi-snapshot-featured-apply"
+            className="riba-btn"
+            disabled={busy}
+            onClick={() => applyPublic(featured.id)}
+            style={{
+              fontSize: 10, padding: '5px 12px',
+              background: 'linear-gradient(135deg, #D946EF, #F59E0B)',
+              color: '#fff', fontWeight: 700,
+            }}
+          >
+            ⬇ {t('midi.snapshots.import')}
+          </button>
+        </div>
+      )}
 
       {/* Save row */}
       <div style={{ display: 'flex', gap: 6 }}>
@@ -276,7 +347,12 @@ export function MidiSnapshotLibrary() {
                 {s.share_label && (
                   <span style={{ fontSize: 10, color: '#A1A1AA', marginLeft: 6 }}>· {s.share_label}</span>
                 )}
-                <div className="font-mono-r" style={{ fontSize: 9, color: '#71717A' }}>by {s.owner}</div>
+                <div className="font-mono-r" style={{ fontSize: 9, color: '#71717A' }}>
+                  by {s.owner}
+                  {typeof s.import_count === 'number' && s.import_count > 0 && (
+                    <span style={{ color: '#F59E0B', marginLeft: 8 }}>· ⬇ {s.import_count}</span>
+                  )}
+                </div>
               </span>
               <button
                 data-testid={`midi-snapshot-public-apply-${s.id}`}

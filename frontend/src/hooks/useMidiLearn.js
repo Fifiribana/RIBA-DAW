@@ -165,11 +165,31 @@ export function MidiLearnProvider({ children }) {
     } catch (_) { /* best-effort */ }
   }, [assignments]);
 
+  /**
+   * Replace the active `assignments` map with the contents of a snapshot
+   * (`{notes: {key: action}, cc: {key: action}}`) — no reload needed.
+   * Pure local-state refresh; persistence is handled separately by the
+   * Snapshot Library via PATCH /mapping/{owner}/learn calls.
+   */
+  const replaceAssignments = useCallback((snapshot) => {
+    const next = {};
+    for (const [k, action] of Object.entries(snapshot?.notes || {})) {
+      next[action] = { kind: 'noteon', key: Number(k), action };
+    }
+    for (const [k, action] of Object.entries(snapshot?.cc || {})) {
+      next[action] = { kind: 'cc', key: Number(k), action };
+    }
+    setAssignments(next);
+    setStatus('saved');
+    setStatusMsg(`✓ Snapshot applied · ${Object.keys(next).length} bindings`);
+    setTimeout(() => { setStatusMsg(''); setStatus('idle'); }, 1800);
+  }, []);
+
   const value = useMemo(() => ({
     armed, assignments, status, statusMsg,
-    arm, cancel, captureEvent, unbind,
+    arm, cancel, captureEvent, unbind, replaceAssignments,
     owner: ownerRef.current,
-  }), [armed, assignments, status, statusMsg, arm, cancel, captureEvent, unbind]);
+  }), [armed, assignments, status, statusMsg, arm, cancel, captureEvent, unbind, replaceAssignments]);
 
   return (
     <MidiLearnContext.Provider value={value}>
@@ -186,7 +206,8 @@ export function useMidiLearn() {
     return {
       armed: null, assignments: {}, status: 'idle', statusMsg: '',
       arm: () => {}, cancel: () => {}, captureEvent: async () => false,
-      unbind: async () => {}, owner: 'anonymous',
+      unbind: async () => {}, replaceAssignments: () => {},
+      owner: 'anonymous',
     };
   }
   return ctx;

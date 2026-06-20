@@ -339,7 +339,37 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 - **Desktop build** : cross-compile depuis le container Linux ARM64 vers Windows/macOS impossible — voir `/app/DESKTOP_RELEASE.md`. Le pipeline GitHub Actions `release.yml` produit les vrais installateurs signables sur push de tag `v*.*.*`.
 
-### v3.9 (this iteration - Feb 2026) — UNIVERSAL MIDI LEARN 🎚️ + OAUTH PREP 🔐
+### v3.11 (this iteration - Feb 2026) — SNAPSHOT OF THE WEEK 🏆 + UX POLISH ✨
+- **🏆 Snapshot of the Week** (`/app/backend/ai/midi.py`) — moteur communautaire de découverte :
+  - **`POST /api/midi/snapshots/{id}/import`** : log d'un import sur snapshot **public uniquement** (snapshots privés → 403). Insertion dans `midi_snapshot_imports` (timestamp + importer + owner) **+ denormalisation** sur le doc snapshot (`import_count++`, `last_imported_at`). Pas de dédup par importer — re-importer dans une autre session est un signal de valeur réel ; la fenêtre rolling 7 jours limite naturellement les abus.
+  - **`GET /api/midi/snapshots/featured?window_days=7`** : Mongo aggregate `$match cutoff → $group snapshot_id → $sort desc → $limit 20` puis **fallback sur les 20 top candidats** (skip ceux unshared/supprimés depuis) — un snapshot révoqué ne réduit jamais la bannière au silence. Retourne `{featured, window_days, window_count, computed_at}` ou `featured=null` si aucun import.
+  - **`GET /api/midi/snapshots/leaderboard?window_days=7&limit=10`** : top-N pour widget sidebar futur ; **redaction systématique** des champs `notes`/`cc` (poids + sécurité).
+  - **Path ordering corrigé** : `/snapshots/featured` et `/snapshots/leaderboard` placés AVANT `/snapshots/{snapshot_id}` dans la registration pour que FastAPI matche les routes statiques en premier.
+- **🎨 Frontend bannière** (`MidiSnapshotLibrary.jsx`) :
+  - Bannière 🏆 magenta→amber au-dessus de la liste owner-scoped quand `featured` non-null : nom + tagline + compteur traduit (`5 griots imported it this week`) + bouton Import gradient.
+  - **Apply Public** déclenche désormais automatiquement le **POST /import** en arrière-plan (best-effort, swallowed errors) puis refresh la bannière.
+  - **Compteurs visibles** sur chaque public row : `⬇ 5` en amber quand `import_count > 0`.
+- **✨ UX polish** :
+  - **Suppression du `window.location.reload()`** post-Apply Snapshot. Nouvelle méthode `replaceAssignments(snapshot)` exposée par `useMidiLearn()` : reconstruit la map `assignments[]` localement à partir des `notes`+`cc` du snapshot. Apply est désormais **instantané** (pas de rechargement de page → pas de perte de contexte audio/transport).
+  - Le statut "✓ applied" reste visible 2.5 s au lieu d'un reload brutal.
+- **🌐 i18n** : 2 nouvelles clés `midi.snapshots.sotwLabel` + `midi.snapshots.sotwCount` (avec interpolation `{{count}}`) en **EN / FR / ES / PT / SW**, verrouillées par locale parity test.
+- **📊 Tests** : **+13 nets** (224 → **237 collectés**) :
+  - `test_snapshot_of_the_week.py` (13 tests) : compteur incrémenté correctement, refus snapshots privés (403), 404 sur unknown id, validation importer key, top-N ordering, redaction leaderboard, clamp window_days/limit, fallback past unshared, isolation cross-snapshot.
+  - Locale parity étendu (`midi.snapshots` passe de 17 à 19 clés).
+- **🎬 Smoke UI validé** : bannière rendue dans Setup → MIDI Input… avec `data-testid='midi-snapshot-featured-banner'`, `-apply`, `-count`. Text traduit affiché correctement ("5 griots imported it this week"). Community presets count visible (30 imports loggés au cumul des tests).
+
+### v3.10 (iter 31 - Feb 2026) — MIXER MIDI LEARN 🎛️ + SNAPSHOT LIBRARY 💾 + VISUAL QUANTIZE 🎯
+- **🎛️ P0 · MIDI Learn par piste (MixerModal.jsx réécrite)** : chaque tranche de console expose 4 cibles MIDI Learn — `track.{id}.volume` / `pan` / `mute` / `solo` — câblées via `<MidiLearnTrigger>` avec data-testid systématiques `mixer-strip-{id}-{vol,pan,mute,solo}-midi-wrap`. Right-click ouvre le micro-menu, l'arming pulse magenta, et la pill globale s'affiche. Le dispatcher Daw.jsx résout désormais dans l'ordre **armed > user-learnt (per-track) > factory-default** ; pour CC : `volume` = 0..127 → 0..100 %, `pan` = 0..127 → -50..+50, `mute`/`solo` togglent quand CC ≥ 64 ; pour note-on, `mute`/`solo` togglent en mode pad-trigger.
+- **💾 P1 · MIDI Snapshot Library** (backend `midi.py` + UI `MidiSnapshotLibrary.jsx`) :
+  - **Backend** : 6 routes — `POST /api/midi/snapshots` (upsert par `(owner, name)` avec `$setOnInsert` id stable), `GET /snapshots?owner=X` (liste owner-scoped triée `updated_at desc`), `GET /snapshots/{id}` (payload complet), `GET /snapshots/public` (shared=true, **notes/cc redactés**), `DELETE /snapshots/{id}?owner=X` (cross-owner protégé → 404), `POST /snapshots/{id}/share?owner=X&shared=Y&share_label=Z` (toggle public + tagline). Regex nom : Latin Extended + Latin Extended Additional + em-dash (U+2010-2015) → noms griots/diaspora pris en charge (`Studio Yaoundé — Bantú Sessions`).
+  - **Frontend** : panneau intégré dans `Setup → MIDI Input...` sous la mapping reference card. Input nom + Save (désactivé si `liveCount=0` OU nom vide), liste owner-scoped (Apply / Share-Unshare / Delete), tagline optionnelle, **section "Community presets · Bantu Library"** publique avec bouton Import 1-clic qui PATCH chaque binding via l'endpoint v3.9 puis reload pour resync l'UI.
+  - **Tests** : 18 nouveaux tests couvrant CRUD complet, upsert stabilité, validation noms (accentués / em-dash / slashes / >80 chars), validation pitch, partage avec/sans owner, listing public redacté.
+- **🎯 P2 · Visual Quantize Overlay** (`VisualQuantizeOverlay.jsx`) : strip 26 px sous la `Timeline`, visible quand Bantu Markers ON. Chaque note MIDI capturée pousse via ref `push(rawBeat, quantizedBeat, pitch)` → halos magenta (raw) + amber (quantisé) avec tick reliant les deux, fade 4 s, capping 12 events. `data-testid='visual-quantize-overlay'` + `visual-quantize-empty` (placeholder *"Awaiting MIDI input…"*). Aussi alimenté quand aucune piste MIDI sélectionnée — feedback visuel pédagogique sur le Bantu Swing en temps réel.
+- **🌐 i18n complet** : `midi.snapshots.*` (17 clés) + `midi.quantize.*` (3 clés) en **EN / FR / ES / PT / SW**, verrouillés par `test_locale_coverage.py`.
+- **📊 Tests** : **+18 tests nets** (206 → **224 collectés**, objectif >220 dépassé). 56/56 PASS sur les modules v3.10 (midi_snapshots 18 + midi_learn 14 + midi 21 + locale_coverage 3). 11 échecs préexistants liés au binaire `ffmpeg` manquant du container preview (album_teaser, boot_cinematic, bantu_reel, promo_cascade) — non causés par v3.10.
+- **🎬 Smoke UI** : tous data-testid confirmés présents ; Mixer post-création-MIDI-track expose les 4 wraps par strip ; right-click + Learn arme correctement avec pill globale i18n.
+
+### v3.9 (iter 30 - Feb 2026) — UNIVERSAL MIDI LEARN 🎚️ + OAUTH PREP 🔐
 - **🎚️ MIDI Learn universel** (`/app/frontend/src/hooks/useMidiLearn.js` + `MidiLearnTrigger.jsx`) :
   - **Right-click n'importe où** sur les faders / knobs / boutons transport pour ouvrir un mini-menu contextuel ("Learn next MIDI control" / "Unbind" / "Cancel"). UI portal-rendered, anchored au curseur, fermeture à l'outside-click.
   - **Armement visuel** : la cible armée pulse magenta (outline + glow 14 px). Une pill flottante 'Learning · {label} · play a note or move a knob…' s'affiche en bas centré, avec bouton Cancel + TTL auto 12 s.

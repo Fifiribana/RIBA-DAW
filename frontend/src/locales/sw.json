@@ -290,7 +290,9 @@
       "sharedOn": "Picha imechapishwa kwenye Bantu Library",
       "sharedOff": "Picha imeondolewa kwenye Bantu Library",
       "errEmptyName": "Toa picha yako jina kwanza.",
-      "confirmDelete": "Futa picha hii?"
+      "confirmDelete": "Futa picha hii?",
+      "sotwLabel": "PICHA YA WIKI HII",
+      "sotwCount": "Griots {{count}} wameipakua wiki hii"
     },
     "quantize": {
       "label": "Quantize",

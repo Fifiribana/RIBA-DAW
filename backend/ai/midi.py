@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Path
@@ -496,6 +496,10 @@ def _snapshot_view(doc: dict) -> dict:
     return out
 
 
+# Rolling window (in days) used by /snapshots/featured + /leaderboard.
+_FEATURED_WINDOW_DAYS = 7
+
+
 @router.post("/snapshots")
 async def midi_snapshot_save(payload: MidiSnapshotPayload) -> dict:
     """Upsert a snapshot by (owner, name).
@@ -561,6 +565,83 @@ async def midi_snapshots_public(limit: int = 30) -> dict:
     return {"snapshots": items, "count": len(items)}
 
 
+@router.get("/snapshots/featured")
+async def midi_snapshot_featured(window_days: int = _FEATURED_WINDOW_DAYS) -> dict:
+    """Snapshot of the Week — most-imported shared preset over a rolling window.
+
+    Returns the full snapshot doc + a count of imports in the window. The
+    response is intentionally compact (single snapshot, no array) so the UI
+    can drop it straight into a banner. When no imports happened in the
+    window — or when every top candidate has since been un-shared — returns
+    `featured=null` and the UI shows a neutral empty-state.
+    """
+    window_days = max(1, min(60, int(window_days)))
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=window_days)).isoformat()
+
+    # Fetch the top 20 candidates so we can fall through past any that were
+    # later unshared/deleted (otherwise a single revoked snapshot would
+    # silence the Featured banner entirely).
+    pipeline = [
+        {"$match": {"imported_at": {"$gte": cutoff}}},
+        {"$group": {"_id": "$snapshot_id", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20},
+    ]
+    candidates = await _db().midi_snapshot_imports.aggregate(pipeline).to_list(20)
+    if not candidates:
+        return {"featured": None, "window_days": window_days, "window_count": 0}
+
+    for c in candidates:
+        snap = await _db().midi_snapshots.find_one({"id": c["_id"]}, {"_id": 0})
+        if snap and snap.get("shared"):
+            return {
+                "featured": snap,
+                "window_days": window_days,
+                "window_count": c["count"],
+                "computed_at": datetime.now(timezone.utc).isoformat(),
+            }
+    return {"featured": None, "window_days": window_days, "window_count": 0}
+
+
+@router.get("/snapshots/leaderboard")
+async def midi_snapshot_leaderboard(
+    window_days: int = _FEATURED_WINDOW_DAYS,
+    limit: int = 10,
+) -> dict:
+    """Top-N most-imported shared snapshots over the rolling window.
+
+    Same engine as /featured but returns an ordered list for a sidebar widget.
+    """
+    window_days = max(1, min(60, int(window_days)))
+    limit = max(1, min(20, int(limit)))
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=window_days)).isoformat()
+    pipeline = [
+        {"$match": {"imported_at": {"$gte": cutoff}}},
+        {"$group": {"_id": "$snapshot_id", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": limit},
+    ]
+    rows = await _db().midi_snapshot_imports.aggregate(pipeline).to_list(limit)
+    if not rows:
+        return {"leaderboard": [], "window_days": window_days}
+
+    ids = [r["_id"] for r in rows]
+    counts = {r["_id"]: r["count"] for r in rows}
+    snaps_cursor = _db().midi_snapshots.find(
+        {"id": {"$in": ids}, "shared": True},
+        {"_id": 0, "notes": 0, "cc": 0},  # redact heavy fields
+    )
+    snaps = await snaps_cursor.to_list(limit)
+    snaps_by_id = {s["id"]: s for s in snaps}
+    # Preserve the leaderboard ordering returned by the aggregate.
+    leaderboard = []
+    for sid in ids:
+        if sid in snaps_by_id:
+            entry = {**snaps_by_id[sid], "window_count": counts[sid]}
+            leaderboard.append(entry)
+    return {"leaderboard": leaderboard, "window_days": window_days}
+
+
 @router.get("/snapshots/{snapshot_id}")
 async def midi_snapshot_get(snapshot_id: str = Path(..., min_length=8, max_length=64)) -> dict:
     """Fetch the full payload of a single snapshot by id (any owner — used by the
@@ -569,8 +650,6 @@ async def midi_snapshot_get(snapshot_id: str = Path(..., min_length=8, max_lengt
     if not doc:
         raise HTTPException(404, "snapshot not found")
     return doc
-
-
 @router.delete("/snapshots/{snapshot_id}")
 async def midi_snapshot_delete(snapshot_id: str = Path(..., min_length=8, max_length=64),
                                 owner: str = "") -> dict:
@@ -601,6 +680,60 @@ async def midi_snapshot_share(
         raise HTTPException(404, "snapshot not found for this owner")
     doc = await _db().midi_snapshots.find_one({"id": snapshot_id}, {"_id": 0})
     return {"shared": bool(shared), "snapshot": doc}
+
+
+# === Snapshot of the Week (Sprint v3.11) =====================================
+# Each public-snapshot import is logged with a timestamp so we can compute the
+# top trending preset over a rolling 7-day window. The counter is denormalised
+# onto the snapshot itself (import_count, last_imported_at) to keep the
+# /featured query a single small aggregation rather than a per-doc rollup.
+
+
+@router.post("/snapshots/{snapshot_id}/import")
+async def midi_snapshot_import(
+    snapshot_id: str = Path(..., min_length=8, max_length=64),
+    importer: str = "anonymous",
+) -> dict:
+    """Log an import (Apply) of a public snapshot — drives the Featured banner.
+
+    Idempotency: we don't dedupe per-importer here on purpose. Re-importing the
+    same preset twice in two distinct sessions is a genuine signal of value;
+    the rolling 7-day window naturally caps abuse.
+    """
+    importer = (importer or "anonymous").strip()
+    if importer != "anonymous" and not _OWNER_RE.match(importer):
+        raise HTTPException(400, "invalid importer key")
+
+    snap = await _db().midi_snapshots.find_one({"id": snapshot_id})
+    if not snap:
+        raise HTTPException(404, "snapshot not found")
+    if not snap.get("shared"):
+        raise HTTPException(403, "snapshot is private — cannot import")
+
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    # Log the import event (capped collection-style retention via window query).
+    await _db().midi_snapshot_imports.insert_one({
+        "snapshot_id": snapshot_id,
+        "importer": importer,
+        "owner": snap.get("owner"),
+        "imported_at": now_iso,
+    })
+    # Denormalise counter + last_imported_at on the snapshot doc.
+    await _db().midi_snapshots.update_one(
+        {"id": snapshot_id},
+        {
+            "$inc": {"import_count": 1},
+            "$set": {"last_imported_at": now_iso},
+        },
+    )
+    doc = await _db().midi_snapshots.find_one({"id": snapshot_id}, {"_id": 0})
+    return {
+        "imported": True,
+        "snapshot_id": snapshot_id,
+        "import_count": doc.get("import_count", 1),
+        "last_imported_at": doc.get("last_imported_at"),
+    }
 
 
 # Helpers exported for tests

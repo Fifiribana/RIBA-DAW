@@ -290,7 +290,9 @@
       "sharedOn": "Snapshot publicado na Bantu Library",
       "sharedOff": "Snapshot removido da Bantu Library",
       "errEmptyName": "Dá um nome ao teu snapshot primeiro.",
-      "confirmDelete": "Apagar este snapshot?"
+      "confirmDelete": "Apagar este snapshot?",
+      "sotwLabel": "SNAPSHOT DA SEMANA",
+      "sotwCount": "{{count}} griots importaram-no esta semana"
     },
     "quantize": {
       "label": "Quantize",

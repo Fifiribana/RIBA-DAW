@@ -46,7 +46,8 @@ REQUIRED_KEYS = {
     "midi.snapshots": ["title", "namePlaceholder", "save", "apply", "share",
                       "unshare", "import", "empty", "publicTitle",
                       "publicEmpty", "saved", "deleted", "applied",
-                      "sharedOn", "sharedOff", "errEmptyName", "confirmDelete"],
+                      "sharedOn", "sharedOff", "errEmptyName", "confirmDelete",
+                      "sotwLabel", "sotwCount"],
     "midi.quantize": ["label", "legend", "empty"],
     "assistant":    ["title", "sendBtn", "thinking"],
     "manual":       ["menubarBtn"],          # the new MenuBar Manual button label
