@@ -14,6 +14,8 @@ from .studio_live import router as studio_live_router
 from .translate import router as translate_router
 from .storytelling import router as storytelling_router
 from .library import router as library_router
+from .library_v2 import router as library_v2_router
+from .midi import router as midi_router
 from .scheduler import start_scheduler, shutdown_scheduler
 
 __all__ = [
@@ -32,6 +34,8 @@ __all__ = [
     "translate_router",
     "storytelling_router",
     "library_router",
+    "library_v2_router",
+    "midi_router",
     "start_scheduler",
     "shutdown_scheduler",
 ]

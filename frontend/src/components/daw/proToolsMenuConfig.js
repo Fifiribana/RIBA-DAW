@@ -106,6 +106,7 @@ export const PRO_TOOLS_MENUS = {
   Setup: [
     { id: 'setup_playback', label: 'Playback Engine...', key: 'openPlayback' },
     { id: 'setup_io', label: 'I/O Setup...', key: 'openIO' },
+    { id: 'setup_midi', label: 'MIDI Input...', key: 'openMidi' },
     { id: 'setup_preferences', label: 'Preferences...', key: 'openPrefs' },
     { sep: true },
     { id: 'setup_gm', label: 'GM 128 Instruments', key: 'openGM' },

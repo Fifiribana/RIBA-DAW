@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
+import { BantuHeatmap } from './BantuHeatmap';
+import { LibraryLikeButton, LibraryCommentsPanel, GriotProfileModal } from './LibraryEngagement';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -50,6 +52,9 @@ export function BantuStorytellingLibrary({ onLoad }) {
   const [style, setStyle] = useState('');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('recent');
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [openComments, setOpenComments] = useState({});  // id -> bool
+  const [griotOpen, setGriotOpen] = useState(null);
 
   const fetchFeatured = async () => {
     try {
@@ -145,6 +150,16 @@ export function BantuStorytellingLibrary({ onLoad }) {
           }}
         />
         <button
+          data-testid="library-heatmap-toggle"
+          onClick={() => setShowHeatmap((v) => !v)}
+          style={{
+            background: showHeatmap ? 'rgba(34,211,238,0.18)' : 'transparent',
+            border: '1px solid', borderColor: showHeatmap ? '#22D3EE80' : 'rgba(255,255,255,0.08)',
+            color: '#E4E4E7', borderRadius: 999, padding: '4px 10px',
+            fontSize: 11, cursor: 'pointer',
+          }}
+        >🌍 {t('library.heatmapBtn', 'Heatmap')}</button>
+        <button
           data-testid="library-refresh-btn"
           onClick={fetchItems}
           style={{
@@ -161,6 +176,8 @@ export function BantuStorytellingLibrary({ onLoad }) {
           padding: '8px 12px', fontSize: 12, border: '1px solid rgba(239,68,68,0.32)',
         }}>{String(error)}</div>
       )}
+
+      {showHeatmap && <BantuHeatmap />}
 
       <div className="font-mono-r" style={{ fontSize: 10, color: '#71717A', textTransform: 'uppercase', letterSpacing: '0.10em' }}>
         {loading ? `⚙ ${t('common.loading', 'Loading…')}` : `${items.length} / ${total}  ${t('library.results', 'records')}`}
@@ -305,37 +322,64 @@ export function BantuStorytellingLibrary({ onLoad }) {
                 />
               ))}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-              <span style={{ fontSize: 9, color: '#52525B' }}>
-                — {it.author_name || 'Anonymous'}
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, gap: 4, flexWrap: 'wrap' }}>
               <button
-                data-testid={`library-load-${it.id}`}
-                onClick={async () => {
-                  // Fetch full doc (server bumps plays + we get a fresh copy)
-                  try {
-                    const full = await axios.get(`${API}/storytelling/library/${it.id}`);
-                    onLoad?.(full.data);
-                  } catch {
-                    onLoad?.(it);
-                  }
-                }}
+                data-testid={`library-author-${it.id}`}
+                onClick={() => setGriotOpen(it.author_name)}
                 style={{
-                  background: 'transparent',
-                  border: '1px solid #D946EF66',
-                  color: '#D946EF',
-                  borderRadius: 6, padding: '3px 10px',
-                  fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  background: 'transparent', border: 'none', color: '#22D3EE',
+                  fontSize: 9, padding: 0, cursor: 'pointer', textAlign: 'left',
+                  textDecoration: 'underline dotted',
                 }}
-              >
-                {t('library.loadBtn', 'Load')}
-              </button>
+                title={`Open griot profile of ${it.author_name}`}
+              >— {it.author_name || 'Anonymous'}</button>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <LibraryLikeButton storyId={it.id} initialLikes={it.likes || 0} />
+                <button
+                  data-testid={`library-comments-toggle-${it.id}`}
+                  onClick={() => setOpenComments((m) => ({ ...m, [it.id]: !m[it.id] }))}
+                  title="Toggle comments"
+                  style={{
+                    background: openComments[it.id] ? 'rgba(99,102,241,0.18)' : 'transparent',
+                    border: '1px solid', borderColor: openComments[it.id] ? '#6366F180' : 'rgba(255,255,255,0.10)',
+                    color: openComments[it.id] ? '#A5B4FC' : '#A1A1AA',
+                    borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >💬</button>
+                <button
+                  data-testid={`library-load-${it.id}`}
+                  onClick={async () => {
+                    try {
+                      const full = await axios.get(`${API}/storytelling/library/${it.id}`);
+                      onLoad?.(full.data);
+                    } catch {
+                      onLoad?.(it);
+                    }
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #D946EF66',
+                    color: '#D946EF',
+                    borderRadius: 6, padding: '3px 10px',
+                    fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                  }}
+                >
+                  {t('library.loadBtn', 'Load')}
+                </button>
+              </div>
             </div>
+            {openComments[it.id] && <LibraryCommentsPanel storyId={it.id} />}
           </div>
         );
         })}
       </div>
+      <GriotProfileModal
+        author={griotOpen}
+        onClose={() => setGriotOpen(null)}
+        onLoadStory={(rec) => onLoad?.(rec)}
+      />
     </div>
   );
 }

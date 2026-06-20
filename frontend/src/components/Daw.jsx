@@ -33,6 +33,8 @@ import { BantuStorytellingModal } from './daw/modals/BantuStorytellingModal';
 import { GlobalTransportPlayer } from './daw/GlobalTransportPlayer';
 import { useStudioLive, StudioLiveBadge } from './daw/useStudioLive';
 import { MagentaOverlay } from './daw/MagentaSpinner';
+import { useWebMIDI } from '@/hooks/useWebMIDI';
+import { ccToTempo, ccToSwing, ccToStyle, ccToPan, BANTU_STYLES, quantizeBeatToBantu } from '@/lib/midiMapping';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -146,6 +148,17 @@ export default function Daw() {
   // state, so the downstream "push local → Y.Map" effects don't re-broadcast
   // and create a feedback loop.
   const applyingRemoteRef = useRef(false);
+
+  // ===== WebMIDI (Sprint v3.8) =====
+  // Dispatcher refs so the hook can call into transport / tempo / swing
+  // functions defined later in the component without re-initialising on every
+  // render. Keeping the registration centralised makes the mapping easy to
+  // override later.
+  const midiDispatchRef = useRef(() => {});
+  const handleMidiEvent = useCallback((evt) => {
+    try { midiDispatchRef.current(evt); } catch (e) { /* swallow */ }
+  }, []);
+  const midi = useWebMIDI({ enabled: true, onEvent: handleMidiEvent });
 
   // Sync tempo + Bantu config + mixer + per-track to/from the shared Y.Map
   useEffect(() => {
@@ -1672,6 +1685,122 @@ export default function Daw() {
     }
   }, []);
 
+  // === MIDI dispatcher (Sprint v3.8) ===
+  // Resolves each incoming MIDI event into an action against the live
+  // transport, tempo, Bantu swing or master bus. Pushed into a ref so the
+  // useWebMIDI hook can keep its onEvent stable across renders.
+  useEffect(() => {
+    midiDispatchRef.current = (evt) => {
+      if (!evt) return;
+      // Note-on → transport / quantised MIDI capture
+      if (evt.kind === 'noteon' && evt.velocity > 0) {
+        const action = evt.action;
+        if (action === 'transport.play') {
+          playAll();
+          setStatusMsg('🎹 MIDI · Play');
+          return;
+        }
+        if (action === 'transport.stop') {
+          if (isPlayingAll) {
+            engine.stopAll();
+            setTracks(prev => prev.map(t => ({ ...t, isPlaying: false })));
+            setIsPlayingAll(false);
+          }
+          setStatusMsg('🎹 MIDI · Stop');
+          return;
+        }
+        if (action === 'transport.record') {
+          toggleRecording();
+          setStatusMsg('🎹 MIDI · Record');
+          return;
+        }
+        if (action === 'transport.loop') {
+          toggleLoop();
+          return;
+        }
+        if (action === 'transport.metronome') {
+          toggleMetronome();
+          return;
+        }
+        // Free notes (no action mapping): capture into selected MIDI track if any.
+        if (!action) {
+          const target = tracks.find(t => t.id === selectedTrackId && t.isMIDI);
+          if (target) {
+            // Quantise note onset to the current Bantu groove.
+            const wallBeat = ((Date.now() / 1000) * (tempo / 60)) % (target.duration || 8);
+            const onset = bantuSwingEnabled
+              ? quantizeBeatToBantu(wallBeat, bantuStyle, bantuSwingIntensity)
+              : Math.round(wallBeat * 4) / 4;
+            const newNote = {
+              pitch: evt.pitch,
+              velocity: evt.velocity,
+              start: Math.max(0, onset),
+              duration: 0.5,
+            };
+            const updated = [...(target.midiNotes || []), newNote];
+            setTracks(prev => prev.map(tr => tr.id === target.id
+              ? { ...tr, midiNotes: updated }
+              : tr));
+            engine.loadMIDI(target.id, updated);
+            setStatusMsg(`🎹 MIDI · note ${evt.pitch} @ ${onset.toFixed(2)} beats (Bantu)`);
+          }
+        }
+        return;
+      }
+      if (evt.kind === 'cc') {
+        const action = evt.action;
+        if (action === 'tempo.set') {
+          const bpm = ccToTempo(evt.value);
+          setTempo(bpm);
+          setStatusMsg(`🎹 MIDI · Tempo → ${bpm} BPM`);
+          return;
+        }
+        if (action === 'swing.intensity') {
+          const i = ccToSwing(evt.value);
+          setBantuSwingIntensity(i);
+          if (!bantuSwingEnabled && i > 0) setBantuSwingEnabled(true);
+          setStatusMsg(`🎹 MIDI · Swing intensity → ${Math.round(i * 100)} %`);
+          return;
+        }
+        if (action === 'swing.enable') {
+          const on = evt.value >= 64;
+          setBantuSwingEnabled(on);
+          setStatusMsg(`🎹 MIDI · Swing ${on ? 'ON' : 'OFF'}`);
+          return;
+        }
+        if (action === 'swing.style') {
+          const styleId = ccToStyle(evt.value);
+          if (BANTU_STYLES.includes(styleId)) {
+            setBantuStyle(styleId);
+            setStatusMsg(`🎹 MIDI · Style → ${styleId}`);
+          }
+          return;
+        }
+        if (action === 'master.volume') {
+          const v = Math.round((evt.value / 127) * 100);
+          setMasterVol(v);
+          engine.setMasterVolume(v / 100);
+          return;
+        }
+        if (action === 'master.pan') {
+          const p = ccToPan(evt.value);
+          // Apply to the currently selected track if any (no global pan in mix bus).
+          if (selectedTrackId) {
+            const t = engine.tracks?.get?.(selectedTrackId);
+            if (t && t.pan) t.pan.pan.value = p;
+            setTracks(prev => prev.map(tr => tr.id === selectedTrackId
+              ? { ...tr, pan: Math.round(p * 100) }
+              : tr));
+          }
+          return;
+        }
+      }
+    };
+  }, [
+    isPlayingAll, playAll, toggleMetronome, toggleLoop, toggleRecording,
+    tracks, selectedTrackId, tempo, bantuStyle, bantuSwingEnabled, bantuSwingIntensity,
+  ]);
+
   // === Keyboard shortcuts ===
   useEffect(() => {
     const onKey = (e) => {
@@ -1808,6 +1937,7 @@ export default function Daw() {
           // Setup
           openPlayback: () => { setSetupTab('playback'); setSetupOpen(true); loadAudioDevices(); },
           openIO: () => { setSetupTab('io'); setSetupOpen(true); loadAudioDevices(); },
+          openMidi: () => { setSetupTab('midi'); setSetupOpen(true); midi.requestAccess?.(); },
           openPrefs: () => { setSetupTab('preferences'); setSetupOpen(true); },
           openGM: () => setGmOpen(true),
           openVst: scanVst,
@@ -2436,6 +2566,8 @@ export default function Daw() {
           looping={looping}
           metronomeOn={metronomeOn}
           undoCount={undoStackRef.current.length}
+          midi={midi}
+          onMidiRequestAccess={midi.requestAccess}
           onClose={() => setSetupOpen(false)}
         />
       )}
