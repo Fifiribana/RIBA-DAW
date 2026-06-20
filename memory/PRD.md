@@ -339,7 +339,29 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 - **Desktop build** : cross-compile depuis le container Linux ARM64 vers Windows/macOS impossible — voir `/app/DESKTOP_RELEASE.md`. Le pipeline GitHub Actions `release.yml` produit les vrais installateurs signables sur push de tag `v*.*.*`.
 
-### v3.8 (this iteration - Feb 2026) — WEBMIDI INPUT 🎹 (Premier contrôle matériel)
+### v3.9 (this iteration - Feb 2026) — UNIVERSAL MIDI LEARN 🎚️ + OAUTH PREP 🔐
+- **🎚️ MIDI Learn universel** (`/app/frontend/src/hooks/useMidiLearn.js` + `MidiLearnTrigger.jsx`) :
+  - **Right-click n'importe où** sur les faders / knobs / boutons transport pour ouvrir un mini-menu contextuel ("Learn next MIDI control" / "Unbind" / "Cancel"). UI portal-rendered, anchored au curseur, fermeture à l'outside-click.
+  - **Armement visuel** : la cible armée pulse magenta (outline + glow 14 px). Une pill flottante 'Learning · {label} · play a note or move a knob…' s'affiche en bas centré, avec bouton Cancel + TTL auto 12 s.
+  - **Capture à la volée** : dès qu'un événement MIDI (note-on ou CC) arrive après armement, il est lié à l'action ciblée ; les bindings antérieurs sur la même touche physique sont écrasés côté front pour cohérence UX.
+  - **Persistance backend** : `PATCH /api/midi/mapping/{owner}/learn` upsert 2-étapes (évite le conflit Mongo `$set + $setOnInsert` sur path dotted) — fait de chaque griot un détenteur de son mapping matériel personnel, rechargé à l'init via `GET /api/midi/mapping/{owner}` puis reverse-mappé en `assignments[action] = {kind, key}`.
+  - **Résolution dispatch** (Daw.jsx) : ordre `armed → user-learnt → factory-default` ; supporte des bindings spécialisés `track.{id}.volume` et `track.{id}.pan`.
+  - **Owner persisté** dans `localStorage['riba-midi-owner']` (auto-généré `griot_xxxxxxxx` au 1er load) — stable cross-session.
+  - **UI wrap** : 5 cibles primaires câblées en v3.9 — `transport.play`, `transport.record`, `transport.loop`, `transport.metronome`, `tempo.set`, `master.volume`. Chacune expose `data-testid={base}-midi-{wrap,menu,learn-btn,unbind-btn,badge}` pour test surface.
+  - **Badge visuel** : quand un binding existe, un mini badge magenta (`CC22` / `N36`) s'affiche en haut-droite du contrôle — feedback instantané et identifiable.
+- **🔐 OAuth scaffolding** (`/app/backend/ai/share.py`) :
+  - `_OAUTH_PROVIDERS` dict : 3 providers (TikTok / Instagram / YouTube) avec `authorize_url`, `token_url`, `console_url`, `doc_url`, `scopes`, `required_env`, `redirect_var`.
+  - `GET /api/ai/share/oauth/setup-guide` → snapshot global : `providers={...}` avec `env_status` (boolean per env-var, **JAMAIS la valeur**), `missing`, `ready`, `redirect_uri_configured`. Test `test_oauth_secrets_never_exposed_in_payload` vérifie aucune fuite.
+  - `GET /api/ai/share/oauth/{provider}` → snapshot ciblé ; provider inconnu → **404** (REST-correct).
+  - Note explicite dans la réponse : *"RIBA reads OAuth credentials strictly from the environment. Never paste secrets into the UI."*
+- **🌐 i18n complet** : top-level `midi.*` (5 clés : `learnNext`, `unbind`, `cancel`, `armed`, `saved`) en **EN / FR / ES / PT / SW**. Verrouillé par `test_locale_coverage.py` (parité ≥ 5 locales × 5 clés = 25 garanties).
+- **📊 Tests** : **+21 tests nets** (185 → **206 PASS**) :
+  - `test_midi_learn.py` (14 tests) : create-first / incremental / overwrite / owner-mismatch (400) / 5 cas 422 / unbind ciblé / full reset / persistance reload.
+  - `test_oauth_prep.py` (7 tests) : shape des 3 providers / secret-leak guard / 404 inconnu.
+  - `test_locale_coverage.py` étendu : nouvelle catégorie top-level `midi` parmi `REQUIRED_KEYS`.
+- **🎬 Smoke UI validé** : right-click → menu ouvert → Learn → `data-midi-armed='true'` + pill rendue → Cancel → état nettoyé. 4 menus distincts vérifiés ouverts sur 5 wraps. Aucune erreur console JS.
+
+### v3.8 (iter 29 - Feb 2026) — WEBMIDI INPUT 🎹 (Premier contrôle matériel)
 - **🎹 WebMIDI Engine** (`/app/frontend/src/hooks/useWebMIDI.js` + `/app/frontend/src/lib/midiMapping.js`) :
   - `navigator.requestMIDIAccess({sysex:false})` auto-déclenché à l'ouverture du panneau MIDI ; détection live des `inputs` / `outputs` USB (claviers maîtres, pads, surfaces de contrôle) avec `onstatechange` qui rafraîchit la liste sans reload.
   - Décodeur MIDI pur (`decodeMidiMessage`) : note-on / note-off / CC / pitch-bend ; les status bytes non-data (clock, sysex) sont ignorés proprement → zéro crash en présence d'un MPK mini, Launchkey, etc.
