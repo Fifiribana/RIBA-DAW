@@ -339,7 +339,23 @@ User asked for web DAW called Riba, extended over iterations with: full feature 
 - **LLM BUDGET** : top up at Profile → Universal Key → Add Balance.
 - **Desktop build** : cross-compile depuis le container Linux ARM64 vers Windows/macOS impossible — voir `/app/DESKTOP_RELEASE.md`. Le pipeline GitHub Actions `release.yml` produit les vrais installateurs signables sur push de tag `v*.*.*`.
 
-### v3.12 (this iteration - Feb 2026) — OAUTH WEB-FLOW 🔐 + MOBILE RESPONSIVE 📱 + FFMPEG FIX 🐛
+### v3.13 (this iteration - Feb 2026) — PRESENCE BADGE ⚡ + ONBOARDING TOUR 🎓
+- **⚡ P0 · Presence Badge temps réel** :
+  - **Backend** (`/app/backend/ai/studio_live.py`) : nouvelle route `GET /api/sessions/presence` qui agrège l'état du dict in-memory `_PEERS` (rooms WebRTC/Y.js) en 4 compteurs + un hint de polling :
+    - `griots_online` (total peers connectés), `active_sessions` (rooms non-vides), `solo_count` (1 peer), `collab_count` (≥2 peers), `poll_interval_ms` (12 000 par défaut → le client n'a jamais à deviner la cadence).
+  - **Frontend** (`PresenceBadge.jsx`) : pill posée dans la TopBar à côté du logo RIBA. Polling auto `setInterval` à la cadence donnée par le backend ; dot vert pulsant quand `online > 0`, gris quand studio quiet. **Anti-flicker** : ring `box-shadow: 0 0 10px` 600 ms uniquement quand le compteur change (`lastCountRef`). Tooltip i18n avec count interpolé.
+- **🎓 P1 · Onboarding Tour 30s** (`OnboardingTour.jsx`) :
+  - **4 étapes** : Welcome (centrée) → Bantu Oral Grid (ancrée sur `bantu-markers-toggle`) → Bantu Storytelling (ancrée sur menu Tools) → Studio Live (ancrée sur menu Window).
+  - **Spotlight ring magenta** 220 ms (cubic-bezier) autour de l'élément ancré, avec inverse-mask via `box-shadow: 0 0 0 9999px rgba(0,0,0,0.45)` — backdrop sombre partout sauf sur la cible.
+  - **Bubble flottante** auto-clamped dans le viewport (top/bottom selon espace dispo, left/right pour ne pas déborder).
+  - **Persistence** : `localStorage['riba-onboarding-done'] = '1'` ; **prop `forceOpen`** pour relancer manuellement (futur menu "Help → Replay tour").
+  - **Step dots** (4 cercles 6px, magenta sur actif) + step indicator i18n (`Étape 2 / 4`).
+  - **Skip/Back/Next** avec gradient magenta-amber sur le CTA primaire ; touche Esc dismiss (via outside-click backdrop).
+- **🌐 i18n complet** : 2 + 13 nouvelles clés (`presence.label`, `presence.labelEmpty` + 13 clés `onboarding.*` avec interpolation `{{current}}/{{total}}`) en **EN / FR / ES / PT / SW**. Verrouillé par `test_locale_coverage`.
+- **📊 Tests** : **+7 nets** (257 → **264 collectés**), **252/252 PASS** (suite étendue). 7 tests `test_presence.py` couvrent : shape, types, ranges, invariants mathématiques (`solo + collab == active`, `collab ≤ active`, `peers ≥ rooms`), parité avec endpoint legacy `/sessions`.
+- **🎬 Smoke UI** : Onboarding tour s'affiche dès le 1er load (localStorage vide) → Step 1 centré + Next clic → Step 2 ancré sur Bantu toggle avec spotlight magenta → Skip → `localStorage['riba-onboarding-done']='1'` confirmé. Presence badge visible avec `data-online=0`, `data-testid='presence-badge'`. Tous les data-testid (`onboarding-backdrop`, `-spotlight`, `-step-{id}`, `-next`, `-back`, `-skip`, `-dot-{i}`) confirmés présents.
+
+### v3.12 (iter 33 - Feb 2026) — OAUTH WEB-FLOW 🔐 + MOBILE RESPONSIVE 📱 + FFMPEG FIX 🐛
 - **🔐 P0 · OAuth 2.0 Authorization-Code Web-Flow** (`/app/backend/ai/oauth_flow.py`) :
   - **4 routes** sous `/api/ai/share/oauth/{provider}/` :
     - `GET /authorize?owner=X` → génère URL avec **state CSRF token** (32 octets URL-safe) + **PKCE S256** (TikTok, Google) + scopes par provider ; state + verifier persistés dans `oauth_states` collection.

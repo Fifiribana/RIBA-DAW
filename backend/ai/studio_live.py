@@ -105,3 +105,28 @@ def list_sessions():
         "total_sessions": len(_PEERS),
         "total_peers":    sum(len(s) for s in _PEERS.values()),
     }
+
+
+@router.get("/sessions/presence")
+def sessions_presence():
+    """Lightweight presence snapshot — fed to the TopBar live counter.
+
+    Counts:
+      • griots_online    — total open WebRTC/y-protocol peer connections.
+      • active_sessions  — number of *non-empty* collaboration rooms.
+      • solo_count       — 1-peer rooms (someone just opened RIBA).
+      • collab_count     — 2+-peer rooms (actual jamming together).
+    """
+    peers_per_room = [len(s) for s in _PEERS.values()]
+    griots_online = sum(peers_per_room)
+    active_sessions = sum(1 for n in peers_per_room if n > 0)
+    solo_count = sum(1 for n in peers_per_room if n == 1)
+    collab_count = sum(1 for n in peers_per_room if n >= 2)
+    return {
+        "griots_online":   griots_online,
+        "active_sessions": active_sessions,
+        "solo_count":      solo_count,
+        "collab_count":    collab_count,
+        # Hint clients on polling cadence so we don't get hammered.
+        "poll_interval_ms": 12_000,
+    }

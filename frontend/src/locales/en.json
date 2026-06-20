@@ -299,5 +299,24 @@
       "legend": "raw • quant",
       "empty": "Awaiting MIDI input…"
     }
+  },
+  "presence": {
+    "label": "griots",
+    "labelEmpty": "studio quiet"
+  },
+  "onboarding": {
+    "stepIndicator": "Step {{current}} / {{total}}",
+    "skip": "Skip tour",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Start jamming",
+    "welcomeTitle": "Welcome to RIBA 🎵",
+    "welcomeBody": "30 seconds to discover what makes RIBA unique — Bantu grid, AI storytelling, real-time collaboration.",
+    "bantuTitle": "Bantu Oral Grid 🥁",
+    "bantuBody": "Toggle the Bantu markers to lock your groove on Bikutsi 4/4, 6/8, 12/24, Makossa or Asiko — the world's first asymmetric quantizer.",
+    "storyTitle": "Bantu Storytelling 📜",
+    "storyBody": "Generate your first Mvett story from a prompt — RIBA's AI weaves words and audio into a single take.",
+    "liveTitle": "Studio Live 👥",
+    "liveBody": "Open Window → Studio Live to invite a fellow griot. Two clicks, real-time mix sync, no install."
   }
 }

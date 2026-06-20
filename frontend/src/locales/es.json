@@ -299,5 +299,24 @@
       "legend": "crudo • quant",
       "empty": "Esperando entrada MIDI…"
     }
+  },
+  "presence": {
+    "label": "griots",
+    "labelEmpty": "estudio en silencio"
+  },
+  "onboarding": {
+    "stepIndicator": "Paso {{current}} / {{total}}",
+    "skip": "Omitir tour",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "finish": "Empezar a tocar",
+    "welcomeTitle": "Bienvenido a RIBA 🎵",
+    "welcomeBody": "30 segundos para descubrir lo que hace único a RIBA — cuadrícula Bantu, storytelling con IA, colaboración en tiempo real.",
+    "bantuTitle": "Bantu Oral Grid 🥁",
+    "bantuBody": "Activa los marcadores Bantu para anclar tu groove en Bikutsi 4/4, 6/8, 12/24, Makossa o Asiko — el primer cuantizador asimétrico del mundo.",
+    "storyTitle": "Bantu Storytelling 📜",
+    "storyBody": "Genera tu primer relato Mvett desde un prompt — la IA de RIBA teje palabras y audio en una sola toma.",
+    "liveTitle": "Studio Live 👥",
+    "liveBody": "Abre Window → Studio Live para invitar a otro griot. Dos clics, mezcla en tiempo real, cero instalación."
   }
 }

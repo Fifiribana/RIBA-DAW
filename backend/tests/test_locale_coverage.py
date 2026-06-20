@@ -49,6 +49,10 @@ REQUIRED_KEYS = {
                       "sharedOn", "sharedOff", "errEmptyName", "confirmDelete",
                       "sotwLabel", "sotwCount"],
     "midi.quantize": ["label", "legend", "empty"],
+    "presence":      ["label", "labelEmpty"],
+    "onboarding":    ["stepIndicator", "skip", "back", "next", "finish",
+                      "welcomeTitle", "welcomeBody", "bantuTitle", "bantuBody",
+                      "storyTitle", "storyBody", "liveTitle", "liveBody"],
     "assistant":    ["title", "sendBtn", "thinking"],
     "manual":       ["menubarBtn"],          # the new MenuBar Manual button label
     "common":       ["tips", "apply", "generate"],

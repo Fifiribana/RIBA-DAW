@@ -38,6 +38,8 @@ import { ccToTempo, ccToSwing, ccToStyle, ccToPan, BANTU_STYLES, quantizeBeatToB
 import { useMidiLearn } from '@/hooks/useMidiLearn';
 import { MidiLearnTrigger, MidiLearnPill } from './daw/MidiLearnTrigger';
 import { VisualQuantizeOverlay } from './daw/VisualQuantizeOverlay';
+import { PresenceBadge } from './daw/PresenceBadge';
+import { OnboardingTour } from './daw/OnboardingTour';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -2046,6 +2048,7 @@ export default function Daw() {
               DAW · v1.0
             </div>
           </div>
+          <PresenceBadge />
         </div>
 
         {/* Transport */}
@@ -2791,6 +2794,7 @@ export default function Daw() {
       <GlobalTransportPlayer />
       <StudioLiveBadge live={live} />
       <MidiLearnPill />
+      <OnboardingTour />
     </div>
   );
 }

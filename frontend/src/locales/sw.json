@@ -299,5 +299,24 @@
       "legend": "ghafi • iliyopangwa",
       "empty": "Inasubiri ingizo la MIDI…"
     }
+  },
+  "presence": {
+    "label": "griots",
+    "labelEmpty": "studio kimya"
+  },
+  "onboarding": {
+    "stepIndicator": "Hatua {{current}} / {{total}}",
+    "skip": "Ruka ziara",
+    "back": "Nyuma",
+    "next": "Endelea",
+    "finish": "Anza kucheza",
+    "welcomeTitle": "Karibu RIBA 🎵",
+    "welcomeBody": "Sekunde 30 za kugundua kile kinachofanya RIBA kuwa cha kipekee — gridi ya Bantu, kusimulia kwa IA, ushirikiano wa wakati halisi.",
+    "bantuTitle": "Bantu Oral Grid 🥁",
+    "bantuBody": "Washa alama za Bantu ili kufunga groove yako kwa Bikutsi 4/4, 6/8, 12/24, Makossa au Asiko — kioo cha kwanza cha quantization kisicho sawa duniani.",
+    "storyTitle": "Bantu Storytelling 📜",
+    "storyBody": "Tengeneza hadithi yako ya kwanza ya Mvett kutoka kwa prompt — IA ya RIBA inafuma maneno na sauti kwa rekodi moja.",
+    "liveTitle": "Studio Live 👥",
+    "liveBody": "Fungua Window → Studio Live ili kumkaribisha griot mwingine. Mibofyo miwili, usawazishaji wa mchanganyiko wa wakati halisi, hakuna usakinishaji."
   }
 }
