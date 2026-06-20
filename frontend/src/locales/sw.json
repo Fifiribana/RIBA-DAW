@@ -269,6 +269,33 @@
     "unbind": "Tenganisha",
     "cancel": "Ghairi",
     "armed": "Inajifunza…",
-    "saved": "Imeunganishwa"
+    "saved": "Imeunganishwa",
+    "snapshots": {
+      "title": "Maktaba ya picha za MIDI",
+      "liveCount": "Vifungo {{count}} hai",
+      "namePlaceholder": "Jina la preset (mfano: Home Studio)",
+      "shareLabelPlaceholder": "Maelezo ya hiari (mfano: ‘by MvettMaster’)",
+      "save": "Hifadhi",
+      "apply": "Pakia",
+      "share": "Shiriki",
+      "unshare": "Acha kushiriki",
+      "import": "Ingiza",
+      "empty": "Hakuna picha bado. Bonyeza Hifadhi ili kufunga ramani yako ya MIDI Learn.",
+      "publicTitle": "Preseti za jumuiya · Bantu Library",
+      "publicEmpty": "Hakuna picha za jumuiya bado — kuwa griot wa kwanza kushiriki yako!",
+      "saved": "Picha imehifadhiwa",
+      "deleted": "Picha imefutwa",
+      "applied": "Picha imewekwa",
+      "applying": "Inapakia…",
+      "sharedOn": "Picha imechapishwa kwenye Bantu Library",
+      "sharedOff": "Picha imeondolewa kwenye Bantu Library",
+      "errEmptyName": "Toa picha yako jina kwanza.",
+      "confirmDelete": "Futa picha hii?"
+    },
+    "quantize": {
+      "label": "Quantize",
+      "legend": "ghafi • iliyopangwa",
+      "empty": "Inasubiri ingizo la MIDI…"
+    }
   }
 }

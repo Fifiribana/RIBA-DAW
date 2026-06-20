@@ -413,6 +413,196 @@ async def midi_session_recent(limit: int = 20) -> dict:
     return {"sessions": items, "count": len(items)}
 
 
+# === MIDI Snapshot Library (Sprint v3.10) ====================================
+# A *named* snapshot is a frozen copy of a user's mapping, optionally shared in
+# the public Bantu Storytelling Library so other griots can download & apply it
+# in one click. Storage doc shape:
+#   { id, owner, name, notes, cc, shared, share_label, created_at, updated_at }
+# Owner-scoped CRUD + a public listing for shared presets.
+
+_SNAPSHOT_NAME_RE = re.compile(
+    r"^[A-Za-z0-9 _\-\.\u00C0-\u024F\u1E00-\u1EFF\u2010-\u2015]{1,80}$"
+)
+
+
+class MidiSnapshotPayload(BaseModel):
+    """Body for create / update of a named snapshot."""
+
+    owner: str = Field(..., description="Owner key, [A-Za-z0-9_-]{1,48}.")
+    name: str = Field(..., min_length=1, max_length=80,
+                      description="Human-readable preset name.")
+    notes: dict = Field(default_factory=dict)
+    cc: dict = Field(default_factory=dict)
+    shared: bool = Field(False, description="Whether to expose in the public library.")
+    share_label: Optional[str] = Field(
+        None, max_length=120,
+        description="Optional tagline shown in the public Bantu Library card.",
+    )
+
+    @field_validator("owner")
+    @classmethod
+    def _validate_owner(cls, v: str) -> str:
+        if not v or not _OWNER_RE.match(v.strip()):
+            raise ValueError("owner must match [A-Za-z0-9_-]{1,48}")
+        return v.strip()
+
+    @field_validator("name")
+    @classmethod
+    def _validate_name(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not _SNAPSHOT_NAME_RE.match(v):
+            raise ValueError(
+                "snapshot name must be 1..80 chars of letters, digits, "
+                "spaces, hyphens, underscores or dots"
+            )
+        return v
+
+    @field_validator("notes")
+    @classmethod
+    def _validate_notes(cls, v: dict) -> dict:
+        clean = {}
+        for k, action in v.items():
+            try:
+                pitch = int(k)
+            except (TypeError, ValueError):
+                raise ValueError(f"note key must be 0..127, got {k!r}")
+            if pitch < 0 or pitch > 127:
+                raise ValueError(f"note pitch out of range: {pitch}")
+            if not isinstance(action, str) or not action:
+                raise ValueError(f"action for note {pitch} must be non-empty string")
+            clean[str(pitch)] = action[:64]
+        return clean
+
+    @field_validator("cc")
+    @classmethod
+    def _validate_cc(cls, v: dict) -> dict:
+        clean = {}
+        for k, action in v.items():
+            try:
+                num = int(k)
+            except (TypeError, ValueError):
+                raise ValueError(f"CC key must be 0..127, got {k!r}")
+            if num < 0 or num > 127:
+                raise ValueError(f"CC number out of range: {num}")
+            if not isinstance(action, str) or not action:
+                raise ValueError(f"action for CC {num} must be non-empty string")
+            clean[str(num)] = action[:64]
+        return clean
+
+
+def _snapshot_view(doc: dict) -> dict:
+    """Strip _id + redact for the wire."""
+    out = {k: v for k, v in doc.items() if k != "_id"}
+    return out
+
+
+@router.post("/snapshots")
+async def midi_snapshot_save(payload: MidiSnapshotPayload) -> dict:
+    """Upsert a snapshot by (owner, name).
+
+    Re-saving the same (owner,name) replaces in-place — no duplicate rows.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    update = {
+        "$set": {
+            "owner": payload.owner,
+            "name": payload.name,
+            "notes": payload.notes,
+            "cc": payload.cc,
+            "shared": bool(payload.shared),
+            "share_label": (payload.share_label or "").strip()[:120] or None,
+            "updated_at": now,
+        },
+        "$setOnInsert": {
+            "id": str(uuid.uuid4()),
+            "created_at": now,
+        },
+    }
+    await _db().midi_snapshots.update_one(
+        {"owner": payload.owner, "name": payload.name},
+        update,
+        upsert=True,
+    )
+    doc = await _db().midi_snapshots.find_one(
+        {"owner": payload.owner, "name": payload.name}, {"_id": 0}
+    )
+    return {"saved": True, "snapshot": doc}
+
+
+@router.get("/snapshots")
+async def midi_snapshots_list(owner: str = "") -> dict:
+    """List snapshots — owner-scoped, sorted newest first."""
+    owner = (owner or "").strip()
+    if not owner or not _OWNER_RE.match(owner):
+        raise HTTPException(400, "owner query param is required")
+    cursor = _db().midi_snapshots.find({"owner": owner}, {"_id": 0}).sort("updated_at", -1)
+    items = await cursor.to_list(200)
+    return {"owner": owner, "snapshots": items, "count": len(items)}
+
+
+@router.get("/snapshots/public")
+async def midi_snapshots_public(limit: int = 30) -> dict:
+    """List shared snapshots for the public Bantu Storytelling Library card.
+
+    Returns lightweight metadata only (no notes/cc by default) — clients fetch
+    the full payload on demand via GET /api/midi/snapshots/{id}.
+    """
+    limit = max(1, min(60, int(limit)))
+    cursor = (
+        _db()
+        .midi_snapshots.find(
+            {"shared": True},
+            {"_id": 0, "notes": 0, "cc": 0},
+        )
+        .sort("updated_at", -1)
+        .limit(limit)
+    )
+    items = await cursor.to_list(limit)
+    return {"snapshots": items, "count": len(items)}
+
+
+@router.get("/snapshots/{snapshot_id}")
+async def midi_snapshot_get(snapshot_id: str = Path(..., min_length=8, max_length=64)) -> dict:
+    """Fetch the full payload of a single snapshot by id (any owner — used by the
+    public Library to let visitors apply a shared preset)."""
+    doc = await _db().midi_snapshots.find_one({"id": snapshot_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "snapshot not found")
+    return doc
+
+
+@router.delete("/snapshots/{snapshot_id}")
+async def midi_snapshot_delete(snapshot_id: str = Path(..., min_length=8, max_length=64),
+                                owner: str = "") -> dict:
+    """Delete a snapshot owned by `owner`. 404 if mismatched or absent."""
+    if not owner or not _OWNER_RE.match(owner):
+        raise HTTPException(400, "owner query param is required")
+    result = await _db().midi_snapshots.delete_one({"id": snapshot_id, "owner": owner})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "snapshot not found for this owner")
+    return {"deleted": True, "id": snapshot_id, "owner": owner}
+
+
+@router.post("/snapshots/{snapshot_id}/share")
+async def midi_snapshot_share(
+    snapshot_id: str = Path(..., min_length=8, max_length=64),
+    owner: str = "",
+    shared: bool = True,
+    share_label: Optional[str] = None,
+) -> dict:
+    """Toggle the public-sharing flag on a snapshot (owner-scoped)."""
+    if not owner or not _OWNER_RE.match(owner):
+        raise HTTPException(400, "owner query param is required")
+    update = {"$set": {"shared": bool(shared), "updated_at": datetime.now(timezone.utc).isoformat()}}
+    if share_label is not None:
+        update["$set"]["share_label"] = (share_label or "").strip()[:120] or None
+    result = await _db().midi_snapshots.update_one({"id": snapshot_id, "owner": owner}, update)
+    if result.matched_count == 0:
+        raise HTTPException(404, "snapshot not found for this owner")
+    doc = await _db().midi_snapshots.find_one({"id": snapshot_id}, {"_id": 0})
+    return {"shared": bool(shared), "snapshot": doc}
+
+
 # Helpers exported for tests
 __all__ = [
     "router",

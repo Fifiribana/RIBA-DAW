@@ -43,6 +43,11 @@ REQUIRED_KEYS = {
                      "actionSwingIntensity", "actionSwingEnable",
                      "actionSwingStyle", "actionVolume", "actionPan", "note"],
     "midi":         ["learnNext", "unbind", "cancel", "armed", "saved"],
+    "midi.snapshots": ["title", "namePlaceholder", "save", "apply", "share",
+                      "unshare", "import", "empty", "publicTitle",
+                      "publicEmpty", "saved", "deleted", "applied",
+                      "sharedOn", "sharedOff", "errEmptyName", "confirmDelete"],
+    "midi.quantize": ["label", "legend", "empty"],
     "assistant":    ["title", "sendBtn", "thinking"],
     "manual":       ["menubarBtn"],          # the new MenuBar Manual button label
     "common":       ["tips", "apply", "generate"],

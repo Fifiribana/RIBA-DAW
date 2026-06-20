@@ -269,6 +269,33 @@
     "unbind": "Desvincular",
     "cancel": "Cancelar",
     "armed": "Aprendiendo…",
-    "saved": "Mapeado"
+    "saved": "Mapeado",
+    "snapshots": {
+      "title": "Biblioteca de snapshots",
+      "liveCount": "{{count}} mapeos activos",
+      "namePlaceholder": "Nombre del preset (ej. Home Studio)",
+      "shareLabelPlaceholder": "Etiqueta opcional (ej. ‘by MvettMaster’)",
+      "save": "Guardar",
+      "apply": "Cargar",
+      "share": "Compartir",
+      "unshare": "Despublicar",
+      "import": "Importar",
+      "empty": "Aún no hay snapshots guardados. Toca Guardar para congelar tu mapeo MIDI Learn.",
+      "publicTitle": "Presets de la comunidad · Bantu Library",
+      "publicEmpty": "Aún no hay snapshots compartidos — ¡sé el primer griot en compartir el tuyo!",
+      "saved": "Snapshot guardado",
+      "deleted": "Snapshot eliminado",
+      "applied": "Snapshot aplicado",
+      "applying": "Cargando…",
+      "sharedOn": "Snapshot publicado en la Bantu Library",
+      "sharedOff": "Snapshot retirado de la Bantu Library",
+      "errEmptyName": "Dale un nombre a tu snapshot primero.",
+      "confirmDelete": "¿Eliminar este snapshot?"
+    },
+    "quantize": {
+      "label": "Quantize",
+      "legend": "crudo • quant",
+      "empty": "Esperando entrada MIDI…"
+    }
   }
 }

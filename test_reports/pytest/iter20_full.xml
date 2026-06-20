@@ -1,0 +1,800 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="11" skipped="0" tests="219" time="309.833" timestamp="2026-06-20T11:47:04.513787+00:00" hostname="agent-env-664d6ff3-6be0-4ff0-893c-73aabbf7de33"><testcase classname="tests.test_ai_endpoints.TestStatusProbes" name="test_music_status_shape" time="0.094" /><testcase classname="tests.test_ai_endpoints.TestStatusProbes" name="test_stems_status_enabled" time="0.106" /><testcase classname="tests.test_ai_endpoints.TestAssistant" name="test_assistant_happy_path_add_midi_and_tempo" time="0.128" /><testcase classname="tests.test_ai_endpoints.TestAssistant" name="test_assistant_metronome_phrase_fallback_shape" time="0.131" /><testcase classname="tests.test_ai_endpoints.TestMusicGenLegacy" name="test_generate_music_behaviour_respects_fal_state" time="0.235" /><testcase classname="tests.test_ai_endpoints.TestStems" name="test_separate_stems_no_input_returns_400" time="0.097" /><testcase classname="tests.test_ai_endpoints.TestStems" name="test_separate_stems_with_tiny_wav" time="6.085" /><testcase classname="tests.test_album_and_scheduler.TestAlbumTeaser" name="test_album_teaser_drop_map" time="0.112"><failure message="AssertionError: {&quot;detail&quot;:&quot;ffmpeg not available on this server&quot;}&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_album_and_scheduler.TestAlbumTeaser object at 0xf82a13e72cd0&gt;
+
+    def test_album_teaser_drop_map(self):
+        ids = _library_ids(3)
+        r = requests.post(
+            f"{LOCAL}/album/teaser",
+            json={
+                "track_ids":       ids,
+                "mode":            "drop_map",
+                "target_duration": 15,
+                "transition_sec":  1.0,
+                "bantu_style":     "bikutsi_44",
+                "title":           "Test Drop Album",
+                "style_label":     "Bantu Drop Map",
+            },
+            timeout=120,
+        )
+&gt;       assert r.status_code == 200, r.text
+E       AssertionError: {"detail":"ffmpeg not available on this server"}
+E       assert 503 == 200
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_album_and_scheduler.py:34: AssertionError</failure></testcase><testcase classname="tests.test_album_and_scheduler.TestAlbumTeaser" name="test_album_teaser_sequential_mode" time="0.098"><failure message="AssertionError: {&quot;detail&quot;:&quot;ffmpeg not available on this server&quot;}&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_album_and_scheduler.TestAlbumTeaser object at 0xf82a13e73310&gt;
+
+    def test_album_teaser_sequential_mode(self):
+        ids = _library_ids(2)
+        r = requests.post(
+            f"{LOCAL}/album/teaser",
+            json={"track_ids": ids, "mode": "sequential", "target_duration": 15, "title": "Seq", "style_label": "Seq"},
+            timeout=90,
+        )
+&gt;       assert r.status_code == 200, r.text
+E       AssertionError: {"detail":"ffmpeg not available on this server"}
+E       assert 503 == 200
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_album_and_scheduler.py:64: AssertionError</failure></testcase><testcase classname="tests.test_album_and_scheduler.TestAlbumTeaser" name="test_album_teaser_validation" time="0.002"><failure message="assert 503 == 400&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_album_and_scheduler.TestAlbumTeaser object at 0xf82a13e73110&gt;
+
+    def test_album_teaser_validation(self):
+        # empty
+        r = requests.post(f"{LOCAL}/album/teaser", json={"track_ids": []}, timeout=10)
+&gt;       assert r.status_code == 400
+E       assert 503 == 400
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_album_and_scheduler.py:76: AssertionError</failure></testcase><testcase classname="tests.test_album_and_scheduler.TestAlbumTeaser" name="test_album_cover_path_traversal_blocked" time="0.096" /><testcase classname="tests.test_album_and_scheduler.TestScheduler" name="test_scheduled_endpoint_returns_list" time="0.094" /><testcase classname="tests.test_album_and_scheduler.TestScheduler" name="test_scheduling_a_tiktok_job_requires_creds" time="0.002" /><testcase classname="tests.test_bantu_hardware.TestBantuGrid" name="test_bikutsi_44_density_16_bars_4" time="0.002" /><testcase classname="tests.test_bantu_hardware.TestBantuGrid" name="test_bikutsi_68_density_12_bars_2" time="0.042" /><testcase classname="tests.test_bantu_hardware.TestBantuGrid" name="test_bikutsi_1224_density_24_bars_4_polyrhythm" time="0.042" /><testcase classname="tests.test_bantu_hardware.TestBantuGrid" name="test_asiko_wisdom_succeeds" time="0.042" /><testcase classname="tests.test_bantu_hardware.TestBantuGrid" name="test_makossa_roots_succeeds" time="0.042" /><testcase classname="tests.test_bantu_hardware.TestBantuGrid" name="test_invalid_style_returns_400" time="0.042" /><testcase classname="tests.test_bantu_hardware.TestQuantizeStyles" name="test_list_returns_all_5_styles" time="0.042" /><testcase classname="tests.test_bantu_hardware.TestHardwareSetup" name="test_setup_hardware_saves" time="0.043" /><testcase classname="tests.test_bantu_hardware.TestHardwareSetup" name="test_setup_hardware_with_defaults" time="0.043" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-4-asiko_wisdom]" time="0.025" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-4-makossa_roots]" time="0.024" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-4-bikutsi_44]" time="0.025" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-4-bikutsi_68]" time="0.026" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-4-bikutsi_1224]" time="0.024" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-1-asiko_wisdom]" time="0.025" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-1-makossa_roots]" time="0.025" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-1-bikutsi_44]" time="0.026" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-1-bikutsi_68]" time="0.025" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[16-1-bikutsi_1224]" time="0.026" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[32-8-asiko_wisdom]" time="0.026" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[32-8-makossa_roots]" time="0.028" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[32-8-bikutsi_44]" time="0.027" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[32-8-bikutsi_68]" time="0.026" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[32-8-bikutsi_1224]" time="0.026" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[8-2-asiko_wisdom]" time="0.025" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[8-2-makossa_roots]" time="0.031" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[8-2-bikutsi_44]" time="0.030" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[8-2-bikutsi_68]" time="0.028" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[8-2-bikutsi_1224]" time="0.027" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[24-6-asiko_wisdom]" time="0.026" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[24-6-makossa_roots]" time="0.027" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[24-6-bikutsi_44]" time="0.028" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[24-6-bikutsi_68]" time="0.027" /><testcase classname="tests.test_bantu_parity" name="test_bantu_grid_parity[24-6-bikutsi_1224]" time="0.029" /><testcase classname="tests.test_bantu_parity" name="test_js_module_resolves" time="0.024" /><testcase classname="tests.test_boot_and_snippets.TestBootCinematic" name="test_boot_cinematic_default" time="0.003"><failure message="AssertionError: {&quot;detail&quot;:&quot;ffmpeg not available on this server&quot;}&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_boot_and_snippets.TestBootCinematic object at 0xf829e0c71f10&gt;
+
+    def test_boot_cinematic_default(self):
+        r = requests.post(
+            f"{LOCAL}/boot-cinematic",
+            data={"duration": "4", "format": "landscape_1080", "with_drone": "true"},
+            timeout=60,
+        )
+&gt;       assert r.status_code == 200, r.text
+E       AssertionError: {"detail":"ffmpeg not available on this server"}
+E       assert 503 == 200
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_boot_and_snippets.py:41: AssertionError</failure></testcase><testcase classname="tests.test_boot_and_snippets.TestBootCinematic" name="test_boot_cinematic_custom_subtitles" time="0.002"><failure message="AssertionError: {&quot;detail&quot;:&quot;ffmpeg not available on this server&quot;}&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_boot_and_snippets.TestBootCinematic object at 0xf829e0c72610&gt;
+
+    def test_boot_cinematic_custom_subtitles(self):
+        r = requests.post(
+            f"{LOCAL}/boot-cinematic",
+            data={
+                "duration": "3",
+                "format": "square_1080",
+                "subtitles_csv": "Pioneered in Yaoundé|Bantu Oral Grid|RIBA Studio",
+                "with_drone": "false",
+            },
+            timeout=60,
+        )
+&gt;       assert r.status_code == 200, r.text
+E       AssertionError: {"detail":"ffmpeg not available on this server"}
+E       assert 503 == 200
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_boot_and_snippets.py:72: AssertionError</failure></testcase><testcase classname="tests.test_boot_and_snippets.TestBootCinematic" name="test_boot_cinematic_bad_format" time="0.002"><failure message="assert 503 == 400&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_boot_and_snippets.TestBootCinematic object at 0xf829e0c72d10&gt;
+
+    def test_boot_cinematic_bad_format(self):
+        r = requests.post(
+            f"{LOCAL}/boot-cinematic",
+            data={"duration": "4", "format": "bad_format"},
+            timeout=15,
+        )
+&gt;       assert r.status_code == 400
+E       assert 503 == 400
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_boot_and_snippets.py:86: AssertionError</failure></testcase><testcase classname="tests.test_boot_and_snippets.TestReelSnippets" name="test_snippets_3_candidates" time="1.202" /><testcase classname="tests.test_boot_and_snippets.TestReelSnippets" name="test_snippets_short_input_full_track" time="0.311" /><testcase classname="tests.test_boot_and_snippets.TestReelSnippets" name="test_snippets_window_out_of_range" time="0.195" /><testcase classname="tests.test_boot_and_snippets.TestReelSnippets" name="test_snippets_no_file_returns_422" time="0.002" /><testcase classname="tests.test_boot_and_snippets.TestReelStartSec" name="test_bantu_reel_accepts_start_sec" time="0.767"><failure message="AssertionError: {&quot;detail&quot;:&quot;ffmpeg not available on this server&quot;}&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_boot_and_snippets.TestReelStartSec object at 0xf829e0c7d1d0&gt;
+
+    def test_bantu_reel_accepts_start_sec(self):
+        wav = _three_zone_wav(seconds=20.0)
+        r = requests.post(
+            f"{LOCAL}/bantu-reel",
+            files={"file": ("seek.wav", wav, "audio/wav")},
+            data={
+                "format": "square_1080",
+                "style_label": "Bikutsi 4/4",
+                "title": "Seek Test",
+                "duration_max_sec": "6",
+                "start_sec": "10.5",
+                "with_mp3": "false",
+            },
+            timeout=60,
+        )
+&gt;       assert r.status_code == 200, r.text
+E       AssertionError: {"detail":"ffmpeg not available on this server"}
+E       assert 503 == 200
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_boot_and_snippets.py:162: AssertionError</failure></testcase><testcase classname="tests.test_featured_curation.TestFeaturedEndpoint" name="test_featured_returns_shape" time="0.106" /><testcase classname="tests.test_featured_curation.TestFeaturedEndpoint" name="test_featured_respects_limit_param" time="0.093" /><testcase classname="tests.test_featured_curation.TestFeaturedEndpoint" name="test_featured_includes_recent_trending" time="0.589" /><testcase classname="tests.test_featured_curation.TestCuratorEndpoint" name="test_feature_endpoint_403_without_token" time="0.099" /><testcase classname="tests.test_featured_curation.TestCuratorEndpoint" name="test_feature_endpoint_403_with_bad_token" time="0.101" /><testcase classname="tests.test_generator_endpoints.TestGenerateLyrics" name="test_lyrics_returns_structured_payload" time="0.127" /><testcase classname="tests.test_generator_endpoints.TestGenerateLyrics" name="test_lyrics_persists_in_workspace" time="0.243" /><testcase classname="tests.test_generator_endpoints.TestGenerateTrack" name="test_track_endpoint_shape_respects_fal_state" time="108.866" /><testcase classname="tests.test_generator_endpoints.TestGenerateTrack" name="test_track_card_appears_in_workspace" time="34.558" /><testcase classname="tests.test_generator_endpoints.TestWorkspace" name="test_workspace_list_shape" time="0.133" /><testcase classname="tests.test_generator_endpoints.TestWorkspace" name="test_delete_removes_entry" time="0.463" /><testcase classname="tests.test_generator_endpoints.TestWorkspace" name="test_workspace_file_404_for_lyrics" time="0.233" /><testcase classname="tests.test_generator_extensions.TestLibrary" name="test_library_lists_4_loops" time="0.628" /><testcase classname="tests.test_generator_extensions.TestUploadReference" name="test_upload_wav_creates_workspace_entry" time="0.345" /><testcase classname="tests.test_generator_extensions.TestUploadReference" name="test_voice_recording_default_title" time="0.109" /><testcase classname="tests.test_generator_extensions.TestUploadReference" name="test_upload_rejects_unsupported_extension" time="0.003" /><testcase classname="tests.test_generator_extensions.TestUploadReference" name="test_upload_rejects_empty_file" time="0.002" /><testcase classname="tests.test_generator_extensions.TestUploadReference" name="test_upload_rejects_invalid_kind" time="0.015" /><testcase classname="tests.test_generator_extensions.TestGenerateTrackTitle" name="test_user_title_overrides_local_title" time="33.751" /><testcase classname="tests.test_generator_extensions.TestGenerateTrackTitle" name="test_default_title_when_not_provided" time="34.645" /><testcase classname="tests.test_genesis_endpoint.TestGenesisStatus" name="test_genesis_status_shape" time="0.196" /><testcase classname="tests.test_launch_visuals.TestLaunchVisuals" name="test_all_visuals_present" time="0.000" /><testcase classname="tests.test_launch_visuals.TestLaunchVisuals" name="test_visuals_dimensions_match_spec" time="0.003" /><testcase classname="tests.test_library_v2.TestLikes" name="test_like_toggle_is_idempotent" time="0.480" /><testcase classname="tests.test_library_v2.TestLikes" name="test_like_dedup_across_clients" time="0.599" /><testcase classname="tests.test_library_v2.TestLikes" name="test_like_requires_client_id" time="0.300" /><testcase classname="tests.test_library_v2.TestLikes" name="test_like_status_endpoint" time="0.398" /><testcase classname="tests.test_library_v2.TestComments" name="test_post_and_list_comment" time="0.394" /><testcase classname="tests.test_library_v2.TestComments" name="test_post_comment_strips_html" time="0.384" /><testcase classname="tests.test_library_v2.TestComments" name="test_post_rejects_empty" time="0.295" /><testcase classname="tests.test_library_v2.TestComments" name="test_delete_comment_requires_author_token" time="0.511" /><testcase classname="tests.test_library_v2.TestGriotProfile" name="test_griot_profile_aggregates_records" time="1.004" /><testcase classname="tests.test_library_v2.TestGriotProfile" name="test_griot_profile_404" time="0.096" /><testcase classname="tests.test_library_v2.TestHeatmap" name="test_heatmap_shape" time="0.100" /><testcase classname="tests.test_locale_coverage.TestLocaleKeyParity" name="test_all_supported_locales_exist" time="0.000" /><testcase classname="tests.test_locale_coverage.TestLocaleKeyParity" name="test_required_keys_in_every_locale" time="0.001" /><testcase classname="tests.test_locale_coverage.TestLocaleKeyParity" name="test_no_locale_collides_on_supported_lang_codes" time="0.001" /><testcase classname="tests.test_midi" name="test_midi_status_advertises_capabilities" time="0.094" /><testcase classname="tests.test_midi" name="test_midi_default_mapping_shape" time="0.095" /><testcase classname="tests.test_midi" name="test_midi_mapping_save_and_recall_roundtrip" time="0.213" /><testcase classname="tests.test_midi" name="test_midi_mapping_unknown_owner_falls_back_to_default" time="0.123" /><testcase classname="tests.test_midi" name="test_midi_mapping_rejects_invalid_owners[]" time="0.106" /><testcase classname="tests.test_midi" name="test_midi_mapping_rejects_invalid_owners[ ]" time="0.092" /><testcase classname="tests.test_midi" name="test_midi_mapping_rejects_invalid_owners[no spaces ok]" time="0.093" /><testcase classname="tests.test_midi" name="test_midi_mapping_rejects_invalid_owners[\xf4_\xe9]" time="0.095" /><testcase classname="tests.test_midi" name="test_midi_mapping_rejects_invalid_owners[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx]" time="0.093" /><testcase classname="tests.test_midi" name="test_midi_mapping_rejects_invalid_owners[with/slash]" time="0.091" /><testcase classname="tests.test_midi" name="test_midi_mapping_rejects_out_of_range_pitch" time="0.093" /><testcase classname="tests.test_midi" name="test_midi_mapping_rejects_non_numeric_cc" time="0.093" /><testcase classname="tests.test_midi" name="test_midi_mapping_path_rejects_bad_owner" time="0.094" /><testcase classname="tests.test_midi" name="test_midi_session_log_full_payload" time="0.090" /><testcase classname="tests.test_midi" name="test_midi_session_rejects_unknown_style" time="0.093" /><testcase classname="tests.test_midi" name="test_midi_session_accepts_minimal_payload" time="0.098" /><testcase classname="tests.test_midi" name="test_midi_session_recent_lists_latest_first" time="0.375" /><testcase classname="tests.test_midi" name="test_midi_session_recent_clamps_limit" time="0.096" /><testcase classname="tests.test_midi" name="test_helpers_cc_to_tempo_mapping" time="0.000" /><testcase classname="tests.test_midi" name="test_helpers_cc_to_pan_mapping" time="0.000" /><testcase classname="tests.test_midi" name="test_helpers_cc_to_style_buckets" time="0.000" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_creates_first_cc_binding" time="0.101" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_creates_first_noteon_binding" time="0.097" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_incremental_appends_without_dropping_prior_bindings" time="0.478" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_overrides_same_controller" time="0.206" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_rejects_owner_mismatch" time="0.093" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_rejects_noteon_without_pitch" time="0.097" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_rejects_cc_without_controller" time="0.093" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_rejects_unknown_kind" time="0.098" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_rejects_pitch_out_of_range" time="0.090" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_rejects_empty_action" time="0.093" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_unbind_removes_single_cc" time="0.311" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_unbind_full_reset" time="0.309" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_unbind_owner_mismatch" time="0.095" /><testcase classname="tests.test_midi_learn" name="test_midi_learn_persisted_mapping_survives_reload" time="0.206" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_save_creates_first" time="0.095" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_save_upserts_by_owner_name" time="0.202" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_save_distinct_names_keep_separate_rows" time="1.406" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_list_requires_owner" time="0.109" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_get_by_id_returns_full_payload" time="0.189" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_get_unknown_id_returns_404" time="0.095" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_save_rejects_empty_name" time="0.105" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_save_rejects_too_long_name" time="0.089" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_save_rejects_invalid_chars_in_name" time="0.101" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_save_accepts_accented_name" time="0.090" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_save_rejects_bad_pitch" time="20.010"><failure message="requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='riba-studio.preview.emergentagent.com', port=443): Max retries exceeded with url: /api/midi/snapshots (Caused by ConnectTimeoutError(&lt;HTTPSConnection(host='riba-studio.preview.emergentagent.com', port=443) at 0xf829e0a9dbd0&gt;, 'Connection to riba-studio.preview.emergentagent.com timed out. (connect timeout=10)'))">self = &lt;HTTPSConnection(host='riba-studio.preview.emergentagent.com', port=443) at 0xf829e0a9dbd0&gt;
+
+    def _new_conn(self) -&gt; socket.socket:
+        """Establish a socket connection and set nodelay settings on it.
+    
+        :return: New socket connection.
+        """
+        try:
+&gt;           sock = connection.create_connection(
+                (self._dns_host, self.port),
+                self.timeout,
+                source_address=self.source_address,
+                socket_options=self.socket_options,
+            )
+
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:204: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/root/.venv/lib/python3.11/site-packages/urllib3/util/connection.py:85: in create_connection
+    raise err
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+address = ('riba-studio.preview.emergentagent.com', 443), timeout = 10
+source_address = None, socket_options = [(6, 1, 1)]
+
+    def create_connection(
+        address: tuple[str, int],
+        timeout: _TYPE_TIMEOUT = _DEFAULT_TIMEOUT,
+        source_address: tuple[str, int] | None = None,
+        socket_options: _TYPE_SOCKET_OPTIONS | None = None,
+    ) -&gt; socket.socket:
+        """Connect to *address* and return the socket object.
+    
+        Convenience function.  Connect to *address* (a 2-tuple ``(host,
+        port)``) and return the socket object.  Passing the optional
+        *timeout* parameter will set the timeout on the socket instance
+        before attempting to connect.  If no *timeout* is supplied, the
+        global default timeout setting returned by :func:`socket.getdefaulttimeout`
+        is used.  If *source_address* is set it must be a tuple of (host, port)
+        for the socket to bind as a source address before making the connection.
+        An host of '' or port 0 tells the OS to use the default.
+        """
+    
+        host, port = address
+        if host.startswith("["):
+            host = host.strip("[]")
+        err = None
+    
+        # Using the value from allowed_gai_family() in the context of getaddrinfo lets
+        # us select whether to work with IPv4 DNS records, IPv6 records, or both.
+        # The original create_connection function always returns all records.
+        family = allowed_gai_family()
+    
+        try:
+            host.encode("idna")
+        except UnicodeError:
+            raise LocationParseError(f"'{host}', label empty or too long") from None
+    
+        for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+            af, socktype, proto, canonname, sa = res
+            sock = None
+            try:
+                sock = socket.socket(af, socktype, proto)
+    
+                # If provided, set socket level options before connecting.
+                _set_socket_options(sock, socket_options)
+    
+                if timeout is not _DEFAULT_TIMEOUT:
+                    sock.settimeout(timeout)
+                if source_address:
+                    sock.bind(source_address)
+&gt;               sock.connect(sa)
+E               TimeoutError: timed out
+
+/root/.venv/lib/python3.11/site-packages/urllib3/util/connection.py:73: TimeoutError
+
+The above exception was the direct cause of the following exception:
+
+self = &lt;urllib3.connectionpool.HTTPSConnectionPool object at 0xf829e0a9f4d0&gt;
+method = 'POST', url = '/api/midi/snapshots'
+body = b'{"owner": "tester", "name": "Test", "notes": {"200": "transport.play"}, "cc": {}}'
+headers = {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate', 'Accept': '*/*', 'Connection': 'keep-alive', 'Content-Length': '81', 'Content-Type': 'application/json'}
+retries = Retry(total=0, connect=None, read=False, redirect=None, status=None)
+redirect = False, assert_same_host = False
+timeout = Timeout(connect=10, read=10, total=None), pool_timeout = None
+release_conn = False, chunked = False, body_pos = None, preload_content = False
+decode_content = False, response_kw = {}, destination_scheme = None, conn = None
+release_this_conn = True, http_tunnel_required = False, err = None
+clean_exit = False
+
+    def urlopen(  # type: ignore[override]
+        self,
+        method: str,
+        url: str,
+        body: _TYPE_BODY | None = None,
+        headers: typing.Mapping[str, str] | None = None,
+        retries: Retry | bool | int | None = None,
+        redirect: bool = True,
+        assert_same_host: bool = True,
+        timeout: _TYPE_TIMEOUT = _DEFAULT_TIMEOUT,
+        pool_timeout: int | None = None,
+        release_conn: bool | None = None,
+        chunked: bool = False,
+        body_pos: _TYPE_BODY_POSITION | None = None,
+        preload_content: bool = True,
+        decode_content: bool = True,
+        **response_kw: typing.Any,
+    ) -&gt; BaseHTTPResponse:
+        """
+        Get a connection from the pool and perform an HTTP request. This is the
+        lowest level call for making a request, so you'll need to specify all
+        the raw details.
+    
+        .. note::
+    
+           More commonly, it's appropriate to use a convenience method
+           such as :meth:`request`.
+    
+        .. note::
+    
+           `release_conn` will only behave as expected if
+           `preload_content=False` because we want to make
+           `preload_content=False` the default behaviour someday soon without
+           breaking backwards compatibility.
+    
+        :param method:
+            HTTP request method (such as GET, POST, PUT, etc.)
+    
+        :param url:
+            The URL to perform the request on.
+    
+        :param body:
+            Data to send in the request body, either :class:`str`, :class:`bytes`,
+            an iterable of :class:`str`/:class:`bytes`, or a file-like object.
+    
+        :param headers:
+            Dictionary of custom headers to send, such as User-Agent,
+            If-None-Match, etc. If None, pool headers are used. If provided,
+            these headers completely replace any pool-specific headers.
+    
+        :param retries:
+            Configure the number of retries to allow before raising a
+            :class:`~urllib3.exceptions.MaxRetryError` exception.
+    
+            If ``None`` (default) will retry 3 times, see ``Retry.DEFAULT``. Pass a
+            :class:`~urllib3.util.retry.Retry` object for fine-grained control
+            over different types of retries.
+            Pass an integer number to retry connection errors that many times,
+            but no other types of errors. Pass zero to never retry.
+    
+            If ``False``, then retries are disabled and any exception is raised
+            immediately. Also, instead of raising a MaxRetryError on redirects,
+            the redirect response will be returned.
+    
+        :type retries: :class:`~urllib3.util.retry.Retry`, False, or an int.
+    
+        :param redirect:
+            If True, automatically handle redirects (status codes 301, 302,
+            303, 307, 308). Each redirect counts as a retry. Disabling retries
+            will disable redirect, too.
+    
+        :param assert_same_host:
+            If ``True``, will make sure that the host of the pool requests is
+            consistent else will raise HostChangedError. When ``False``, you can
+            use the pool on an HTTP proxy and request foreign hosts.
+    
+        :param timeout:
+            If specified, overrides the default timeout for this one
+            request. It may be a float (in seconds) or an instance of
+            :class:`urllib3.util.Timeout`.
+    
+        :param pool_timeout:
+            If set and the pool is set to block=True, then this method will
+            block for ``pool_timeout`` seconds and raise EmptyPoolError if no
+            connection is available within the time period.
+    
+        :param bool preload_content:
+            If True, the response's body will be preloaded into memory.
+    
+        :param bool decode_content:
+            If True, will attempt to decode the body based on the
+            'content-encoding' header.
+    
+        :param release_conn:
+            If False, then the urlopen call will not release the connection
+            back into the pool once a response is received (but will release if
+            you read the entire contents of the response such as when
+            `preload_content=True`). This is useful if you're not preloading
+            the response's content immediately. You will need to call
+            ``r.release_conn()`` on the response ``r`` to return the connection
+            back into the pool. If None, it takes the value of ``preload_content``
+            which defaults to ``True``.
+    
+        :param bool chunked:
+            If True, urllib3 will send the body using chunked transfer
+            encoding. Otherwise, urllib3 will send the body using the standard
+            content-length form. Defaults to False.
+    
+        :param int body_pos:
+            Position to seek to in file-like body in the event of a retry or
+            redirect. Typically this won't need to be set because urllib3 will
+            auto-populate the value when needed.
+        """
+        # Ensure that the URL we're connecting to is properly encoded
+        if url.startswith("/"):
+            # URLs starting with / are inherently schemeless.
+            url = to_str(_encode_target(url))
+            destination_scheme = None
+        else:
+            parsed_url = parse_url(url)
+            destination_scheme = parsed_url.scheme
+            url = to_str(parsed_url.url)
+    
+        if headers is None:
+            headers = self.headers
+    
+        if not isinstance(retries, Retry):
+            retries = Retry.from_int(retries, redirect=redirect, default=self.retries)
+    
+        if release_conn is None:
+            release_conn = preload_content
+    
+        # Check host
+        if assert_same_host and not self.is_same_host(url):
+            raise HostChangedError(self, url, retries)
+    
+        conn = None
+    
+        # Track whether `conn` needs to be released before
+        # returning/raising/recursing. Update this variable if necessary, and
+        # leave `release_conn` constant throughout the function. That way, if
+        # the function recurses, the original value of `release_conn` will be
+        # passed down into the recursive call, and its value will be respected.
+        #
+        # See issue #651 [1] for details.
+        #
+        # [1] &lt;https://github.com/urllib3/urllib3/issues/651&gt;
+        release_this_conn = release_conn
+    
+        http_tunnel_required = connection_requires_http_tunnel(
+            self.proxy, self.proxy_config, destination_scheme
+        )
+    
+        # Merge the proxy headers. Only done when not using HTTP CONNECT. We
+        # have to copy the headers dict so we can safely change it without those
+        # changes being reflected in anyone else's copy.
+        if not http_tunnel_required:
+            headers = headers.copy()  # type: ignore[attr-defined]
+            headers.update(self.proxy_headers)  # type: ignore[union-attr]
+    
+        # Must keep the exception bound to a separate variable or else Python 3
+        # complains about UnboundLocalError.
+        err = None
+    
+        # Keep track of whether we cleanly exited the except block. This
+        # ensures we do proper cleanup in finally.
+        clean_exit = False
+    
+        # Rewind body position, if needed. Record current position
+        # for future rewinds in the event of a redirect/retry.
+        body_pos = set_file_position(body, body_pos)
+    
+        try:
+            # Request a connection from the queue.
+            timeout_obj = self._get_timeout(timeout)
+            conn = self._get_conn(timeout=pool_timeout)
+    
+            conn.timeout = timeout_obj.connect_timeout  # type: ignore[assignment]
+    
+            # Is this a closed/new connection that requires CONNECT tunnelling?
+            if self.proxy is not None and http_tunnel_required and conn.is_closed:
+                try:
+                    self._prepare_proxy(conn)
+                except (BaseSSLError, OSError, SocketTimeout) as e:
+                    self._raise_timeout(
+                        err=e, url=self.proxy.url, timeout_value=conn.timeout
+                    )
+                    raise
+    
+            # If we're going to release the connection in ``finally:``, then
+            # the response doesn't need to know about the connection. Otherwise
+            # it will also try to release it and we'll have a double-release
+            # mess.
+            response_conn = conn if not release_conn else None
+    
+            # Make the request on the HTTPConnection object
+&gt;           response = self._make_request(
+                conn,
+                method,
+                url,
+                timeout=timeout_obj,
+                body=body,
+                headers=headers,
+                chunked=chunked,
+                retries=retries,
+                response_conn=response_conn,
+                preload_content=preload_content,
+                decode_content=decode_content,
+                **response_kw,
+            )
+
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:788: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:488: in _make_request
+    raise new_e
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:464: in _make_request
+    self._validate_conn(conn)
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1106: in _validate_conn
+    conn.connect()
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:759: in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;HTTPSConnection(host='riba-studio.preview.emergentagent.com', port=443) at 0xf829e0a9dbd0&gt;
+
+    def _new_conn(self) -&gt; socket.socket:
+        """Establish a socket connection and set nodelay settings on it.
+    
+        :return: New socket connection.
+        """
+        try:
+            sock = connection.create_connection(
+                (self._dns_host, self.port),
+                self.timeout,
+                source_address=self.source_address,
+                socket_options=self.socket_options,
+            )
+        except socket.gaierror as e:
+            raise NameResolutionError(self.host, self, e) from e
+        except SocketTimeout as e:
+&gt;           raise ConnectTimeoutError(
+                self,
+                f"Connection to {self.host} timed out. (connect timeout={self.timeout})",
+            ) from e
+E           urllib3.exceptions.ConnectTimeoutError: (&lt;HTTPSConnection(host='riba-studio.preview.emergentagent.com', port=443) at 0xf829e0a9dbd0&gt;, 'Connection to riba-studio.preview.emergentagent.com timed out. (connect timeout=10)')
+
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:213: ConnectTimeoutError
+
+The above exception was the direct cause of the following exception:
+
+self = &lt;requests.adapters.HTTPAdapter object at 0xf829e0a84590&gt;
+request = &lt;PreparedRequest [POST]&gt;, stream = False, timeout = 10, verify = True
+cert = None, proxies = OrderedDict()
+
+    def send(
+        self,
+        request: PreparedRequest,
+        stream: bool = False,
+        timeout: _t.TimeoutType = None,
+        verify: _t.VerifyType = True,
+        cert: _t.CertType = None,
+        proxies: dict[str, str] | None = None,
+    ) -&gt; Response:
+        """Sends PreparedRequest object. Returns Response object.
+    
+        :param request: The :class:`PreparedRequest &lt;PreparedRequest&gt;` being sent.
+        :param stream: (optional) Whether to stream the request content.
+        :param timeout: (optional) How long to wait for the server to send
+            data before giving up, as a float, or a :ref:`(connect timeout,
+            read timeout) &lt;timeouts&gt;` tuple.
+        :type timeout: float or tuple or urllib3 Timeout object
+        :param verify: (optional) Either a boolean, in which case it controls whether
+            we verify the server's TLS certificate, or a string, in which case it
+            must be a path to a CA bundle to use
+        :param cert: (optional) Any user-provided SSL certificate to be trusted.
+        :param proxies: (optional) The proxies dictionary to apply to the request.
+        :rtype: requests.Response
+        """
+    
+        assert _is_prepared(request)
+    
+        try:
+            conn = self.get_connection_with_tls_context(
+                request, verify, proxies=proxies, cert=cert
+            )
+        except LocationValueError as e:
+            raise InvalidURL(e, request=request)
+    
+        self.cert_verify(conn, request.url, verify, cert)
+        url = self.request_url(request, proxies)
+        self.add_headers(
+            request,
+            stream=stream,
+            timeout=timeout,
+            verify=verify,
+            cert=cert,
+            proxies=proxies,
+        )
+    
+        chunked = not (request.body is None or "Content-Length" in request.headers)
+    
+        if isinstance(timeout, tuple):
+            try:
+                connect, read = timeout
+                resolved_timeout = TimeoutSauce(connect=connect, read=read)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid timeout {timeout}. Pass a (connect, read) timeout tuple, "
+                    f"or a single float to set both timeouts to the same value."
+                )
+        elif isinstance(timeout, TimeoutSauce):
+            resolved_timeout = timeout
+        else:
+            resolved_timeout = TimeoutSauce(connect=timeout, read=timeout)
+    
+        try:
+&gt;           resp = conn.urlopen(
+                method=request.method,
+                url=url,
+                body=request.body,  # type: ignore[arg-type]  # urllib3 stubs don't accept Iterable[bytes | str]
+                headers=request.headers,  # type: ignore[arg-type]  # urllib3#3072
+                redirect=False,
+                assert_same_host=False,
+                preload_content=False,
+                decode_content=False,
+                retries=self.max_retries,
+                timeout=resolved_timeout,
+                chunked=chunked,
+            )
+
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:696: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:842: in urlopen
+    retries = retries.increment(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Retry(total=0, connect=None, read=False, redirect=None, status=None)
+method = 'POST', url = '/api/midi/snapshots', response = None
+error = ConnectTimeoutError(&lt;HTTPSConnection(host='riba-studio.preview.emergentagent.com', port=443) at 0xf829e0a9dbd0&gt;, 'Connection to riba-studio.preview.emergentagent.com timed out. (connect timeout=10)')
+_pool = &lt;urllib3.connectionpool.HTTPSConnectionPool object at 0xf829e0a9f4d0&gt;
+_stacktrace = &lt;traceback object at 0xf829e0a9da80&gt;
+
+    def increment(
+        self,
+        method: str | None = None,
+        url: str | None = None,
+        response: BaseHTTPResponse | None = None,
+        error: Exception | None = None,
+        _pool: ConnectionPool | None = None,
+        _stacktrace: TracebackType | None = None,
+    ) -&gt; Self:
+        """Return a new Retry object with incremented retry counters.
+    
+        :param response: A response object, or None, if the server did not
+            return a response.
+        :type response: :class:`~urllib3.response.BaseHTTPResponse`
+        :param Exception error: An error encountered during the request, or
+            None if the response was received successfully.
+    
+        :return: A new ``Retry`` object.
+        """
+        if self.total is False and error:
+            # Disabled, indicate to re-raise the error.
+            raise reraise(type(error), error, _stacktrace)
+    
+        total = self.total
+        if total is not None:
+            total -= 1
+    
+        connect = self.connect
+        read = self.read
+        redirect = self.redirect
+        status_count = self.status
+        other = self.other
+        cause = "unknown"
+        status = None
+        redirect_location = None
+    
+        if error and self._is_connection_error(error):
+            # Connect retry?
+            if connect is False:
+                raise reraise(type(error), error, _stacktrace)
+            elif connect is not None:
+                connect -= 1
+    
+        elif error and self._is_read_error(error):
+            # Read retry?
+            if read is False or method is None or not self._is_method_retryable(method):
+                raise reraise(type(error), error, _stacktrace)
+            elif read is not None:
+                read -= 1
+    
+        elif error:
+            # Other retry?
+            if other is not None:
+                other -= 1
+    
+        elif response and response.get_redirect_location():
+            # Redirect retry?
+            if redirect is not None:
+                redirect -= 1
+            cause = "too many redirects"
+            response_redirect_location = response.get_redirect_location()
+            if response_redirect_location:
+                redirect_location = response_redirect_location
+            status = response.status
+    
+        else:
+            # Incrementing because of a server error like a 500 in
+            # status_forcelist and the given method is in the allowed_methods
+            cause = ResponseError.GENERIC_ERROR
+            if response and response.status:
+                if status_count is not None:
+                    status_count -= 1
+                cause = ResponseError.SPECIFIC_ERROR.format(status_code=response.status)
+                status = response.status
+    
+        history = self.history + (
+            RequestHistory(method, url, error, status, redirect_location),
+        )
+    
+        new_retry = self.new(
+            total=total,
+            connect=connect,
+            read=read,
+            redirect=redirect,
+            status=status_count,
+            other=other,
+            history=history,
+        )
+    
+        if new_retry.is_exhausted():
+            reason = error or ResponseError(cause)
+&gt;           raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='riba-studio.preview.emergentagent.com', port=443): Max retries exceeded with url: /api/midi/snapshots (Caused by ConnectTimeoutError(&lt;HTTPSConnection(host='riba-studio.preview.emergentagent.com', port=443) at 0xf829e0a9dbd0&gt;, 'Connection to riba-studio.preview.emergentagent.com timed out. (connect timeout=10)'))
+
+/root/.venv/lib/python3.11/site-packages/urllib3/util/retry.py:543: MaxRetryError
+
+During handling of the above exception, another exception occurred:
+
+    def test_snapshot_save_rejects_bad_pitch():
+&gt;       r = requests.post(f"{API}/midi/snapshots", json={
+            "owner": "tester", "name": "Test",
+            "notes": {"200": "transport.play"}, "cc": {},
+        }, timeout=10)
+
+tests/test_midi_snapshots.py:129: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/root/.venv/lib/python3.11/site-packages/requests/api.py:134: in post
+    return request("post", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:71: in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:651: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:784: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;requests.adapters.HTTPAdapter object at 0xf829e0a84590&gt;
+request = &lt;PreparedRequest [POST]&gt;, stream = False, timeout = 10, verify = True
+cert = None, proxies = OrderedDict()
+
+    def send(
+        self,
+        request: PreparedRequest,
+        stream: bool = False,
+        timeout: _t.TimeoutType = None,
+        verify: _t.VerifyType = True,
+        cert: _t.CertType = None,
+        proxies: dict[str, str] | None = None,
+    ) -&gt; Response:
+        """Sends PreparedRequest object. Returns Response object.
+    
+        :param request: The :class:`PreparedRequest &lt;PreparedRequest&gt;` being sent.
+        :param stream: (optional) Whether to stream the request content.
+        :param timeout: (optional) How long to wait for the server to send
+            data before giving up, as a float, or a :ref:`(connect timeout,
+            read timeout) &lt;timeouts&gt;` tuple.
+        :type timeout: float or tuple or urllib3 Timeout object
+        :param verify: (optional) Either a boolean, in which case it controls whether
+            we verify the server's TLS certificate, or a string, in which case it
+            must be a path to a CA bundle to use
+        :param cert: (optional) Any user-provided SSL certificate to be trusted.
+        :param proxies: (optional) The proxies dictionary to apply to the request.
+        :rtype: requests.Response
+        """
+    
+        assert _is_prepared(request)
+    
+        try:
+            conn = self.get_connection_with_tls_context(
+                request, verify, proxies=proxies, cert=cert
+            )
+        except LocationValueError as e:
+            raise InvalidURL(e, request=request)
+    
+        self.cert_verify(conn, request.url, verify, cert)
+        url = self.request_url(request, proxies)
+        self.add_headers(
+            request,
+            stream=stream,
+            timeout=timeout,
+            verify=verify,
+            cert=cert,
+            proxies=proxies,
+        )
+    
+        chunked = not (request.body is None or "Content-Length" in request.headers)
+    
+        if isinstance(timeout, tuple):
+            try:
+                connect, read = timeout
+                resolved_timeout = TimeoutSauce(connect=connect, read=read)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid timeout {timeout}. Pass a (connect, read) timeout tuple, "
+                    f"or a single float to set both timeouts to the same value."
+                )
+        elif isinstance(timeout, TimeoutSauce):
+            resolved_timeout = timeout
+        else:
+            resolved_timeout = TimeoutSauce(connect=timeout, read=timeout)
+    
+        try:
+            resp = conn.urlopen(
+                method=request.method,
+                url=url,
+                body=request.body,  # type: ignore[arg-type]  # urllib3 stubs don't accept Iterable[bytes | str]
+                headers=request.headers,  # type: ignore[arg-type]  # urllib3#3072
+                redirect=False,
+                assert_same_host=False,
+                preload_content=False,
+                decode_content=False,
+                retries=self.max_retries,
+                timeout=resolved_timeout,
+                chunked=chunked,
+            )
+    
+        except (ProtocolError, OSError) as err:
+            raise ConnectionError(err, request=request)
+    
+        except MaxRetryError as e:
+            if isinstance(e.reason, ConnectTimeoutError):
+                # TODO: Remove this in 3.0.0: see #2811
+                if not isinstance(e.reason, NewConnectionError):
+&gt;                   raise ConnectTimeout(e, request=request)
+E                   requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='riba-studio.preview.emergentagent.com', port=443): Max retries exceeded with url: /api/midi/snapshots (Caused by ConnectTimeoutError(&lt;HTTPSConnection(host='riba-studio.preview.emergentagent.com', port=443) at 0xf829e0a9dbd0&gt;, 'Connection to riba-studio.preview.emergentagent.com timed out. (connect timeout=10)'))
+
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:717: ConnectTimeout</failure></testcase><testcase classname="tests.test_midi_snapshots" name="test_snapshot_share_toggles_flag" time="20.320" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_share_requires_owner" time="10.123" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_share_unknown_id_returns_404" time="0.136" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_public_listing_returns_only_shared" time="2.378" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_public_listing_omits_secret_mapping_fields" time="0.201" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_delete_removes_doc" time="0.309" /><testcase classname="tests.test_midi_snapshots" name="test_snapshot_delete_wrong_owner_returns_404" time="0.195" /><testcase classname="tests.test_oauth_prep" name="test_oauth_setup_guide_lists_all_three_providers" time="0.099" /><testcase classname="tests.test_oauth_prep" name="test_oauth_setup_guide_provider_shape_tiktok" time="3.199" /><testcase classname="tests.test_oauth_prep" name="test_oauth_setup_guide_provider_shape_instagram" time="0.120" /><testcase classname="tests.test_oauth_prep" name="test_oauth_setup_guide_provider_shape_youtube" time="0.108" /><testcase classname="tests.test_oauth_prep" name="test_oauth_secrets_never_exposed_in_payload" time="0.100" /><testcase classname="tests.test_oauth_prep" name="test_oauth_single_provider_known" time="0.099" /><testcase classname="tests.test_oauth_prep" name="test_oauth_single_provider_unknown_404" time="0.089" /><testcase classname="tests.test_reel_endpoint.TestReelStatus" name="test_reel_status_shape" time="0.084"><failure message="assert False is True">self = &lt;test_reel_endpoint.TestReelStatus object at 0xf829e0ce3710&gt;
+
+    def test_reel_status_shape(self):
+        r = requests.get(f"{API}/reel-status", timeout=10)
+        assert r.status_code == 200
+        d = r.json()
+        for k in ("available", "ffmpeg_version", "formats", "max_duration_sec", "watermark", "default_format"):
+            assert k in d, f"missing key {k}"
+&gt;       assert d["available"] is True
+E       assert False is True
+
+tests/test_reel_endpoint.py:37: AssertionError</failure></testcase><testcase classname="tests.test_reel_endpoint.TestBantuReel" name="test_reel_unknown_format_returns_400" time="0.003"><failure message="assert 503 == 400&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_reel_endpoint.TestBantuReel object at 0xf829e0ce3f50&gt;
+
+    def test_reel_unknown_format_returns_400(self):
+        r = requests.post(
+            f"{LOCAL}/bantu-reel",
+            files={"file": ("x.wav", b"\x00" * 100, "audio/wav")},
+            data={"format": "not_a_format", "style_label": "Bikutsi 4/4", "title": "x", "duration_max_sec": "5", "with_mp3": "false"},
+            timeout=30,
+        )
+&gt;       assert r.status_code == 400
+E       assert 503 == 400
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_reel_endpoint.py:53: AssertionError</failure></testcase><testcase classname="tests.test_reel_endpoint.TestBantuReel" name="test_reel_no_file_returns_422" time="0.002" /><testcase classname="tests.test_reel_endpoint.TestBantuReel" name="test_reel_generates_mp4_and_mp3" time="0.092"><failure message="AssertionError: {&quot;detail&quot;:&quot;ffmpeg not available on this server&quot;}&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">self = &lt;test_reel_endpoint.TestBantuReel object at 0xf829e0ce4c10&gt;
+
+    def test_reel_generates_mp4_and_mp3(self):
+        """Full pipeline : harmonic 3s WAV → 1080×1080 MP4 + MP3, ~1-3 s on CPU."""
+        wav = _tiny_harmonic_wav(seconds=3.0)
+        r = requests.post(
+            f"{LOCAL}/bantu-reel",
+            files={"file": ("harm.wav", wav, "audio/wav")},
+            data={
+                "format": "square_1080",
+                "style_label": "Bikutsi 4/4",
+                "title": "Test Phoenix",
+                "duration_max_sec": "5",
+                "with_mp3": "true",
+            },
+            timeout=60,
+        )
+&gt;       assert r.status_code == 200, r.text
+E       AssertionError: {"detail":"ffmpeg not available on this server"}
+E       assert 503 == 200
+E        +  where 503 = &lt;Response [503]&gt;.status_code
+
+tests/test_reel_endpoint.py:75: AssertionError</failure></testcase><testcase classname="tests.test_reel_endpoint.TestBantuReel" name="test_reel_path_traversal_blocked" time="0.094" /><testcase classname="tests.test_remix_endpoint.TestMagicRemix" name="test_remix_status_shape" time="0.186" /><testcase classname="tests.test_remix_endpoint.TestMagicRemix" name="test_remix_invalid_bantu_style_returns_400" time="0.097" /><testcase classname="tests.test_remix_endpoint.TestMagicRemix" name="test_remix_no_file_returns_422" time="0.089" /><testcase classname="tests.test_riba_api.TestHealth" name="test_health_ok" time="0.002" /><testcase classname="tests.test_riba_api.TestDream" name="test_dream_generate_returns_notes" time="0.091" /><testcase classname="tests.test_riba_api.TestDream" name="test_dream_generate_empty_prompt_400" time="0.043" /><testcase classname="tests.test_riba_api.TestDream" name="test_dream_history_contains_recent" time="0.009" /><testcase classname="tests.test_riba_api.TestMastering" name="test_mastering_suggest" time="0.076" /><testcase classname="tests.test_riba_api.TestSessions" name="test_session_full_crud" time="0.304" /><testcase classname="tests.test_riba_api.TestSessions" name="test_session_get_nonexistent_404" time="0.044" /><testcase classname="tests.test_share_endpoints.TestShareStatus" name="test_status_shape_when_no_creds" time="0.090" /><testcase classname="tests.test_share_endpoints.TestSharePrepare" name="test_prepare_with_known_style" time="0.094" /><testcase classname="tests.test_share_endpoints.TestSharePrepare" name="test_prepare_fuzzy_style_match" time="0.099" /><testcase classname="tests.test_share_endpoints.TestSharePrepare" name="test_prepare_without_style" time="0.110" /><testcase classname="tests.test_share_endpoints.TestSharePrepare" name="test_prepare_skip_riba_brand" time="0.097" /><testcase classname="tests.test_share_endpoints.TestSharePrepare" name="test_prepare_limits_truncation" time="0.096" /><testcase classname="tests.test_share_endpoints.TestSharePublish" name="test_publish_unknown_platform_returns_400" time="0.002" /><testcase classname="tests.test_share_endpoints.TestSharePublish" name="test_publish_returns_503_when_creds_missing" time="0.004" /><testcase classname="tests.test_share_endpoints.TestShareJobs" name="test_share_jobs_returns_list" time="0.091" /><testcase classname="tests.test_storytelling.TestStorytellingStatus" name="test_status_shape" time="0.089" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_validates_theme_min_length" time="0.091" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_chapter_contract_holds" time="0.131" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_lyrics_present" time="0.144" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_language_supported[fr]" time="0.128" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_language_supported[en]" time="0.139" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_language_supported[es]" time="0.129" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_language_supported[pt]" time="0.133" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_language_supported[sw]" time="0.129" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_unknown_language_falls_back_to_french" time="0.124" /><testcase classname="tests.test_storytelling.TestStorytellingGenerate" name="test_total_bars_respected_even_when_small" time="0.126" /><testcase classname="tests.test_storytelling_library.TestLibraryStats" name="test_stats_shape" time="0.098" /><testcase classname="tests.test_storytelling_library.TestPublishStory" name="test_publish_returns_id_and_token" time="1.212" /><testcase classname="tests.test_storytelling_library.TestPublishStory" name="test_publish_rejects_bad_language" time="0.107" /><testcase classname="tests.test_storytelling_library.TestPublishStory" name="test_publish_rejects_unknown_style" time="0.096" /><testcase classname="tests.test_storytelling_library.TestPublishStory" name="test_publish_rejects_non_contiguous_bars" time="0.096" /><testcase classname="tests.test_storytelling_library.TestPublishStory" name="test_publish_rejects_short_title" time="0.095" /><testcase classname="tests.test_storytelling_library.TestPublishStory" name="test_publish_rejects_bad_arrangement_hint" time="0.091" /><testcase classname="tests.test_storytelling_library.TestBrowseLibrary" name="test_browse_default_recent" time="0.397" /><testcase classname="tests.test_storytelling_library.TestBrowseLibrary" name="test_browse_filter_by_language" time="0.091" /><testcase classname="tests.test_storytelling_library.TestBrowseLibrary" name="test_browse_filter_by_style" time="0.096" /><testcase classname="tests.test_storytelling_library.TestBrowseLibrary" name="test_browse_search_query" time="0.105" /><testcase classname="tests.test_storytelling_library.TestBrowseLibrary" name="test_browse_pagination" time="0.394" /><testcase classname="tests.test_storytelling_library.TestFetchAndDelete" name="test_fetch_increments_plays" time="0.374" /><testcase classname="tests.test_storytelling_library.TestFetchAndDelete" name="test_fetch_404_for_unknown_id" time="0.102" /><testcase classname="tests.test_storytelling_library.TestFetchAndDelete" name="test_delete_requires_token" time="0.374" /><testcase classname="tests.test_storytelling_library.TestFetchAndDelete" name="test_delete_with_valid_token_works" time="0.301" /><testcase classname="tests.test_studio_live.TestSessionsRest" name="test_list_sessions_shape" time="0.086" /><testcase classname="tests.test_studio_live.TestStudioLiveSocket" name="test_two_peers_connect_and_listed" time="0.940" /><testcase classname="tests.test_studio_live.TestStudioLiveSocket" name="test_binary_frames_broadcast" time="0.769" /><testcase classname="tests.test_studio_live.TestStudioLiveSocket" name="test_sender_does_not_receive_own_frame" time="1.373" /><testcase classname="tests.test_studio_live.TestStudioLiveSocket" name="test_text_frames_broadcast" time="0.778" /><testcase classname="tests.test_studio_live.TestStudioLiveSocket" name="test_session_cleared_when_last_peer_leaves" time="1.261" /><testcase classname="tests.test_tauri_release.TestTauriAssets" name="test_tauri_config_exists_and_valid_json" time="0.000" /><testcase classname="tests.test_tauri_release.TestTauriAssets" name="test_tauri_version_bumped_to_v34" time="0.000" /><testcase classname="tests.test_tauri_release.TestTauriAssets" name="test_phoenix_icons_present_and_nonempty" time="0.000" /><testcase classname="tests.test_tauri_release.TestTauriAssets" name="test_github_release_workflow_present" time="0.000" /><testcase classname="tests.test_translate.TestTranslateStatus" name="test_status_shape" time="0.093" /><testcase classname="tests.test_translate.TestTranslateSingle" name="test_empty_text_rejected" time="0.106" /><testcase classname="tests.test_translate.TestTranslateSingle" name="test_translate_returns_shape" time="0.133" /><testcase classname="tests.test_translate.TestTranslateSingle" name="test_translate_changes_text_when_llm_enabled" time="0.136" /><testcase classname="tests.test_translate.TestTranslateBatch" name="test_batch_keeps_keys" time="0.125" /></testsuite></testsuites>

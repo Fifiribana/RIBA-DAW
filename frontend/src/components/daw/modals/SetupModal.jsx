@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, SetupRow } from '../Modal';
 import { engine } from '@/audio/engine';
+import { MidiSnapshotLibrary } from './MidiSnapshotLibrary';
 
 function CinematicBootToggle() {
   const [on, setOn] = useState(() => {
@@ -285,6 +286,11 @@ function MidiTab({ midi, onRequestAccess, t }) {
           <div style={{ color: '#A1A1AA' }}>CC 7</div><div>{t('setup.midi.actionVolume')}</div>
           <div style={{ color: '#A1A1AA' }}>CC 1</div><div>{t('setup.midi.actionPan')}</div>
         </div>
+      </div>
+
+      {/* Snapshot Library (Sprint v3.10) */}
+      <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <MidiSnapshotLibrary />
       </div>
 
       <div style={{ marginTop: 8, color: '#A1A1AA', fontSize: 11 }}>

@@ -269,6 +269,33 @@
     "unbind": "Unbind",
     "cancel": "Cancel",
     "armed": "Learning…",
-    "saved": "Mapped"
+    "saved": "Mapped",
+    "snapshots": {
+      "title": "Snapshot Library",
+      "liveCount": "{{count}} live bindings",
+      "namePlaceholder": "Preset name (e.g. Home Studio)",
+      "shareLabelPlaceholder": "Optional tagline (e.g. ‘by MvettMaster’)",
+      "save": "Save",
+      "apply": "Load",
+      "share": "Share",
+      "unshare": "Unshare",
+      "import": "Import",
+      "empty": "No saved snapshots yet. Tap Save to freeze your current MIDI Learn mapping.",
+      "publicTitle": "Community presets · Bantu Library",
+      "publicEmpty": "No community snapshots shared yet — be the first griot to share yours!",
+      "saved": "Snapshot saved",
+      "deleted": "Snapshot deleted",
+      "applied": "Snapshot applied",
+      "applying": "Loading…",
+      "sharedOn": "Snapshot is now public in the Bantu Library",
+      "sharedOff": "Snapshot removed from the Bantu Library",
+      "errEmptyName": "Give your snapshot a name first.",
+      "confirmDelete": "Delete this snapshot?"
+    },
+    "quantize": {
+      "label": "Quantize",
+      "legend": "raw • quant",
+      "empty": "Awaiting MIDI input…"
+    }
   }
 }

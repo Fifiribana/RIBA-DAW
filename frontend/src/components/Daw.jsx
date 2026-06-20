@@ -37,6 +37,7 @@ import { useWebMIDI } from '@/hooks/useWebMIDI';
 import { ccToTempo, ccToSwing, ccToStyle, ccToPan, BANTU_STYLES, quantizeBeatToBantu } from '@/lib/midiMapping';
 import { useMidiLearn } from '@/hooks/useMidiLearn';
 import { MidiLearnTrigger, MidiLearnPill } from './daw/MidiLearnTrigger';
+import { VisualQuantizeOverlay } from './daw/VisualQuantizeOverlay';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -165,6 +166,8 @@ export default function Daw() {
   // Build a live action→handler map so user-learnt bindings can drive the
   // very same actions as the factory defaults — handler dispatch is the same.
   const midi = useWebMIDI({ enabled: true, onEvent: handleMidiEvent });
+  // Visual Quantize Overlay ref (Sprint v3.10)
+  const quantizeOverlayRef = useRef(null);
 
   // Sync tempo + Bantu config + mixer + per-track to/from the shared Y.Map
   useEffect(() => {
@@ -1748,6 +1751,15 @@ export default function Daw() {
           toggleMetronome();
           return;
         }
+        // Per-track learnt note-on bindings (pad-style triggers)
+        if (action && action.startsWith('track.')) {
+          const [, trackId, knob] = action.split('.');
+          if (knob === 'mute' || knob === 'solo') {
+            handleTrackAction(knob, trackId);
+            setStatusMsg(`🎹 MIDI · Track ${trackId.slice(0, 6)} ${knob.toUpperCase()}`);
+            return;
+          }
+        }
         // Free notes (no action mapping): capture into selected MIDI track if any.
         if (!action) {
           const target = tracks.find(t => t.id === selectedTrackId && t.isMIDI);
@@ -1768,7 +1780,17 @@ export default function Daw() {
               ? { ...tr, midiNotes: updated }
               : tr));
             engine.loadMIDI(target.id, updated);
+            // Push to the Visual Quantize Overlay (raw vs quantised).
+            quantizeOverlayRef.current?.push?.(wallBeat, onset, evt.pitch);
             setStatusMsg(`🎹 MIDI · note ${evt.pitch} @ ${onset.toFixed(2)} beats (Bantu)`);
+          } else {
+            // No selected MIDI track — still surface the quantise in the overlay
+            // so the user can *see* how the Bantu Grid would treat the note.
+            const wallBeat = ((Date.now() / 1000) * (tempo / 60)) % 4;
+            const onset = bantuSwingEnabled
+              ? quantizeBeatToBantu(wallBeat, bantuStyle, bantuSwingIntensity)
+              : Math.round(wallBeat * 4) / 4;
+            quantizeOverlayRef.current?.push?.(wallBeat, onset, evt.pitch);
           }
         }
         return;
@@ -1826,14 +1848,15 @@ export default function Daw() {
           const knob = parts[2];
           if (knob === 'volume') {
             const v = Math.round((evt.value / 127) * 100);
-            setTracks(prev => prev.map(tr => tr.id === trackId ? { ...tr, volume: v } : tr));
-            const tr = engine.tracks?.get?.(trackId);
-            if (tr && tr.gain) tr.gain.gain.value = v / 100;
+            handleTrackAction('volume', trackId, v);
           } else if (knob === 'pan') {
-            const p = ccToPan(evt.value);
-            setTracks(prev => prev.map(tr => tr.id === trackId ? { ...tr, pan: Math.round(p * 100) } : tr));
-            const tr = engine.tracks?.get?.(trackId);
-            if (tr && tr.pan) tr.pan.pan.value = p;
+            // CC value 0..127 → pan -50..+50 (matches track pan UI range)
+            const p = Math.round(((evt.value / 127) * 2 - 1) * 50);
+            handleTrackAction('pan', trackId, p);
+          } else if (knob === 'mute' || knob === 'solo') {
+            // Toggle only on press (CC value >= 64 = on, < 64 = off — but for
+            // discrete pad-style buttons we treat ≥64 as a toggle pulse).
+            if (evt.value >= 64) handleTrackAction(knob, trackId);
           }
           return;
         }
@@ -1841,6 +1864,7 @@ export default function Daw() {
     };
   }, [
     isPlayingAll, playAll, toggleMetronome, toggleLoop, toggleRecording,
+    handleTrackAction,
     tracks, selectedTrackId, tempo, bantuStyle, bantuSwingEnabled, bantuSwingIntensity,
     midiLearn.armed, midiLearn.assignments, midiLearn.captureEvent,
   ]);
@@ -2269,6 +2293,13 @@ export default function Daw() {
         collaborators={live?.collaborators || []}
         onLocalCursor={live?.setCursor}
         storyChapters={storyChapters}
+      />
+
+      {/* VISUAL QUANTIZE OVERLAY (Sprint v3.10) */}
+      <VisualQuantizeOverlay
+        ref={quantizeOverlayRef}
+        visible={showBantuMarkers}
+        barLength={timeSig || 4}
       />
 
       {/* MAIN AREA */}
