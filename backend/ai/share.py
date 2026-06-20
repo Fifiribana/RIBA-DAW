@@ -410,3 +410,94 @@ def share_scheduled():
     """Persisted scheduled jobs handled by APScheduler — survives restarts."""
     from .scheduler import list_scheduled_jobs
     return {"jobs": list_scheduled_jobs()}
+
+
+# =========================================================================
+# 4) OAUTH SETUP GUIDE — preparation for real OAuth2 migration (Sprint v3.9)
+# =========================================================================
+# This is intentionally read-only: it surfaces *exactly* which env vars each
+# provider needs, the authorise URL template (with required scopes) and the
+# current readiness flag. No tokens ever leave the env; nothing is logged.
+# The real auth-code exchange will land in v4.0 once the user wires up their
+# domain + app registrations on each platform.
+
+_OAUTH_PROVIDERS = {
+    "tiktok": {
+        "label": "TikTok for Developers",
+        "authorize_url":  "https://www.tiktok.com/v2/auth/authorize/",
+        "token_url":      "https://open.tiktokapis.com/v2/oauth/token/",
+        "console_url":    "https://developers.tiktok.com/apps",
+        "required_env":   ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET", "TIKTOK_ACCESS_TOKEN"],
+        "scopes":         ["user.info.basic", "video.upload", "video.publish"],
+        "redirect_var":   "TIKTOK_REDIRECT_URI",
+        "doc_url":        "https://developers.tiktok.com/doc/content-posting-api-get-started",
+    },
+    "instagram": {
+        "label": "Meta Graph API · Instagram",
+        "authorize_url":  "https://www.facebook.com/v19.0/dialog/oauth",
+        "token_url":      "https://graph.facebook.com/v19.0/oauth/access_token",
+        "console_url":    "https://developers.facebook.com/apps",
+        "required_env":   ["IG_APP_ID", "IG_APP_SECRET", "IG_USER_ID", "IG_ACCESS_TOKEN", "PUBLIC_BASE_URL"],
+        "scopes":         ["instagram_basic", "instagram_content_publish", "pages_show_list"],
+        "redirect_var":   "IG_REDIRECT_URI",
+        "doc_url":        "https://developers.facebook.com/docs/instagram-api/guides/content-publishing",
+    },
+    "youtube": {
+        "label": "YouTube Data API v3",
+        "authorize_url":  "https://accounts.google.com/o/oauth2/v2/auth",
+        "token_url":      "https://oauth2.googleapis.com/token",
+        "console_url":    "https://console.cloud.google.com/apis/credentials",
+        "required_env":   ["YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN"],
+        "scopes":         ["https://www.googleapis.com/auth/youtube.upload"],
+        "redirect_var":   "YOUTUBE_REDIRECT_URI",
+        "doc_url":        "https://developers.google.com/youtube/v3/guides/uploading_a_video",
+    },
+}
+
+
+def _oauth_provider_view(name: str) -> dict:
+    """Snapshot a single provider, mixing static config + live readiness."""
+    cfg = _OAUTH_PROVIDERS[name]
+    env = os.environ
+    # Strip sensitive values; we only ever expose presence, never the secret.
+    env_status = {k: _has(env.get(k, "")) for k in cfg["required_env"]}
+    missing = [k for k, ok in env_status.items() if not ok]
+    redirect = env.get(cfg["redirect_var"], "").strip()
+    return {
+        "label":          cfg["label"],
+        "authorize_url":  cfg["authorize_url"],
+        "token_url":      cfg["token_url"],
+        "console_url":    cfg["console_url"],
+        "doc_url":        cfg["doc_url"],
+        "scopes":         cfg["scopes"],
+        "required_env":   cfg["required_env"],
+        "env_status":     env_status,
+        "missing":        missing,
+        "ready":          len(missing) == 0,
+        "redirect_var":   cfg["redirect_var"],
+        "redirect_uri_configured": _has(redirect),
+    }
+
+
+@router.get("/share/oauth/setup-guide")
+def share_oauth_setup_guide():
+    """Return a structured guide so the UI can show the exact next step.
+
+    *No* secrets are ever surfaced — only presence / absence of env vars.
+    """
+    return {
+        "providers": {p: _oauth_provider_view(p) for p in _OAUTH_PROVIDERS},
+        "note": (
+            "RIBA reads OAuth credentials strictly from the environment. "
+            "Set them in /app/backend/.env then restart the backend. "
+            "Never paste secrets into the UI — they're not stored client-side."
+        ),
+    }
+
+
+@router.get("/share/oauth/{provider}")
+def share_oauth_provider(provider: str):
+    """Per-provider OAuth readiness snapshot."""
+    if provider not in _OAUTH_PROVIDERS:
+        raise HTTPException(404, f"Unknown OAuth provider: {provider}")
+    return _oauth_provider_view(provider)

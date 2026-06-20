@@ -1,0 +1,60 @@
+{
+  "summary": "Sprint v3.9 (Universal MIDI Learn + OAuth scaffolding) verified end-to-end. Backend pytest: 206 passed total (201 in main suite + 5 in test_promo_and_studio_live.py run isolated, including the known-flaky test_websocket_relay_2_clients which PASSED in 5.83s in isolation). Target was ~215; landed at 206 — comfortably above the 200 floor and the >170 historical bar. All 14 new test_midi_learn.py + 7 new test_oauth_prep.py + 3 extended test_locale_coverage.py (24/24) pass in 3.25s in isolation. Frontend UI: master-vol context-menu opens on right-click, Learn button arms the parameter (data-midi-armed='true' attribute applied to the wrap span), the midi-learn-pill renders at the bottom with text '🎹 Learning · Master Volume · play a note or move a knob…', and the pill Cancel button correctly removes both the pill from the DOM and clears the data-midi-armed attribute. All 5 transport/tempo wraps (transport-play, transport-record, transport-loop, transport-metronome, tempo) exist with -midi-wrap / -midi-menu / -midi-learn-btn data-testid attributes; 4 different context menus successfully opened (master-vol, transport-play, transport-metronome, tempo) — exceeds the '3 different context menus' acceptance criterion.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_passing": {
+    "pytest new modules (test_midi_learn + test_oauth_prep + test_locale_coverage)": "24/24 PASS in 3.25s — /app/test_reports/pytest/iter19_new.xml",
+    "pytest main suite (excluding _e2e_magic_remix.py + test_promo_and_studio_live.py)": "201 passed, 1 warning in 269.54s — /app/test_reports/pytest/iter19_full.xml",
+    "pytest test_promo_and_studio_live.py isolated": "5/5 PASS in 5.83s (including the historically-flaky websocket_relay_2_clients)",
+    "Backend total v3.9": "201 + 5 = 206 tests passing (was 185 at end of v3.8; delta +21 = 14 midi-learn + 7 oauth + matches sprint plan)",
+    "PATCH /api/midi/mapping/{owner}/learn — first CC binding": "saved=true, cc dict populated, notes empty",
+    "PATCH /api/midi/mapping/{owner}/learn — first noteon binding": "notes dict populated, cc empty",
+    "PATCH /api/midi/mapping/{owner}/learn — incremental 4 successive bindings": "all 4 persist, none dropped",
+    "PATCH /api/midi/mapping/{owner}/learn — overwrite same controller": "no error, action replaced",
+    "PATCH /api/midi/mapping/{owner}/learn — owner mismatch": "400",
+    "PATCH /api/midi/mapping/{owner}/learn — 422 validators": "noteon w/o pitch, cc w/o controller, unknown kind, pitch>127, empty action — all 422",
+    "DELETE /api/midi/mapping/{owner}/learn — targeted CC unbind": "other CCs preserved",
+    "DELETE /api/midi/mapping/{owner}/learn — full reset (no kind)": "notes={}, cc={}",
+    "DELETE /api/midi/mapping/{owner}/learn — owner mismatch": "400",
+    "GET /api/midi/mapping/{owner} after PATCH": "fallback=false with learnt bindings (survives reload)",
+    "GET /api/ai/share/oauth/setup-guide": "providers={tiktok,instagram,youtube} with required_env/scopes/env_status/ready/redirect_var/redirect_uri_configured; no secret values leaked",
+    "GET /api/ai/share/oauth/tiktok|instagram|youtube": "provider snapshot with label/authorize_url/token_url/scopes/env_status/ready",
+    "GET /api/ai/share/oauth/spotify": "404 unknown provider",
+    "Locale parity (en/fr/es/pt/sw)": "top-level 'midi' object present with all 5 keys non-empty: learnNext, unbind, cancel, armed, saved (in addition to setup.midi.* from v3.8)",
+    "UI master-vol right-click": "data-testid='master-vol-midi-menu' opens",
+    "UI Learn arm": "data-midi-armed='true' applied to data-testid='master-vol-midi-wrap'; data-testid='midi-learn-pill' visible with text '🎹 Learning · Master Volume · play a note or move a knob…'",
+    "UI pill cancel": "data-testid='midi-learn-pill-cancel' click removes pill from DOM AND clears data-midi-armed attribute",
+    "UI alternate wraps (transport-play|record|loop|metronome + tempo)": "All 5 wraps + menus + learn-btn data-testid present; 4 distinct context menus opened successfully (criterion was 3)"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_midi_learn.py",
+    "/app/backend/tests/test_oauth_prep.py",
+    "/app/backend/tests/test_locale_coverage.py",
+    "/app/test_reports/pytest/iter19_new.xml",
+    "/app/test_reports/pytest/iter19_full.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ai/midi.py — Universal MIDI Learn route uses a 2-step upsert (find_one_and_update then conditional $set on the kind sub-dict) which correctly side-steps the MongoDB error 'Updating the path X would create a conflict at X' that would occur with a naive $set+$setOnInsert on overlapping paths. Solid fix; the 14 tests in test_midi_learn.py confirm idempotency, additivity, and overwrite semantics work as advertised.",
+    "ai/midi.py — Pydantic validators on MidiLearnBinding reject empty action, unknown kind, pitch>127, missing pitch for noteon, missing controller for cc — all roundtrip to 422 cleanly (no 500s, no stack traces in backend logs).",
+    "ai/share.py — _OAUTH_PROVIDERS structure + _oauth_provider_view() helper deliberately uses _has(env_var) (boolean) and NEVER reads os.environ.get() into the response payload. test_oauth_secrets_never_exposed_in_payload explicitly asserts no secret-looking strings (length>20, alphanumeric) appear anywhere in the serialised JSON — strong leak guard. Unknown provider returns 404 (not 422) which is the correct REST semantic for an unrouted resource identifier.",
+    "useMidiLearn.js — Context+Provider+hook pattern; owner persisted in localStorage 'riba-midi-owner' (good for stable per-user bindings across sessions in a single-tenant client). captureEvent is invoked synchronously from the MIDI dispatcher before fallback mapping, which correctly preempts default behaviour when armed — no race window observed during the smoke test.",
+    "MidiLearnTrigger.jsx — Right-click context menu uses absolute positioning anchored to cursor; pill is portal-rendered at the bottom of the page. data-testid attributes are systematic ({wrapId}-midi-wrap / -midi-menu / -midi-learn-btn + global midi-learn-pill / midi-learn-pill-cancel) — excellent test-surface design.",
+    "Daw.jsx — MIDI dispatcher useEffect now (a) intercepts when armed, (b) honours dynamic user assignments via mappingRef before factory fallback, (c) supports per-track learnt bindings 'track.{id}.volume' / 'track.{id}.pan'. Resolution order is correct (armed > user-learnt > factory-default).",
+    "Locales: top-level 'midi' object is duplicated alongside setup.midi.* (which was kept for the v3.8 Setup modal MIDI tab). Mild duplication risk — consider in a future refactor consolidating under a single namespace, but for now the dual-namespace approach keeps i18n keys close to their UI consumers (setup.midi.* for the Setup modal, midi.* for the global Learn pill/menus).",
+    "Known flaky test_promo_and_studio_live.py::TestStudioLiveSessions::test_websocket_relay_2_clients confirmed PASSES in isolation (5.83s for the full file). Pre-existing >200s suite-runtime timeout is documented in v3.8 handoff and remains the recommended workaround (run that file in its own pytest invocation in CI).",
+    "PendingDeprecationWarning starlette/python_multipart persists (upstream library issue, not actionable in this sprint)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (206/206 — 201 main + 5 promo/studio_live isolated)", "frontend": "100% on v3.9 scope (master-vol right-click + Learn arm + pill render + pill cancel + 4 alternate context menus opened across the 5 wraps)"},
+  "test_credentials": "none required",
+  "seed_data_creation": "test_midi_learn.py creates ~6 transient mappings under owners 'learner_cc' / 'learner_note' / 'learner_inc' / 'learner_dup' / 'learner_unbind' / 'learner_reload' — all isolated test owners, no production-data pollution. test_oauth_prep.py is read-only.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "v3.9 livré conforme : 206 pytests verts (185 -> 206, delta +21 = 14 midi-learn + 7 oauth, +3 locale tests étendus déjà comptés sous test_locale_coverage). Le test flaky test_websocket_relay_2_clients passe en isolation (5.8s pour le fichier entier) — toujours recommander de l'exécuter dans son propre invocation pytest en CI. UI MIDI Learn complètement fonctionnel : right-click ouvre le menu, Learn arme avec data-midi-armed='true' + pill flottante avec texte i18n correct (preuve : '🎹 Learning · Master Volume · play a note or move a knob…' s'affiche en EN). Cancel sur la pill efface l'état armé et démonte la pill du DOM. Tous les data-testid v3.9 confirmés : master-vol-midi-{wrap,menu,learn-btn}, transport-{play,record,loop,metronome}-midi-{wrap,menu,learn-btn}, tempo-midi-{wrap,menu,learn-btn}, midi-learn-pill, midi-learn-pill-cancel. Backend OAuth scaffolding : 3 providers (tiktok/instagram/youtube) exposés via /api/ai/share/oauth/setup-guide et /api/ai/share/oauth/{provider}, aucune fuite de secret (vérifié par test_oauth_secrets_never_exposed_in_payload), 404 pour provider inconnu (ex: spotify). Parité locale : 5 langues x 5 nouvelles clés top-level midi.* (learnNext, unbind, cancel, armed, saved) toutes non-vides. Pas de capture MIDI live possible en Chromium headless sans device — couvert au niveau backend (PATCH learn) et UI (arm/cancel) uniquement.",
+  "rca of the issue": "Aucune anomalie détectée. Sprint v3.9 livré conforme à toute la spec : (1) Universal MIDI Learn — right-click context-menu sur tout fader/knob/transport button, arme l'état, persiste via PATCH /api/midi/mapping/{owner}/learn avec validation Pydantic stricte (422) et résolution upsert 2-étapes (évite le path-conflict $set+$setOnInsert), (2) OAuth scaffolding pour TikTok/Instagram/YouTube avec env_status/ready/scopes/redirect_uri/required_env exposés sans aucune fuite de secret, 404 sur provider inconnu, (3) i18n : top-level midi.* (5 clés) ajouté aux 5 locales en plus de setup.midi.* (v3.8). Compte tests : 206 (objectif ~215 ; bien au-dessus du plancher 200)."
+}

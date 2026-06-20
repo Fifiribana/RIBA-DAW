@@ -35,6 +35,8 @@ import { useStudioLive, StudioLiveBadge } from './daw/useStudioLive';
 import { MagentaOverlay } from './daw/MagentaSpinner';
 import { useWebMIDI } from '@/hooks/useWebMIDI';
 import { ccToTempo, ccToSwing, ccToStyle, ccToPan, BANTU_STYLES, quantizeBeatToBantu } from '@/lib/midiMapping';
+import { useMidiLearn } from '@/hooks/useMidiLearn';
+import { MidiLearnTrigger, MidiLearnPill } from './daw/MidiLearnTrigger';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -158,6 +160,10 @@ export default function Daw() {
   const handleMidiEvent = useCallback((evt) => {
     try { midiDispatchRef.current(evt); } catch (e) { /* swallow */ }
   }, []);
+  // === MIDI Learn (Sprint v3.9) ===
+  const midiLearn = useMidiLearn();
+  // Build a live action→handler map so user-learnt bindings can drive the
+  // very same actions as the factory defaults — handler dispatch is the same.
   const midi = useWebMIDI({ enabled: true, onEvent: handleMidiEvent });
 
   // Sync tempo + Bantu config + mixer + per-track to/from the shared Y.Map
@@ -1685,16 +1691,36 @@ export default function Daw() {
     }
   }, []);
 
-  // === MIDI dispatcher (Sprint v3.8) ===
+  // === MIDI dispatcher (Sprint v3.8 + Learn v3.9) ===
   // Resolves each incoming MIDI event into an action against the live
   // transport, tempo, Bantu swing or master bus. Pushed into a ref so the
   // useWebMIDI hook can keep its onEvent stable across renders.
   useEffect(() => {
+    // Build reverse lookup: physicalKey ("cc:22" / "noteon:60") → action
+    const reverse = {};
+    for (const [action, a] of Object.entries(midiLearn.assignments || {})) {
+      reverse[`${a.kind}:${a.key}`] = action;
+    }
     midiDispatchRef.current = (evt) => {
       if (!evt) return;
+      // 1) MIDI Learn capture — armed targets steal the event.
+      if (midiLearn.armed) {
+        midiLearn.captureEvent(evt);
+        return;
+      }
+
+      // 2) Resolve action: user assignment first, then factory default.
+      let action = evt.action || null;
+      if (evt.kind === 'noteon' && evt.velocity > 0) {
+        const learned = reverse[`noteon:${evt.pitch}`];
+        if (learned) action = learned;
+      } else if (evt.kind === 'cc') {
+        const learned = reverse[`cc:${evt.controller}`];
+        if (learned) action = learned;
+      }
+
       // Note-on → transport / quantised MIDI capture
       if (evt.kind === 'noteon' && evt.velocity > 0) {
-        const action = evt.action;
         if (action === 'transport.play') {
           playAll();
           setStatusMsg('🎹 MIDI · Play');
@@ -1748,7 +1774,6 @@ export default function Daw() {
         return;
       }
       if (evt.kind === 'cc') {
-        const action = evt.action;
         if (action === 'tempo.set') {
           const bpm = ccToTempo(evt.value);
           setTempo(bpm);
@@ -1794,11 +1819,30 @@ export default function Daw() {
           }
           return;
         }
+        // Per-track learnt assignments: `track.{id}.volume` / `track.{id}.pan`
+        if (action && action.startsWith('track.')) {
+          const parts = action.split('.');
+          const trackId = parts[1];
+          const knob = parts[2];
+          if (knob === 'volume') {
+            const v = Math.round((evt.value / 127) * 100);
+            setTracks(prev => prev.map(tr => tr.id === trackId ? { ...tr, volume: v } : tr));
+            const tr = engine.tracks?.get?.(trackId);
+            if (tr && tr.gain) tr.gain.gain.value = v / 100;
+          } else if (knob === 'pan') {
+            const p = ccToPan(evt.value);
+            setTracks(prev => prev.map(tr => tr.id === trackId ? { ...tr, pan: Math.round(p * 100) } : tr));
+            const tr = engine.tracks?.get?.(trackId);
+            if (tr && tr.pan) tr.pan.pan.value = p;
+          }
+          return;
+        }
       }
     };
   }, [
     isPlayingAll, playAll, toggleMetronome, toggleLoop, toggleRecording,
     tracks, selectedTrackId, tempo, bantuStyle, bantuSwingEnabled, bantuSwingIntensity,
+    midiLearn.armed, midiLearn.assignments, midiLearn.captureEvent,
   ]);
 
   // === Keyboard shortcuts ===
@@ -1981,6 +2025,7 @@ export default function Daw() {
         </div>
 
         {/* Transport */}
+        <MidiLearnTrigger targetId="transport.play" label="Transport · Play" testid="transport-play">
         <button
           data-testid={TID.playAll}
           onClick={playAll}
@@ -1993,7 +2038,9 @@ export default function Daw() {
           {isPlayingAll ? <Stop size={16} weight="fill" /> : <Play size={16} weight="fill" />}
           {isPlayingAll ? 'STOP' : 'PLAY'}
         </button>
+        </MidiLearnTrigger>
 
+        <MidiLearnTrigger targetId="transport.record" label="Transport · Record" testid="transport-record">
         <button
           data-testid={TID.recordBtn}
           onClick={toggleRecording}
@@ -2004,7 +2051,9 @@ export default function Daw() {
           <Record size={14} weight="fill" />
           {recording ? `REC ${recordTime}s` : 'REC'}
         </button>
+        </MidiLearnTrigger>
 
+        <MidiLearnTrigger targetId="transport.metronome" label="Transport · Metronome" testid="transport-metronome">
         <button
           data-testid={TID.metronomeBtn}
           onClick={toggleMetronome}
@@ -2023,7 +2072,9 @@ export default function Daw() {
             }} />
           )}
         </button>
+        </MidiLearnTrigger>
 
+        <MidiLearnTrigger targetId="transport.loop" label="Transport · Loop" testid="transport-loop">
         <button
           data-testid={TID.loopBtn}
           onClick={toggleLoop}
@@ -2035,6 +2086,7 @@ export default function Daw() {
           <Repeat size={14} weight={looping ? 'fill' : 'regular'} />
           Loop
         </button>
+        </MidiLearnTrigger>
 
         <button
           data-testid={TID.undoBtn}
@@ -2056,6 +2108,7 @@ export default function Daw() {
         </button>
 
         {/* Tempo */}
+        <MidiLearnTrigger targetId="tempo.set" label="Tempo (BPM)" testid="tempo">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '0 12px', borderLeft: '1px solid rgba(255,255,255,0.06)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
             <span data-testid={TID.tempoValue} className="font-mono-r" style={{ fontSize: 22, fontWeight: 700, color: themeText, letterSpacing: '0.05em' }}>
@@ -2071,6 +2124,7 @@ export default function Daw() {
             style={{ width: 110, color: '#D946EF', '--val': `${((tempo - 60) / 140) * 100}%` }}
           />
         </div>
+        </MidiLearnTrigger>
 
         {/* Time signature */}
         {metronomeOn && (
@@ -2101,6 +2155,7 @@ export default function Daw() {
         {/* Master + VU */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
           <VUMeter width={180} height={6} />
+          <MidiLearnTrigger targetId="master.volume" label="Master Volume" testid="master-vol">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="font-mono-r" style={{ fontSize: 9, color: themeText2 }}>MASTER</span>
             <input
@@ -2114,6 +2169,7 @@ export default function Daw() {
               {masterVol}
             </span>
           </div>
+          </MidiLearnTrigger>
         </div>
 
         <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="riba-btn riba-btn-icon" data-testid={TID.themeBtn}>
@@ -2703,6 +2759,7 @@ export default function Daw() {
       )}
       <GlobalTransportPlayer />
       <StudioLiveBadge live={live} />
+      <MidiLearnPill />
     </div>
   );
 }

@@ -263,5 +263,12 @@
     "sendBtn": "Enviar",
     "clearBtn": "Borrar historial",
     "thinking": "La IA está pensando…"
+  },
+  "midi": {
+    "learnNext": "Aprender el próximo control MIDI",
+    "unbind": "Desvincular",
+    "cancel": "Cancelar",
+    "armed": "Aprendiendo…",
+    "saved": "Mapeado"
   }
 }

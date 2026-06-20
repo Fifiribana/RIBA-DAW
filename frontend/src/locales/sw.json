@@ -263,5 +263,12 @@
     "sendBtn": "Tuma",
     "clearBtn": "Futa historia",
     "thinking": "AI inafikiri…"
+  },
+  "midi": {
+    "learnNext": "Jifunze udhibiti unaofuata wa MIDI",
+    "unbind": "Tenganisha",
+    "cancel": "Ghairi",
+    "armed": "Inajifunza…",
+    "saved": "Imeunganishwa"
   }
 }

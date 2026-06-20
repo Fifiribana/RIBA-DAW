@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "@/App.css";
 import Daw from "@/components/Daw";
 import { SplashScreen } from "@/components/daw/SplashScreen";
+import { MidiLearnProvider } from "@/hooks/useMidiLearn";
 
 function _detectCinematic() {
   try {
@@ -36,7 +37,9 @@ function App() {
           mode={cinematic ? 'cinematic' : 'short'}
         />
       )}
-      <Daw />
+      <MidiLearnProvider>
+        <Daw />
+      </MidiLearnProvider>
     </div>
   );
 }

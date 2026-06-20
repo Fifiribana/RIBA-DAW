@@ -42,6 +42,7 @@ REQUIRED_KEYS = {
                      "actionLoop", "actionMetronome", "actionTempo",
                      "actionSwingIntensity", "actionSwingEnable",
                      "actionSwingStyle", "actionVolume", "actionPan", "note"],
+    "midi":         ["learnNext", "unbind", "cancel", "armed", "saved"],
     "assistant":    ["title", "sendBtn", "thinking"],
     "manual":       ["menubarBtn"],          # the new MenuBar Manual button label
     "common":       ["tips", "apply", "generate"],

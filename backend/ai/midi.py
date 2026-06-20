@@ -239,6 +239,158 @@ async def midi_mapping_get(owner: str = Path(..., min_length=1, max_length=48)) 
     return {"fallback": False, **doc}
 
 
+# === MIDI Learn (Sprint v3.9) ================================================
+class MidiLearnBinding(BaseModel):
+    """Single MIDI Learn assignment — merged into a stored mapping."""
+
+    owner: str = Field(..., description="Owner key, [A-Za-z0-9_-]{1,48}.")
+    kind: str = Field(..., description="'noteon' or 'cc'.")
+    # Either pitch (for noteon) OR controller (for cc) — depending on `kind`.
+    pitch: Optional[int] = Field(None, ge=0, le=127)
+    controller: Optional[int] = Field(None, ge=0, le=127)
+    action: str = Field(..., min_length=1, max_length=64,
+                        description="Dotted action key e.g. 'track.42.volume'.")
+
+    @field_validator("owner")
+    @classmethod
+    def _validate_owner(cls, v: str) -> str:
+        if not v or not _OWNER_RE.match(v.strip()):
+            raise ValueError("owner must match [A-Za-z0-9_-]{1,48}")
+        return v.strip()
+
+    @field_validator("kind")
+    @classmethod
+    def _validate_kind(cls, v: str) -> str:
+        if v not in ("noteon", "cc"):
+            raise ValueError("kind must be 'noteon' or 'cc'")
+        return v
+
+    def assert_consistent(self) -> None:
+        """Ensure pitch/controller match the declared kind."""
+        if self.kind == "noteon" and self.pitch is None:
+            raise HTTPException(422, "noteon binding requires pitch (0..127)")
+        if self.kind == "cc" and self.controller is None:
+            raise HTTPException(422, "cc binding requires controller (0..127)")
+
+
+class MidiLearnClear(BaseModel):
+    """Targeted removal of a single binding (or all if no target supplied)."""
+
+    owner: str
+    kind: Optional[str] = Field(None, description="'noteon' | 'cc' | None for full reset.")
+    pitch: Optional[int] = Field(None, ge=0, le=127)
+    controller: Optional[int] = Field(None, ge=0, le=127)
+
+    @field_validator("owner")
+    @classmethod
+    def _validate_owner(cls, v: str) -> str:
+        if not v or not _OWNER_RE.match(v.strip()):
+            raise ValueError("owner must match [A-Za-z0-9_-]{1,48}")
+        return v.strip()
+
+
+@router.patch("/mapping/{owner}/learn")
+async def midi_learn_bind(
+    binding: MidiLearnBinding,
+    owner: str = Path(..., min_length=1, max_length=48),
+) -> dict:
+    """Merge a single new binding into the stored mapping (creates if absent).
+
+    Existing entries for the same pitch/controller are overwritten; everything
+    else is preserved — that's the whole point of MIDI Learn: incremental.
+    """
+    if owner != binding.owner:
+        raise HTTPException(400, "owner in path and payload must match")
+    if not _OWNER_RE.match(owner):
+        raise HTTPException(400, "invalid owner key")
+    binding.assert_consistent()
+
+    key = str(binding.pitch if binding.kind == "noteon" else binding.controller)
+    field = "notes" if binding.kind == "noteon" else "cc"
+
+    # Two-step upsert so Mongo never sees a $set + $setOnInsert collision on
+    # the same dotted path:
+    #   1. Ensure the document exists with both maps initialised.
+    #   2. Write the new binding inside the appropriate map.
+    now = datetime.now(timezone.utc).isoformat()
+    await _db().midi_mappings.update_one(
+        {"owner": owner},
+        {
+            "$setOnInsert": {
+                "owner": owner,
+                "notes": {},
+                "cc": {},
+                "created_at": now,
+            },
+        },
+        upsert=True,
+    )
+    await _db().midi_mappings.update_one(
+        {"owner": owner},
+        {"$set": {f"{field}.{key}": binding.action, "updated_at": now}},
+    )
+    doc = await _db().midi_mappings.find_one({"owner": owner}, {"_id": 0}) or {}
+    return {
+        "saved": True,
+        "owner": owner,
+        "binding": {
+            "kind": binding.kind,
+            "key": key,
+            "action": binding.action,
+        },
+        "notes": doc.get("notes", {}),
+        "cc": doc.get("cc", {}),
+    }
+
+
+@router.delete("/mapping/{owner}/learn")
+async def midi_learn_unbind(
+    payload: MidiLearnClear,
+    owner: str = Path(..., min_length=1, max_length=48),
+) -> dict:
+    """Remove a single binding, or wipe the whole mapping when no target is given."""
+    if owner != payload.owner:
+        raise HTTPException(400, "owner in path and payload must match")
+    if not _OWNER_RE.match(owner):
+        raise HTTPException(400, "invalid owner key")
+
+    if payload.kind is None:
+        # Full reset: clear both dicts but keep the doc so subsequent PATCH still
+        # finds an owner row.
+        await _db().midi_mappings.update_one(
+            {"owner": owner},
+            {"$set": {"notes": {}, "cc": {}, "updated_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+        return {"cleared": "all", "owner": owner, "notes": {}, "cc": {}}
+
+    if payload.kind == "noteon":
+        if payload.pitch is None:
+            raise HTTPException(422, "noteon unbind requires pitch")
+        key = str(payload.pitch)
+        field = "notes"
+    elif payload.kind == "cc":
+        if payload.controller is None:
+            raise HTTPException(422, "cc unbind requires controller")
+        key = str(payload.controller)
+        field = "cc"
+    else:
+        raise HTTPException(422, f"unknown kind: {payload.kind!r}")
+
+    await _db().midi_mappings.update_one(
+        {"owner": owner},
+        {"$unset": {f"{field}.{key}": ""},
+         "$set":   {"updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    doc = await _db().midi_mappings.find_one({"owner": owner}, {"_id": 0}) or {}
+    return {
+        "cleared": {"kind": payload.kind, "key": key},
+        "owner": owner,
+        "notes": doc.get("notes", {}),
+        "cc": doc.get("cc", {}),
+    }
+
+
 @router.post("/session")
 async def midi_session_log(session: MidiSession) -> dict:
     """Log a finished MIDI take for analytics & later remixing."""
