@@ -29,3 +29,4 @@ test_reports/
 
 # Large generated assets
 RIBA-v3.13-source.zip
+.github/workflows/release.yml
