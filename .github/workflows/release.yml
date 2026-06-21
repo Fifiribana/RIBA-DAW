@@ -1,0 +1,208 @@
+## ✅ Push réussi ! Voici l'état actuel :
+
+📍 **Ton repo** : https://github.com/Fifiribana/RIBA-DAW
+✅ **Public** : Oui
+✅ **Branche** : `main`
+✅ **Fichiers poussés** : backend/, frontend/, src-tauri/, docs/, memory/, etc. (720+ fichiers)
+⏳ **Manquant** : `.github/workflows/release.yml` (à ajouter en 30 secondes)
+
+---
+
+## 🎯 DERNIÈRE ÉTAPE : Créer le workflow `release.yml` (2 minutes)
+
+Tu vas créer **UN SEUL fichier** sur GitHub via leur interface web. C'est très simple.
+
+### Étape 1 — Clique ce lien (URL magique qui pré-remplit tout)
+
+👉 **https://github.com/Fifiribana/RIBA-DAW/new/main?filename=.github/workflows/release.yml**
+
+Une page va s'ouvrir avec :
+- Le nom du fichier déjà rempli : `.github/workflows/release.yml`
+- Un éditeur de code vide en grand
+
+### Étape 2 — Copie-colle ce contenu YAML
+
+**Sélectionne TOUT le bloc ci-dessous** (clic + Ctrl+A puis Ctrl+C) et **colle-le dans l'éditeur GitHub** :
+
+```yaml
+name: release-desktop
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.platform }} · ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            os: macos
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            os: macos
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            os: windows
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            os: linux
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.target }}
+
+      - name: Install Linux system dependencies
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            patchelf
+
+      - name: Regenerate Phoenix icons from setup_icons.py
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pillow
+          python backend/setup_icons.py
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build frontend bundle
+        working-directory: ./frontend
+        env:
+          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL }}
+          CI: 'false'
+        run: yarn build
+
+      - name: Tauri build (${{ matrix.target }})
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./src-tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: 'RIBA ${{ github.ref_name }}'
+          releaseBody: |
+            ## RIBA Desktop · Bantu Digital Audio Workstation
+
+            **Native installer** for ${{ matrix.os }} (${{ matrix.target }}).
+
+            - 🔥 Phoenix branding
+            - 🌐 5 langues : Français · English · Español · Português · Kiswahili
+            - 🎛 Bantu Oral Grid + Bantu Swing Live
+            - 📖 Bantu Storytelling (Mvett) with real audio impact
+            - 🌐 Studio Live Session (collaborative WebRTC + Y.js)
+
+            ⚠ Build non code-signed yet. macOS: right-click → Open to bypass Gatekeeper.
+            Windows SmartScreen may flag the installer.
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.target }}
+
+  publish:
+    name: Finalize release notes
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark release as ready
+        run: |
+          echo "All platform binaries built — open the draft release on GitHub,"
+          echo "review the assets, and click 'Publish release' to ship."
+```
+
+### Étape 3 — Commit le fichier
+
+En bas de la page GitHub :
+1. **Commit message** : `Add Tauri build workflow`
+2. Coche **"Commit directly to the main branch"** ✅
+3. Clique le bouton vert **"Commit changes"**
+
+### Étape 4 — Configure le secret `REACT_APP_BACKEND_URL` 
+
+⚠️ Le workflow utilise un secret pour l'URL backend en production. Sans ça, l'app Desktop ne pourra pas appeler ton backend.
+
+1. Va sur 👉 **https://github.com/Fifiribana/RIBA-DAW/settings/secrets/actions**
+2. Clique **"New repository secret"**
+3. Remplis :
+   - **Name** : `REACT_APP_BACKEND_URL`
+   - **Secret** : `https://riba-studio.preview.emergentagent.com` *(ou ton URL de production si tu en as une)*
+4. Clique **"Add secret"**
+
+### Étape 5 — Créer la Release v3.13.0 (déclencheur du build) 🚀
+
+1. Va sur 👉 **https://github.com/Fifiribana/RIBA-DAW/releases/new**
+2. **Choose a tag** : tape `v3.13.0` → clique "Create new tag: v3.13.0 on publish"
+3. **Target** : `main`
+4. **Release title** : `RIBA v3.13.0 - Production Ready`
+5. Clique le bouton vert **"Publish release"** 🚀
+
+### Étape 6 — Surveille le build (20-30 min)
+
+👉 **https://github.com/Fifiribana/RIBA-DAW/actions**
+
+Tu verras **4 jobs** tourner en parallèle :
+- 🍎 macOS aarch64 (M1/M2/M3)
+- 🍎 macOS x86_64 (Intel)
+- 🪟 Windows x86_64
+- 🐧 Linux x86_64
+
+Quand tous sont verts ✅, tes fichiers seront ici :
+👉 **https://github.com/Fifiribana/RIBA-DAW/releases**
+
+---
+
+## 🛡️ Sécurité — IMPORTANT à faire maintenant
+
+Maintenant que le push est terminé, **révoque le token** pour la sécurité :
+
+1. Va sur 👉 https://github.com/settings/tokens
+2. Trouve **"Emergent RIBA push"**
+3. Clique **"Delete"** 🗑️
+
+---
+
+## ⚡ Action immédiate
+
+👉 Clique sur ce lien pour créer le workflow : **https://github.com/Fifiribana/RIBA-DAW/new/main?filename=.github/workflows/release.yml**
+
+Dis-moi quand c'est fait ! 🎵
