@@ -371,7 +371,7 @@ def build_all() -> None:
     LAUNCH_DIR = FRONT_PUBLIC / "launch"
     launch_assets = make_launch_pack(master, LAUNCH_DIR)
 
-    print("✓ Phoenix assets written :")
+    print("Phoenix assets written :")
     for p in (
         FRONT_PUBLIC / "riba-logo.png",
         FRONT_PUBLIC / "icon-192.png",
