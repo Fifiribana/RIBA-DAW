@@ -5,7 +5,7 @@
   "identifier": "com.emergent.riba",
   "build": {
     "beforeDevCommand": "yarn --cwd ../frontend start",
-    "beforeBuildCommand": "yarn --cwd ../frontend build",
+    "beforeBuildCommand": "",
     "devUrl": "http://localhost:3000",
     "frontendDist": "../frontend/build"
   },
