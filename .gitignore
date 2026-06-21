@@ -1,89 +1,31 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# IDE and editors
-.idea/
-.vscode/
-
-# Dependencies
+# Node
 node_modules/
-/node_modules
-/.pnp
-.pnp.js
-.yarn/install-state.gz
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# Testing
-/coverage
-
-# Next.js
-/.next/
-/out/
-next-env.d.ts
-*.tsbuildinfo
-
-# Production builds
-/build
-dist/
-dist
-
-# Environment files (comprehensive coverage)
-
-*token.json*
-*credentials.json*
-
-# Logs and debug files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-dump.rdb
-
-# System files
-.DS_Store
-*.pem
+frontend/build/
+frontend/.cache/
 
 # Python
 __pycache__/
-*pyc*
-venv/
-.venv/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
 
-# Development tools
-chainlit.md
-.chainlit
-.ipynb_checkpoints/
-.ac
+# Rust / Tauri
+src-tauri/target/
 
-# Deployment
-.vercel
+# OS
+.DS_Store
+Thumbs.db
 
-# Data and databases
-agenthub/agents/youtube/db
+# Env (keep .env structure but allow tokens to commit only via Actions secrets)
+backend/.env
+frontend/.env
 
-# Archive files and large assets
-**/*.zip
-**/*.tar.gz
-**/*.tar
-**/*.tgz
-*.pack
-*.deb
-*.dylib
+# Logs / tmp
+*.log
+.emergent/
+test_reports/
+.tmp/
 
-# Build caches
-.cache/
-
-memory/test_credentials.md
-
-# Mobile development
-android-sdk/frontend/node_modules/.cache/default-development/3.pack
-frontend/node_modules/.cache/default-development/3.pack
-.env
-.env.*
-*.env
-credentials.json
-*.key
-.credentials
+# Large generated assets
+RIBA-v3.13-source.zip
