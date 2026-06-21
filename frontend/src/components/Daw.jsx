@@ -668,23 +668,38 @@ export default function Daw() {
     });
   }, []);
 
-  // === VST Scan (cosmetic) ===
-  const scanVst = useCallback(() => {
+ // === VRAI SCAN VST DE VOTRE PC (Via Rust/Tauri v2) ===
+  const scanVst = useCallback(async () => {
     setVstScanning(true);
     setVstFoundCount(0);
-    setStatusMsg('Scanning VST plugins...');
-    let count = 0;
-    const total = 4833;
-    const id = setInterval(() => {
-      count += Math.floor(80 + Math.random() * 200);
-      if (count >= total) {
-        count = total;
-        clearInterval(id);
+    setStatusMsg('Recherche de vos plugins .vst3 natifs...');
+    
+    try {
+      // On vérifie si on tourne bien dans l'environnement de bureau Tauri
+      if (window.__TAURI_INTERNALS__ !== undefined) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        
+        // On réveille le scanner Rust de votre machine !
+        const plugins = await invoke('scan_vst_plugins');
+        
+        // On met à jour l'interface avec les vrais plugins trouvés
+        setVstFoundCount(plugins.length);
+        setStatusMsg(`Scan terminé : ${plugins.length} plugin(s) VST3 détecté(s)`);
+        
+        console.log("Plugins détectés sur Windows :", plugins);
+      } else {
+        // Mode de secours si vous testez sur un navigateur classique
+        setStatusMsg('Scan non disponible sur le web (Lancez l\'application installée RIBA)');
         setVstScanning(false);
-        setStatusMsg(`VST scan complete: ${total} plugins found`);
       }
-      setVstFoundCount(Math.min(count, total));
-    }, 60);
+    } catch (e) {
+      console.error(e);
+      setStatusMsg('Erreur lors du scan VST : ' + e.message);
+      setVstScanning(false);
+    } finally {
+      // On laisse le panneau visible 2 secondes pour apprécier le résultat
+      setTimeout(() => setVstScanning(false), 2000);
+    }
   }, []);
 
   // === Apply GM instrument to all MIDI tracks ===
