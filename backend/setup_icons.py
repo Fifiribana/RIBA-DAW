@@ -390,7 +390,7 @@ def build_all() -> None:
         if p.exists():
            print(f"    {p.name} ({p.stat().st_size//1024} KB)")
     for p in launch_assets:
-        print(f"   {p.relative_to(Path('/app'))}  ({p.stat().st_size//1024} KB) [launch]")
+       print(f"    {p.name} ({p.stat().st_size//1024} KB) [launch]")
 
 
 if __name__ == "__main__":
